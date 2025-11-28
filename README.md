@@ -1,0 +1,2 @@
+# Gloorbot
+Parallel scraper
