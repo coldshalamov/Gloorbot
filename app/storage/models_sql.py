@@ -1,0 +1,136 @@
+"""SQLAlchemy ORM models for application storage."""
+
+from __future__ import annotations
+
+from datetime import datetime
+
+from sqlalchemy import Boolean, DateTime, Float, Index, Integer, String, Text
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+
+class Base(DeclarativeBase):
+    """Declarative base class for ORM models."""
+
+
+class Store(Base):
+    """Retail store representation."""
+
+    __tablename__ = "stores"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    name: Mapped[str] = mapped_column(String, nullable=False)
+    city: Mapped[str | None] = mapped_column(String, nullable=True)
+    state: Mapped[str | None] = mapped_column(String, nullable=True)
+    zip: Mapped[str] = mapped_column(String, nullable=False)
+
+
+class Item(Base):
+    """Catalog item representation."""
+
+    __tablename__ = "items"
+
+    sku: Mapped[str] = mapped_column(String, primary_key=True)
+    retailer: Mapped[str] = mapped_column(String, primary_key=True)
+    title: Mapped[str] = mapped_column(String, nullable=False)
+    category: Mapped[str] = mapped_column(String, nullable=False)
+    product_url: Mapped[str] = mapped_column(String, nullable=False)
+    image_url: Mapped[str | None] = mapped_column(String, nullable=True)
+
+
+class Observation(Base):
+    """Observed price and availability for an item at a store."""
+
+    __tablename__ = "observations"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    ts_utc: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    retailer: Mapped[str] = mapped_column(String, nullable=False)
+    store_id: Mapped[str] = mapped_column(String, nullable=False)
+    store_name: Mapped[str | None] = mapped_column(String, nullable=True)
+    zip: Mapped[str | None] = mapped_column(String, nullable=True)
+    sku: Mapped[str] = mapped_column(String, nullable=False)
+    title: Mapped[str] = mapped_column(String, nullable=False)
+    category: Mapped[str] = mapped_column(String, nullable=False)
+    price: Mapped[float | None] = mapped_column(Float, nullable=True)
+    price_was: Mapped[float | None] = mapped_column(Float, nullable=True)
+    pct_off: Mapped[float | None] = mapped_column(Float, nullable=True)
+    availability: Mapped[str | None] = mapped_column(String, nullable=True)
+    product_url: Mapped[str] = mapped_column(String, nullable=False)
+    image_url: Mapped[str | None] = mapped_column(String, nullable=True)
+    clearance: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+
+    __table_args__ = (
+        Index("ix_observations_store_sku_ts", "store_id", "sku", "ts_utc"),
+        Index("ix_observations_store_id", "store_id"),
+        Index("ix_observations_clearance_ts", "clearance", "ts_utc"),
+        Index("ix_observations_category_clearance", "category", "clearance"),
+        Index("ix_observations_zip_ts", "zip", "ts_utc"),
+    )
+
+
+class Alert(Base):
+    """Alert generated from observation changes."""
+
+    __tablename__ = "alerts"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    ts_utc: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    alert_type: Mapped[str] = mapped_column(String, nullable=False)
+    store_id: Mapped[str] = mapped_column(String, nullable=False)
+    sku: Mapped[str] = mapped_column(String, nullable=False)
+    retailer: Mapped[str] = mapped_column(String, nullable=False)
+    pct_off: Mapped[float | None] = mapped_column(Float, nullable=True)
+    price: Mapped[float | None] = mapped_column(Float, nullable=True)
+    price_was: Mapped[float | None] = mapped_column(Float, nullable=True)
+    note: Mapped[str | None] = mapped_column(String, nullable=True)
+
+
+class Quarantine(Base):
+    """Row quarantine storage for invalid or suspicious scrape results."""
+
+    __tablename__ = "quarantine"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    ts_utc: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    retailer: Mapped[str] = mapped_column(String, nullable=False)
+    store_id: Mapped[str | None] = mapped_column(String, nullable=True)
+    sku: Mapped[str | None] = mapped_column(String, nullable=True)
+    zip: Mapped[str | None] = mapped_column(String, nullable=True)
+    state: Mapped[str | None] = mapped_column(String, nullable=True)
+    category: Mapped[str | None] = mapped_column(String, nullable=True)
+    reason: Mapped[str] = mapped_column(String, nullable=False)
+    payload: Mapped[str] = mapped_column(Text, nullable=False)
+
+    __table_args__ = (
+        Index("ix_quarantine_ts", "ts_utc"),
+        Index("ix_quarantine_reason", "reason"),
+        Index("ix_quarantine_zip", "zip"),
+    )
+
+
+class StorePriceHistory(Base):
+    """Compressed per-store price history records."""
+
+    __tablename__ = "store_price_history"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    retailer: Mapped[str] = mapped_column(String, nullable=False)
+    store_id: Mapped[str] = mapped_column(String, nullable=False)
+    sku: Mapped[str] = mapped_column(String, nullable=False)
+    title: Mapped[str] = mapped_column(String, nullable=False)
+    category: Mapped[str] = mapped_column(String, nullable=False)
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    price: Mapped[float | None] = mapped_column(Float, nullable=True)
+    price_was: Mapped[float | None] = mapped_column(Float, nullable=True)
+    pct_off: Mapped[float | None] = mapped_column(Float, nullable=True)
+    availability: Mapped[str | None] = mapped_column(String, nullable=True)
+    product_url: Mapped[str] = mapped_column(String, nullable=False)
+    image_url: Mapped[str | None] = mapped_column(String, nullable=True)
+    clearance: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+
+    __table_args__ = (
+        Index("ix_history_store_sku", "store_id", "sku"),
+        Index("ix_history_store_updated", "store_id", "updated_at"),
+        Index("ix_history_sku", "sku"),
+    )

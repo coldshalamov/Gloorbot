@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}CheapSkater Dashboard{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='css/style.css') }}">
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <header class="site-header">
+        <div class="brand">
+            <a href="/" class="brand-link">
+                <span class="brand-name">CheapSkater</span>
+                <span class="brand-tagline">WA &amp; OR Lowe's Clearance</span>
+            </a>
+        </div>
+        <nav class="nav-links" aria-label="Primary navigation">
+            <a href="/" class="nav-link{% if active_scope == 'all' %} active{% endif %}">All Clearance</a>
+            <a href="/new-today?state=WA" class="nav-link{% if active_scope == 'new' and state == 'WA' %} active{% endif %}">New Today WA</a>
+            <a href="/new-today?state=OR" class="nav-link{% if active_scope == 'new' and state == 'OR' %} active{% endif %}">New Today OR</a>
+            <a href="/cheapskater" class="nav-link{% if active_scope == 'cheapskater' %} active{% endif %}">Saved Deals</a>
+        </nav>
+    </header>
+    <main class="site-main">
+        {% block content %}{% endblock %}
+    </main>
+    <footer class="site-footer">
+        <p>Tracking Lowe's building-material clearance for Washington &amp; Oregon.</p>
+    </footer>
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>
