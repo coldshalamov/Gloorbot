@@ -1,0 +1,46 @@
+{
+    "title": "Lowes Pickup Today Scraper",
+    "type": "object",
+    "schemaVersion": 1,
+    "description": "Scrape 'Pickup Today' inventory across 50+ Lowe's stores in WA/OR using massive parallelization",
+    "properties": {
+        "store_ids": {
+            "title": "Store IDs",
+            "type": "array",
+            "description": "List of Lowe's Store IDs to scrape. Leave empty to scrape ALL 50+ WA/OR stores from LowesMap.txt.",
+            "editor": "stringList",
+            "default": [],
+            "example": ["0061", "1089", "1631"]
+        },
+        "categories": {
+            "title": "Category URLs",
+            "type": "array",
+            "description": "Specific category URLs to scrape. Leave empty to use all 500+ categories from LowesMap.txt.",
+            "editor": "stringList",
+            "default": [],
+            "example": ["https://www.lowes.com/pl/Lumber-Building-supplies/4294850532"]
+        },
+        "max_pages_per_category": {
+            "title": "Max Pages Per Category",
+            "type": "integer",
+            "description": "Maximum pagination pages per category (24 items/page). Set lower for faster runs.",
+            "default": 20,
+            "minimum": 1,
+            "maximum": 80
+        },
+        "use_stealth": {
+            "title": "Use Playwright Stealth",
+            "type": "boolean",
+            "description": "Enable playwright-stealth for anti-fingerprinting. RECOMMENDED: Keep enabled.",
+            "default": true
+        },
+        "proxy_country": {
+            "title": "Proxy Country Code",
+            "type": "string",
+            "description": "Country code for residential proxies. Must be US for Lowe's.",
+            "default": "US",
+            "enum": ["US"]
+        }
+    },
+    "required": []
+}

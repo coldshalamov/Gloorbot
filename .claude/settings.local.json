@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python test_single_page.py:*)",
+      "Bash(python -c:*)",
+      "Bash(timeout 90 python:*)",
+      "Bash(timeout 120 python:*)",
+      "Bash(timeout 60 python:*)",
+      "Bash(python run_validation_tests.py:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

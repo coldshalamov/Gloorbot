@@ -1,31 +1,3 @@
-# Virtual environments
-/.venv/
-.playwright-profile/
-
-# Python cache directories
+third_party_tmp/
 __pycache__/
-
-# Local databases
-*.sqlite
-*.db
-
-# Application output directories
-/logs/*
-!/logs/.gitkeep
-/outputs/*
-!/outputs/.gitkeep
-
-# Environment and system files
-.env
-.DS_Store
-
-# Build artifacts
-/dist/
-/build/
-
-# Optional IDE settings
-/.vscode/
-/.idea/
-
-# Stray logs outside /logs
-*.log
+*.pyc
