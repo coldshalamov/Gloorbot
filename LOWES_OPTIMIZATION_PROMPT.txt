@@ -1,0 +1,39 @@
+﻿PROBLEM STATEMENT: Lowe's Scraper - Cost Optimization
+
+CURRENT SITUATION:
+Your actor scrapes Lowe's "Pickup Today" inventory across ~50 WA/OR stores and ~291 departments. It works but is economically unviable on Apify - estimated + per full crawl.
+
+WHAT IT DOES NOW:
+1. Enqueues ~109K URLs (50 stores × 291 departments × 7-10 pages)
+2. Uses Apify Request Queue for parallelization
+3. For EACH URL, launches a full Playwright browser instance
+4. Applies Akamai anti-bot detection (headless=False, stealth mode, session locking per store)
+5. Clicks "Pickup Today" filter on each page
+6. Extracts: SKU, title, price, was_price, markdown %, availability, image URL, timestamp
+7. Pushes results to Apify dataset
+
+THE COST PROBLEM:
+- Each browser instance = 8GB memory × 2 hours timeout = massive compute cost
+- 109K URLs × browser launch overhead = astronomical
+- Residential proxy bandwidth for 109K requests = additional $
+- Current estimate: -500 per full crawl depending on actual runtime
+
+HARD CONSTRAINTS (NON-NEGOTIABLE):
+- AKAMAI BLOCKING: Lowe's uses Akamai anti-bot detection. Headless browsers get 403 "Access Denied"
+- PICKUP FILTER: Must click "Pickup Today" filter to see only in-stock items (can't add to URL params without triggering Akamai)
+- DYNAMIC RENDERING: Product data loads via JavaScript; can't scrape raw HTML
+- SESSION LOCKING: Must lock proxy session to store_id to prevent Akamai from flagging distributed requests
+- MUST BE HEADFUL: headless=False is REQUIRED or Akamai blocks
+
+WHAT SHOULD CHANGE:
+1. Browser Session Reuse: Launch ONE browser, keep it alive, cycle through 109K URLs instead of launching 109K browsers
+2. Connection Pooling: Reuse HTTP connections and proxy sessions across requests
+3. Memory Efficiency: Don't load full page renders; extract only product JSON-LD or minimal DOM
+4. Parallelization: If using Playwright, use actual async/concurrent page handling, not sequential browser launches
+5. Batching: Group requests by store/category to maintain Akamai session locking while reducing overhead
+
+GOAL:
+Reduce per-crawl cost from ~ to ~ (or less) while maintaining Akamai evasion and pickup filter accuracy.
+
+DATA OUTPUT NEEDED:
+Same as now: store_id, store_name, SKU, title, category, price, price_was, pct_off, availability, product_url, image_url, timestamp
