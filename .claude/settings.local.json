@@ -6,7 +6,10 @@
       "Bash(timeout 90 python:*)",
       "Bash(timeout 120 python:*)",
       "Bash(timeout 60 python:*)",
-      "Bash(python run_validation_tests.py:*)"
+      "Bash(python run_validation_tests.py:*)",
+      "Bash(where:*)",
+      "Bash(test:*)",
+      "Bash(echo:*)"
     ],
     "deny": [],
     "ask": []
