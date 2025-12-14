@@ -1,34 +1,74 @@
-# Lowe's Pickup Today Scraper - Apify Actor
+# Lowe's Pickup Today Inventory Scraper
 
-Scrape **"Pickup Today"** inventory across 50+ Lowe's stores in Washington and Oregon using Apify's massive parallelization architecture.
+Scrape **"Pickup Today"** inventory across **49 Lowe's stores** in Washington and Oregon. Find local markdowns, clearance items, and sales available for same-day pickup.
 
-## Features
+## Architecture: Sequential Context Rotation
 
-- **Massive Parallelization**: Uses Apify's Request Queue to process 27,000+ URLs across 100+ parallel instances
-- **Akamai Bypass**: Headful Playwright with residential proxies and session locking
-- **Race Condition Fixed**: Proper pickup filter application with verification
-- **Auto-scaling**: Apify automatically scales workers based on queue size
-- **Incremental Results**: Products pushed to Dataset as they're scraped
+**Why NOT Browser Pooling?**
 
-## Performance
+| Approach | RAM Usage | Apify Cost |
+|----------|-----------|------------|
+| Browser Pooling (50 browsers) | 50x base | $400+/run |
+| **Sequential Rotation (1 browser)** | 1x base | **~$25-30/run** |
 
-| Metric | Value |
-|--------|-------|
-| Stores | 50+ (WA/OR) |
-| Categories | 500+ |
-| Max Pages/Category | 20 (480 items) |
-| Target Runtime | 5-15 minutes |
-| Parallelization | 100+ workers |
+This scraper uses **one browser with context rotation per store**, reducing costs by ~90% while maintaining session locking for Akamai evasion.
+
+## Key Features
+
+- **49 Stores**: All Lowe's in Washington (35) and Oregon (14)
+- **24 Categories**: High-value departments (Clearance, Lumber, Tools, Appliances, etc.)
+- **Smart Pagination**: Stops early when products run out (30-50% fewer requests)
+- **Resource Blocking**: Blocks images, fonts, analytics (60-70% bandwidth savings)
+- **Pickup Filter**: Physical click with verification (URL params don't work)
+- **Akamai Evasion**: Residential proxies + session locking + stealth
+
+## Cost Breakdown
+
+| Component | Estimate |
+|-----------|----------|
+| Stores | 49 |
+| Categories | 24 |
+| Pages per category (avg) | ~10 |
+| **Total requests** | ~11,760 |
+| Bandwidth (w/ blocking) | ~2-3 GB |
+| **Residential proxy cost** | ~$25-30 |
+| **Compute cost** | ~$2-5 |
+| **Total per run** | **~$27-35** |
+
+## Critical Requirements
+
+1. **RESIDENTIAL PROXIES** - Datacenter/carrier IPs are blocked
+2. **SESSION LOCKING** - Same IP per store session
+3. **headless=False** - Akamai fingerprints and blocks headless
+4. **Physical filter click** - URL parameters don't activate pickup filter
 
 ## Input Schema
 
 ```json
 {
-    "store_ids": [],           // Empty = all 50+ WA/OR stores
-    "categories": [],          // Empty = all 500+ categories from LowesMap.txt
-    "max_pages_per_category": 20,
-    "use_stealth": true,
-    "proxy_country": "US"
+    "stores": [],                    // Empty = all 49 WA/OR stores
+    "categories": [],                // Empty = all 24 categories
+    "max_pages_per_category": 50     // 24 items/page = 1,200 max items
+}
+```
+
+### Custom Store Selection
+```json
+{
+    "stores": [
+        {"store_id": "0004", "name": "Rainier", "city": "Seattle", "state": "WA", "zip": "98144"},
+        {"store_id": "1108", "name": "Tigard", "city": "Tigard", "state": "OR", "zip": "97223"}
+    ]
+}
+```
+
+### Custom Categories
+```json
+{
+    "categories": [
+        {"name": "Clearance", "url": "https://www.lowes.com/pl/The-back-aisle/2021454685607"},
+        {"name": "Power Tools", "url": "https://www.lowes.com/pl/Power-tools-Tools/4294612503"}
+    ]
 }
 ```
 
@@ -36,147 +76,154 @@ Scrape **"Pickup Today"** inventory across 50+ Lowe's stores in Washington and O
 
 ```json
 {
-    "store_id": "1234",
-    "store_name": "Lowe's Seattle",
+    "store_id": "0004",
+    "store_name": "Lowe's Rainier",
     "sku": "1000123456",
-    "title": "2x4x8 Lumber",
-    "category": "Building Materials",
-    "price": 5.98,
-    "price_was": 6.98,
-    "pct_off": 0.14,
+    "title": "DEWALT 20V MAX Cordless Drill",
+    "category": "Power Tools",
+    "price": 99.00,
+    "price_was": 149.00,
+    "pct_off": 0.3356,
     "availability": "In Stock",
-    "clearance": false,
+    "clearance": true,
     "product_url": "https://www.lowes.com/pd/...",
     "image_url": "https://mobileimages.lowes.com/...",
-    "timestamp": "2025-12-08T19:00:00Z"
+    "timestamp": "2025-12-13T20:00:00Z"
 }
 ```
 
-## Architecture
+## Deployment
 
-### Request Queue Pattern
+### Deploy to Apify
 
-```
-1. Enqueue ALL URLs upfront (stores × categories × pages)
-   └── 50 stores × 500 categories × 20 pages = 500,000 URLs
+```bash
+# Install Apify CLI
+npm install -g apify-cli
 
-2. Apify auto-scales workers to process queue
-   └── 100+ parallel browser instances
+# Login
+apify login
 
-3. Each worker locks proxy session to store_id
-   └── Prevents Akamai "Access Denied" errors
-
-4. Results pushed incrementally to Dataset
-   └── Real-time visibility into progress
+# Push to Apify
+apify push
 ```
 
-### Anti-Bot Strategy
+### Configure Proxy (REQUIRED)
 
-1. **Residential Proxies** with session locking per store
-2. **Headful Playwright** (Akamai blocks headless)
-3. **playwright-stealth** for fingerprint evasion
-4. **Human-like delays** between actions
+In Apify Console:
+1. Go to Actor settings
+2. Under "Proxy configuration"
+3. Select **RESIDENTIAL** proxy group
+4. Set country to **US**
 
-### Pickup Filter Fix
+## Local Testing
 
-The original code had a race condition where it clicked the filter before the page loaded. Fixed by:
+**Note: Local testing will get blocked by Akamai without residential proxies. Use for code verification only.**
 
-1. `wait_for_load_state('networkidle')` before clicking
-2. Verify filter applied via:
-   - URL parameter check
-   - aria-checked/pressed state
-   - Product count change
-3. Multiple retry attempts with verification
-
-## Local Testing (FREE - No Apify Costs!)
-
-### Quick Setup
 ```bash
 # Install dependencies
 pip install -r requirements.txt
 playwright install chromium
-```
 
-### Test 1: Single Page (Simplest)
-```bash
-# Scrape ONE page, see if it works
-python test_single_page.py
+# Run diagnostic (confirms Akamai blocking)
+python test_akamai_diagnostic.py
 
-# With custom URL
-python test_single_page.py --url "https://www.lowes.com/pl/Lumber-Building-supplies/4294850532"
-```
-
-### Test 2: Pickup Filter Validation
-```bash
-# Test JUST the pickup filter fix across 3 URLs
-python test_pickup_filter.py
-```
-
-### Test 3: Full Local Run (Mock Apify)
-```bash
-# Quick test: 1 store, 1 category, 1 page
-python test_local.py
-
-# Full test: 3 stores, 5 categories, 2 pages each
-python test_local.py --full
-
-# Custom test
-python test_local.py --store 0061 --pages 2
-python test_local.py --stores "0061,1089,0252" --pages 3
-```
-
-### Test Options
-| Flag | Description |
-|------|-------------|
-| `--headless` | Run headless (faster but may get blocked) |
-| `--no-proxy` | Direct connection (no proxy) |
-| `--store ID` | Test specific store |
-| `--pages N` | Max pages per category |
-| `--full` | Run comprehensive test |
-
-### Expected Output
-```
-[INFO] Processing: Store 0061 | Lumber | Page 1
-  Pickup filter: Applied
-  Found 24 products
-[DATA] Saved 24 items (total: 24)
-```
-
-Results saved to `test_output.json`
-
-## Deploy to Apify
-
-```bash
-# Push to Apify platform
-apify push
+# Test structure (will show "Access Denied" without proxy)
+python test_production_scraper.py
 ```
 
 ## Files Structure
 
 ```
+apify_actor_seed/
 ├── .actor/
-│   ├── actor.json          # Actor configuration
-│   ├── input_schema.json   # Input parameters
-│   └── dataset_schema.json # Output schema
+│   ├── actor.json           # Actor configuration
+│   ├── input_schema.json    # Input parameters
+│   └── dataset_schema.json  # Output schema
 ├── src/
-│   ├── main.py            # Main Actor entry point
-│   └── __init__.py
-├── catalog/
-│   ├── building_materials.lowes.yml
-│   └── wa_or_stores.yml
-├── input/
-│   └── LowesMap.txt       # Store & category URLs
+│   ├── main.py              # Production Actor (deploy this)
+│   ├── lowes_production_scraper.py  # Standalone scraper
+│   └── proxy_config.py      # Proxy provider configs
+├── test_production_scraper.py   # Full test suite
+├── test_akamai_diagnostic.py    # Block diagnostic
+├── test_single_page.py          # Simple page test
 ├── Dockerfile
 ├── requirements.txt
 └── README.md
 ```
 
-## Critical Notes
+## How It Works
 
-1. **MUST use headless=False** - Akamai aggressively blocks headless browsers
-2. **MUST lock proxy session to store_id** - Changing IPs mid-store triggers blocks
-3. **MUST apply pickup filter on EVERY page** - Pagination URLs don't preserve filter
-4. **Check for crashes AFTER page.goto()** - Chromium's "Aw, Snap!" happens post-navigation
+### 1. Browser Launch
+```python
+browser = await pw.chromium.launch(
+    headless=False,  # REQUIRED for Akamai
+    args=["--disable-blink-features=AutomationControlled"]
+)
+```
+
+### 2. Per-Store Context with Session-Locked Proxy
+```python
+proxy_url = await proxy_config.new_url(session_id=f"lowes_{store_id}")
+context = await browser.new_context(proxy={"server": proxy_url})
+```
+
+### 3. Resource Blocking
+```python
+# Block: images, fonts, analytics, ads
+# NEVER block: lowes.com, akamai scripts
+```
+
+### 4. Pickup Filter (Physical Click)
+```python
+# URL params like ?availability=pickup DON'T work
+# Must physically click the filter element and verify
+element = await page.query_selector('label:has-text("Get It Today")')
+await element.click()
+# Verify via aria-checked or URL change
+```
+
+### 5. Smart Pagination
+```python
+# Stop early when:
+# - Less than 6 products on page (category exhausted)
+# - 2 consecutive empty pages
+# - Block detected
+```
+
+## Troubleshooting
+
+### "Access Denied" Error
+- **Cause**: Akamai detected automation
+- **Fix**: Ensure RESIDENTIAL proxies are configured with session locking
+
+### Empty Results
+- **Cause**: Pickup filter not applied
+- **Fix**: Check filter selectors match current Lowe's UI
+
+### High Costs
+- **Cause**: Too many pages, images not blocked
+- **Fix**: Reduce `max_pages_per_category`, verify resource blocking
+
+## Performance Tuning
+
+| Setting | Faster/Cheaper | More Data |
+|---------|----------------|-----------|
+| `max_pages_per_category` | 10 | 50 |
+| Categories | Just Clearance | All 24 |
+| Stores | 5 test stores | All 49 |
+
+### Quick Test Run (~$2-3)
+```json
+{
+    "stores": [
+        {"store_id": "0004", "name": "Rainier", "city": "Seattle", "state": "WA", "zip": "98144"}
+    ],
+    "categories": [
+        {"name": "Clearance", "url": "https://www.lowes.com/pl/The-back-aisle/2021454685607"}
+    ],
+    "max_pages_per_category": 5
+}
+```
 
 ## License
 

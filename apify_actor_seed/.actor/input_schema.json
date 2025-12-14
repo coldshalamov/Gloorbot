@@ -1,45 +1,38 @@
 {
-    "title": "Lowes Pickup Today Scraper",
+    "title": "Lowe's Pickup Today Scraper",
     "type": "object",
     "schemaVersion": 1,
-    "description": "Scrape 'Pickup Today' inventory across 50+ Lowe's stores in WA/OR using massive parallelization",
+    "description": "Scrape 'Pickup Today' inventory from Lowe's stores in Washington and Oregon. Optimized for cost efficiency using sequential context rotation.",
     "properties": {
-        "store_ids": {
-            "title": "Store IDs",
+        "stores": {
+            "title": "Stores to Scrape",
             "type": "array",
-            "description": "List of Lowe's Store IDs to scrape. Leave empty to scrape ALL 50+ WA/OR stores from LowesMap.txt.",
-            "editor": "stringList",
+            "description": "List of store objects with store_id, name, city, state, zip. Leave empty to scrape ALL 49 WA/OR stores.",
+            "editor": "json",
             "default": [],
-            "example": ["0061", "1089", "1631"]
+            "example": [
+                {"store_id": "0004", "name": "Rainier", "city": "Seattle", "state": "WA", "zip": "98144"},
+                {"store_id": "1108", "name": "Tigard", "city": "Tigard", "state": "OR", "zip": "97223"}
+            ]
         },
         "categories": {
-            "title": "Category URLs",
+            "title": "Categories to Scrape",
             "type": "array",
-            "description": "Specific category URLs to scrape. Leave empty to use all 500+ categories from LowesMap.txt.",
-            "editor": "stringList",
+            "description": "List of category objects with name and url. Leave empty to use all 24 high-value departments.",
+            "editor": "json",
             "default": [],
-            "example": ["https://www.lowes.com/pl/Lumber-Building-supplies/4294850532"]
+            "example": [
+                {"name": "Clearance", "url": "https://www.lowes.com/pl/The-back-aisle/2021454685607"},
+                {"name": "Lumber", "url": "https://www.lowes.com/pl/Lumber-Building-supplies/4294850532"}
+            ]
         },
         "max_pages_per_category": {
             "title": "Max Pages Per Category",
             "type": "integer",
-            "description": "Maximum pagination pages per category (24 items/page). Set lower for faster runs.",
-            "default": 20,
+            "description": "Maximum pagination pages per category (24 items/page). Lower = faster/cheaper. Default 50 pages = 1,200 items max per category.",
+            "default": 50,
             "minimum": 1,
-            "maximum": 80
-        },
-        "use_stealth": {
-            "title": "Use Playwright Stealth",
-            "type": "boolean",
-            "description": "Enable playwright-stealth for anti-fingerprinting. RECOMMENDED: Keep enabled.",
-            "default": true
-        },
-        "proxy_country": {
-            "title": "Proxy Country Code",
-            "type": "string",
-            "description": "Country code for residential proxies. Must be US for Lowe's.",
-            "default": "US",
-            "enum": ["US"]
+            "maximum": 100
         }
     },
     "required": []
