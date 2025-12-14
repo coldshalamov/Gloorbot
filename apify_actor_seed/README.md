@@ -2,27 +2,38 @@
 
 Scrape **"Pickup Today"** inventory across **49 Lowe's stores** in Washington and Oregon. Find local markdowns, clearance items, and sales available for same-day pickup.
 
-## Architecture: Sequential Context Rotation
+## Architecture: 3x Parallel Execution (v2.1)
 
 **Why NOT Browser Pooling?**
 
-| Approach | RAM Usage | Apify Cost |
-|----------|-----------|------------|
-| Browser Pooling (50 browsers) | 50x base | $400+/run |
-| **Sequential Rotation (1 browser)** | 1x base | **~$25-30/run** |
+| Approach | RAM Usage | Duration | Cost |
+|----------|-----------|----------|------|
+| Browser Pooling (50 browsers) | 50x base | 5-8h | $400+/run |
+| Sequential Rotation (1 browser) | 1x base | 16-34h | ~$25-30/run |
+| **3x Parallel (v2.1)** | 3x base | **7-10h** | **~$35-48/run** |
 
-This scraper uses **one browser with context rotation per store**, reducing costs by ~90% while maintaining session locking for Akamai evasion.
+This scraper uses **one browser with 3 concurrent contexts**, processing stores in batches of 3. This reduces completion time by ~60% while keeping costs reasonable.
+
+### Parallel Architecture Details
+
+- **Execution**: 49 stores divided into 17 batches of 3
+- **Per Batch**: 3 stores scraped concurrently using `asyncio.gather()`
+- **Session Locking**: Each store gets a locked proxy session for Akamai evasion
+- **Memory**: 4GB minimum, 8GB maximum (3 contexts + overhead)
+- **Batch Delay**: 2-4 seconds between batches to avoid rate limiting
 
 ## Key Features
 
 - **49 Stores**: All Lowe's in Washington (35) and Oregon (14)
 - **24 Categories**: High-value departments (Clearance, Lumber, Tools, Appliances, etc.)
+- **3x Parallel Contexts**: Sub-12-hour completion (was 16-34h sequential)
+- **Enhanced Pickup Filter**: Triple verification (element state + URL params + product count)
 - **Smart Pagination**: Stops early when products run out (30-50% fewer requests)
 - **Resource Blocking**: Blocks images, fonts, analytics (60-70% bandwidth savings)
-- **Pickup Filter**: Physical click with verification (URL params don't work)
+- **Fail-Fast**: Skips entire category if pickup filter verification fails
 - **Akamai Evasion**: Residential proxies + session locking + stealth
 
-## Cost Breakdown
+## Cost Breakdown (v2.1)
 
 | Component | Estimate |
 |-----------|----------|
@@ -30,10 +41,12 @@ This scraper uses **one browser with context rotation per store**, reducing cost
 | Categories | 24 |
 | Pages per category (avg) | ~10 |
 | **Total requests** | ~11,760 |
-| Bandwidth (w/ blocking) | ~2-3 GB |
-| **Residential proxy cost** | ~$25-30 |
-| **Compute cost** | ~$2-5 |
-| **Total per run** | **~$27-35** |
+| Bandwidth (w/ blocking) | ~6-8 GB |
+| **Residential proxy cost** | ~$27-36 |
+| **Compute cost** | ~$8-12 |
+| **Total per run** | **~$35-48** |
+
+**Duration**: 7-10 hours (49 stores ÷ 3 parallel = 17 batches × 25-35 min/batch)
 
 ## Critical Requirements
 
@@ -173,13 +186,33 @@ context = await browser.new_context(proxy={"server": proxy_url})
 # NEVER block: lowes.com, akamai scripts
 ```
 
-### 4. Pickup Filter (Physical Click)
+### 4. Enhanced Pickup Filter (v2.1)
 ```python
-# URL params like ?availability=pickup DON'T work
-# Must physically click the filter element and verify
-element = await page.query_selector('label:has-text("Get It Today")')
-await element.click()
-# Verify via aria-checked or URL change
+# Triple verification ensures filter actually applied
+async def apply_pickup_filter(page, category_name):
+    # Get baseline before filter
+    url_before = page.url
+    count_before = await get_product_count()
+
+    # Click filter element
+    await element.click()
+    await page.wait_for_load_state("networkidle")
+
+    # VERIFICATION 1: Element state
+    if aria-checked="true" or aria-pressed="true":
+        return True
+
+    # VERIFICATION 2: URL changed with filter params
+    if "?refinement=pickup" in page.url:
+        return True
+
+    # VERIFICATION 3: Product count decreased
+    count_after = await get_product_count()
+    if 0 < count_after < count_before:
+        return True
+
+    # ALL verifications failed - SKIP CATEGORY
+    return False
 ```
 
 ### 5. Smart Pagination
