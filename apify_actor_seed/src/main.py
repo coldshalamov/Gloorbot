@@ -7,7 +7,6 @@ TARGET: "Pickup Today" items to find local markdowns and clearance
 ARCHITECTURE: Sequential Context Rotation (NOT Browser Pooling)
 - Single browser instance (minimum RAM)
 - New context per store (session locking maintained)
-- Aggressive resource blocking (60-70% bandwidth savings)
 - Smart pagination (30-50% fewer requests)
 
 ESTIMATED COST: ~$25-30 per full crawl (109K URLs)
@@ -48,7 +47,7 @@ from playwright_stealth import Stealth
 # =============================================================================
 
 BASE_URL = "https://www.lowes.com"
-GOTO_TIMEOUT_MS = 45000
+GOTO_TIMEOUT_MS = 60000  # Increased timeout for loading resources
 PAGE_SIZE = 24
 DEFAULT_MAX_PAGES = 50
 MIN_PRODUCTS_TO_CONTINUE = 6
@@ -161,49 +160,17 @@ DEFAULT_CATEGORIES = [
 ]
 
 # =============================================================================
-# RESOURCE BLOCKING - 60-70% BANDWIDTH SAVINGS
+# RESOURCE BLOCKING - REMOVED TO AVOID AKAMAI BLOCKING
 # =============================================================================
-
-BLOCKED_RESOURCE_TYPES = {"image", "media", "font"}
-
-BLOCKED_URL_PATTERNS = [
-    r"google-analytics\.com", r"googletagmanager\.com", r"facebook\.net",
-    r"doubleclick\.net", r"analytics", r"tracking", r"beacon", r"pixel",
-    r"ads\.", r"adservice", r"youtube\.com", r"vimeo\.com",
-    r"hotjar\.com", r"clarity\.ms", r"newrelic\.com", r"sentry\.io",
-    r"segment\.com", r"optimizely\.com", r"fullstory\.com",
-    r"\.woff2?(\?|$)", r"\.ttf(\?|$)", r"\.eot(\?|$)",
-]
-
-NEVER_BLOCK_PATTERNS = [
-    r"/_sec/", r"/akam/", r"akamai", r"lowes\.com",
-]
-
+# Aggressive resource blocking was detected by Akamai.
+# We now allow all resources to load normally to mimic real user behavior.
 
 async def setup_request_interception(page: Page) -> None:
-    """Block unnecessary resources while preserving Akamai scripts."""
-    async def handle_route(route: Route):
-        url = route.request.url.lower()
-        resource_type = route.request.resource_type
-
-        for pattern in NEVER_BLOCK_PATTERNS:
-            if re.search(pattern, url, re.IGNORECASE):
-                await route.continue_()
-                return
-
-        if resource_type in BLOCKED_RESOURCE_TYPES:
-            await route.abort()
-            return
-
-        for pattern in BLOCKED_URL_PATTERNS:
-            if re.search(pattern, url, re.IGNORECASE):
-                await route.abort()
-                return
-
-        await route.continue_()
-
-    await page.route("**/*", handle_route)
-
+    """
+    Previously blocked resources. Now a no-op to avoid Akamai detection.
+    Real users load images and fonts!
+    """
+    pass
 
 # =============================================================================
 # PICKUP FILTER - CRITICAL FOR LOCAL AVAILABILITY
@@ -615,7 +582,7 @@ async def main() -> None:
 
     async with Actor:
         Actor.log.info("=" * 60)
-        Actor.log.info("LOWE'S INVENTORY SCRAPER - PRODUCTION")
+        Actor.log.info("LOWE'S INVENTORY SCRAPER - PRODUCTION (DE-OPTIMIZED)")
         Actor.log.info("=" * 60)
 
         # Get input
@@ -682,10 +649,11 @@ async def main() -> None:
                 # Get session-locked proxy
                 proxy_url = await proxy_config.new_url(session_id=f"lowes_{store_id}")
 
-                # Create context with proxy
+                # Create context with proxy and realistic viewport
                 context = await browser.new_context(
                     proxy={"server": proxy_url},
-                    viewport={"width": 1280, "height": 720},
+                    viewport={"width": 1920, "height": 1080},
+                    user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
                 )
 
                 try:
