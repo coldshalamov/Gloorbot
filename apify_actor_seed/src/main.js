@@ -555,6 +555,12 @@ async function scrapeCategory(page, store, category, maxPages, requirePickup) {
       log.warning(`[${category.name}] HTTP ${resp.status()}`);
     }
 
+    // Human-like behavior after each page load to avoid detection
+    await page.waitForTimeout(1000 + Math.random() * 1000);
+    await humanMouseMove(page);
+    await page.waitForTimeout(500 + Math.random() * 500);
+    await humanScroll(page);
+
     const currentUrl = page.url();
     if (!currentUrl.includes('/pl/')) {
       log.warning(`[${category.name}] Navigation landed on unexpected URL: ${currentUrl}`);
@@ -660,10 +666,66 @@ const CHROME_ARGS = [
 // Chromium has detectable TLS/JA3 fingerprints
 const DEFAULT_BROWSER_CHANNEL = 'chrome';
 
+// Human-like mouse movement to bypass behavioral detection
+async function humanMouseMove(page) {
+  const viewport = page.viewportSize();
+  const width = viewport?.width || 1440;
+  const height = viewport?.height || 900;
+
+  const startX = Math.random() * width * 0.3;
+  const startY = Math.random() * height * 0.3;
+  const endX = width * 0.4 + Math.random() * width * 0.4;
+  const endY = height * 0.4 + Math.random() * height * 0.4;
+
+  const steps = 10 + Math.floor(Math.random() * 10);
+  for (let i = 0; i <= steps; i++) {
+    const progress = i / steps;
+    const eased = progress < 0.5
+      ? 2 * progress * progress
+      : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+    const x = startX + (endX - startX) * eased + (Math.random() - 0.5) * 3;
+    const y = startY + (endY - startY) * eased + (Math.random() - 0.5) * 3;
+    await page.mouse.move(x, y);
+    await page.waitForTimeout(15 + Math.random() * 25);
+  }
+}
+
+// Human-like scrolling
+async function humanScroll(page) {
+  const scrollAmount = 150 + Math.floor(Math.random() * 200);
+  const steps = 4 + Math.floor(Math.random() * 4);
+  const stepAmount = scrollAmount / steps;
+  for (let i = 0; i < steps; i++) {
+    await page.mouse.wheel(0, stepAmount);
+    await page.waitForTimeout(40 + Math.random() * 80);
+  }
+}
+
+// Warm up browser session to establish trust with Akamai
+async function warmUpSession(page) {
+  log.info('Warming up browser session...');
+
+  // Load homepage first
+  await page.goto(BASE_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
+  await page.waitForTimeout(3000 + Math.random() * 2000);
+
+  // Simulate human behavior
+  await humanMouseMove(page);
+  await page.waitForTimeout(1000 + Math.random() * 1000);
+  await humanScroll(page);
+  await page.waitForTimeout(1500 + Math.random() * 1500);
+  await humanMouseMove(page);
+  await page.waitForTimeout(500 + Math.random() * 500);
+
+  log.info('Session warm-up complete');
+}
+
 async function scrapeStore(store, categories, proxyUrl, maxPages, requirePickup) {
   const cdpUrl = process.env.CHEAPSKATER_CDP_URL;
   // Use Chrome by default, override with CHEAPSKATER_BROWSER_CHANNEL env var
   const channel = process.env.CHEAPSKATER_BROWSER_CHANNEL || DEFAULT_BROWSER_CHANNEL;
+  // Use persistent profile by default for better Akamai bypass
+  const usePersistentProfile = process.env.CHEAPSKATER_PERSISTENT_PROFILE !== '0';
 
   let browser = null;
   let context = null;
@@ -678,6 +740,26 @@ async function scrapeStore(store, categories, proxyUrl, maxPages, requirePickup)
       context = await browser.newContext();
       page = await context.newPage();
     }
+  } else if (usePersistentProfile) {
+    // CRITICAL: Use persistent context to bypass Akamai behavioral detection
+    // Akamai trusts browsers with consistent profiles over fresh instances
+    const storeId = store.store_id || 'default';
+    const profileDir = path.join(process.cwd(), '.playwright-profiles', `store_${storeId}`);
+
+    log.info(`Using persistent profile at: ${profileDir}`);
+
+    context = await chromium.launchPersistentContext(profileDir, {
+      headless: false,
+      channel: channel,
+      viewport: { width: 1440, height: 900 },
+      locale: 'en-US',
+      timezoneId: 'America/Los_Angeles',
+      args: CHROME_ARGS,
+      ...(proxyUrl ? { proxy: { server: proxyUrl } } : {}),
+    });
+
+    page = context.pages()[0] || await context.newPage();
+    browser = null; // Persistent context manages its own browser
   } else {
     const launchOptions = {
       headless: false,
@@ -698,6 +780,9 @@ async function scrapeStore(store, categories, proxyUrl, maxPages, requirePickup)
 
   await setupRequestBlocking(page);
 
+  // Warm up session with human-like behavior before scraping
+  await warmUpSession(page);
+
   const storeSet = await setStoreContext(page, store);
   if (!storeSet) {
     log.warning(`Store context not set for ${store.store_id || store.name}`);
@@ -714,7 +799,7 @@ async function scrapeStore(store, categories, proxyUrl, maxPages, requirePickup)
   }
 
   await context.close().catch(() => {});
-  if (!cdpUrl) {
+  if (!cdpUrl && browser) {
     await browser.close().catch(() => {});
   }
   return allResults.length;

@@ -3,7 +3,8 @@
     {"store_id": "0004", "name": "Rainier", "city": "Seattle", "state": "WA", "zip": "98144"}
   ],
   "categories": [
-    {"name": "Lumber", "url": "https://www.lowes.com/pl/Lumber-Building-supplies/4294850532"}
+    {"name": "Clearance", "url": "https://www.lowes.com/pl/The-back-aisle/2021454685607"}
   ],
-  "max_pages_per_category": 1
+  "max_pages_per_category": 1,
+  "proxy_country_code": "US"
 }
