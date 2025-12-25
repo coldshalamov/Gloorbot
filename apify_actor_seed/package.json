@@ -1,0 +1,19 @@
+{
+  "name": "lowes-pickup-today-scraper",
+  "version": "3.0.0",
+  "description": "Lowe's pickup-today inventory scraper (JS + fingerprint-suite)",
+  "main": "src/main.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node src/main.js"
+  },
+  "dependencies": {
+    "apify": "^3.1.0",
+    "playwright": "^1.45.0",
+    "fingerprint-injector": "^2.1.0",
+    "fingerprint-generator": "^2.1.0",
+    "header-generator": "^2.1.0",
+    "js-yaml": "^4.1.0",
+    "p-limit": "^4.0.0"
+  }
+}

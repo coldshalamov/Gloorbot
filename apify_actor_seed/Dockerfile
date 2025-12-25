@@ -1,15 +1,14 @@
 # Headful Playwright-ready image with Xvfb for Akamai bypass
-FROM apify/actor-python-playwright:3.12
+FROM apify/actor-node-playwright:18
 
 # Copy all files
 COPY . ./
 
 # Install dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+RUN npm install --omit=dev
 
 # Set environment variables for headful mode
-ENV DISPLAY=:99
-ENV CHEAPSKATER_HEADLESS=false
+ENV APIFY_XVFB=1
 
 # Run the main Actor
-CMD ["python", "-m", "src.main"]
+CMD ["node", "src/main.js"]

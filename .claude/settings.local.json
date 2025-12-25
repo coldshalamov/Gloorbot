@@ -9,7 +9,11 @@
       "Bash(python run_validation_tests.py:*)",
       "Bash(where:*)",
       "Bash(test:*)",
-      "Bash(echo:*)"
+      "Bash(echo:*)",
+      "Bash(curl:*)",
+      "Bash(python apify_helper.py:*)",
+      "Bash(git clone:*)",
+      "Bash(python test_fingerprint_standalone.py:*)"
     ],
     "deny": [],
     "ask": []

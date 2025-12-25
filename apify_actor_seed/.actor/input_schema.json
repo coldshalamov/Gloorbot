@@ -33,6 +33,12 @@
             "default": 50,
             "minimum": 1,
             "maximum": 100
+        },
+        "proxy_country_code": {
+            "title": "Proxy Country Code",
+            "type": "string",
+            "description": "Apify proxy country code for residential proxies (e.g., US).",
+            "default": "US"
         }
     },
     "required": []
