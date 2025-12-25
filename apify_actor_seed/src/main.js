@@ -139,24 +139,32 @@ function skuFromUrl(url) {
 }
 
 async function setupRequestBlocking(page) {
+  // CRITICAL: Akamai detects aggressive resource blocking as bot behavior
+  // Real users load images, fonts, and tracking scripts
+  // Only block obvious third-party trackers that won't affect Akamai detection
   await page.route('**/*', async (route) => {
     const url = route.request().url().toLowerCase();
-    const resourceType = route.request().resourceType();
 
+    // NEVER block anything from lowes.com or Akamai
     if (url.includes('lowes.com') || url.includes('akamai') || url.includes('/_sec/')) {
       return route.continue();
     }
 
-    if (BLOCKED_RESOURCE_TYPES.has(resourceType)) {
-      return route.abort();
-    }
+    // Only block obvious third-party trackers (NOT images/fonts)
+    const blockPatterns = [
+      /google-analytics\.com/i,
+      /googletagmanager\.com/i,
+      /doubleclick\.net/i,
+      /facebook\.net/i,
+    ];
 
-    for (const pattern of BLOCKED_URL_PATTERNS) {
+    for (const pattern of blockPatterns) {
       if (pattern.test(url)) {
         return route.abort();
       }
     }
 
+    // Let everything else through - real users load images and fonts!
     return route.continue();
   });
 }
@@ -648,9 +656,14 @@ const CHROME_ARGS = [
   '--window-size=1440,960',
 ];
 
+// CRITICAL: Use real Chrome, not Chromium, to bypass Akamai
+// Chromium has detectable TLS/JA3 fingerprints
+const DEFAULT_BROWSER_CHANNEL = 'chrome';
+
 async function scrapeStore(store, categories, proxyUrl, maxPages, requirePickup) {
   const cdpUrl = process.env.CHEAPSKATER_CDP_URL;
-  const channel = process.env.CHEAPSKATER_BROWSER_CHANNEL;
+  // Use Chrome by default, override with CHEAPSKATER_BROWSER_CHANNEL env var
+  const channel = process.env.CHEAPSKATER_BROWSER_CHANNEL || DEFAULT_BROWSER_CHANNEL;
 
   let browser = null;
   let context = null;
@@ -669,8 +682,8 @@ async function scrapeStore(store, categories, proxyUrl, maxPages, requirePickup)
     const launchOptions = {
       headless: false,
       args: CHROME_ARGS,
+      channel: channel, // Always use Chrome channel
     };
-    if (channel) launchOptions.channel = channel;
     if (proxyUrl) launchOptions.proxy = { server: proxyUrl };
 
     browser = await chromium.launch(launchOptions);

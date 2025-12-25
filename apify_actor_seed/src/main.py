@@ -84,6 +84,29 @@ DEFAULT_MAX_PAGES = 50
 MIN_PRODUCTS_TO_CONTINUE = 6
 
 # =============================================================================
+# PICKUP SELECTORS
+# =============================================================================
+
+PICKUP_SELECTORS = [
+    'label:has-text("Get It Today")',
+    'label:has-text("Pickup Today")',
+    'label:has-text("Available Today")',
+    'label:has-text("Pickup")',
+    'div:has-text("Pickup Today")',
+    'button:has-text("Pickup")',
+    'button:has-text("Pickup Today")',
+    'button:has-text("Get It Today")',
+    'button:has-text("Get it today")',
+    '[data-testid*="pickup"]',
+    '[data-testid*="availability"]',
+    '[data-test-id*="pickup"]',
+    '[aria-label*="Pickup"]',
+    '[aria-label*="Get it today"]',
+    '[aria-label*="Available today"]',
+    'input[type="checkbox"][id*="pickup"]',
+]
+
+# =============================================================================
 # ANTI-FINGERPRINTING - RANDOMIZED USER AGENTS
 # =============================================================================
 
@@ -116,13 +139,13 @@ LOCALES = [
 def randomize_user_agent_enabled() -> bool:
     """Return True when explicit UA randomization is requested."""
 
-    return os.getenv("CHEAPSKATER_RANDOM_UA", "0").strip() == "1"
+    return os.getenv("CHEAPSKATER_RANDOM_UA", "1").strip() == "1"
 
 
 def randomize_locale_enabled() -> bool:
     """Return True when timezone/locale should be randomized."""
 
-    return os.getenv("CHEAPSKATER_RANDOM_TZLOCALE", "0").strip() == "1"
+    return os.getenv("CHEAPSKATER_RANDOM_TZLOCALE", "1").strip() == "1"
 
 
 def desired_timezone() -> str:
@@ -140,7 +163,7 @@ def desired_locale() -> str:
 def pickup_filter_enabled() -> bool:
     """Return True when pickup filter clicks should be attempted."""
 
-    return os.getenv("CHEAPSKATER_PICKUP_FILTER", "0").strip() == "1"
+    return os.getenv("CHEAPSKATER_PICKUP_FILTER", "1").strip() == "1"
 
 
 def resource_blocking_enabled() -> bool:
@@ -218,14 +241,36 @@ def fingerprint_injection_enabled() -> bool:
     return os.getenv("CHEAPSKATER_FINGERPRINT_INJECTION", "1").strip() == "1"
 
 
+def require_proxy_enabled() -> bool:
+    """Return True when the run should fail without a proxy."""
+
+    return os.getenv("CHEAPSKATER_REQUIRE_PROXY", "0").strip() == "1"
+
+
 def persistent_context_enabled() -> bool:
     """Return True when each store should use a persistent profile context."""
 
-    return os.getenv("CHEAPSKATER_PERSISTENT_CONTEXT", "0").strip() == "1"
+    return os.getenv("CHEAPSKATER_PERSISTENT_CONTEXT", "1").strip() == "1"
+
+
+def resolve_user_data_dir() -> str:
+    """Resolve the user data directory used to seed profiles."""
+
+    raw = os.getenv("CHEAPSKATER_USER_DATA_DIR")
+    if raw:
+        return raw
+
+    local = os.getenv("LOCALAPPDATA")
+    if local:
+        candidate = Path(local) / "Google" / "Chrome" / "User Data" / "Default"
+        if candidate.exists():
+            return str(candidate)
+
+    return ".playwright-profile/chromium"
 
 
 def _base_profile_dir() -> Path:
-    raw = os.getenv("CHEAPSKATER_USER_DATA_DIR") or ".playwright-profile/chromium"
+    raw = resolve_user_data_dir()
     path = Path(raw).expanduser()
     path.mkdir(parents=True, exist_ok=True)
     return path
@@ -335,6 +380,45 @@ def proxy_settings_from_url(proxy_url: str) -> dict[str, str]:
         settings["password"] = unquote(parsed.password)
 
     return settings
+
+
+def build_context_options() -> dict[str, Any]:
+    """Build randomized context options for Playwright."""
+
+    viewport_width = random.randint(1280, 1920)
+    viewport_height = random.randint(720, 1080)
+    if randomize_locale_enabled():
+        selected_timezone = random.choice(TIMEZONES)
+        selected_locale = random.choice(LOCALES)
+    else:
+        selected_timezone = "America/Los_Angeles"
+        selected_locale = "en-US"
+
+    if randomize_user_agent_enabled():
+        selected_ua = random.choice(USER_AGENTS)
+    else:
+        selected_ua = USER_AGENTS[0]
+
+    return {
+        "viewport": {"width": viewport_width, "height": viewport_height},
+        "timezone_id": selected_timezone,
+        "locale": selected_locale,
+        "user_agent": selected_ua,
+    }
+
+
+async def prime_session(page: Page, sleep_fn=asyncio.sleep) -> None:
+    """Prime the session by loading the homepage and scrolling lightly."""
+
+    try:
+        await page.goto(BASE_URL, wait_until="domcontentloaded", timeout=GOTO_TIMEOUT_MS)
+        await sleep_fn(random.uniform(1.0, 2.0))
+        await page.evaluate("window.scrollTo(0, document.body.scrollHeight * 0.25)")
+        await sleep_fn(random.uniform(0.3, 0.7))
+        await page.evaluate("window.scrollTo(0, 0)")
+        await sleep_fn(random.uniform(0.3, 0.7))
+    except Exception:
+        return
 
 
 async def compute_fingerprint_hash(page: Page) -> str:
@@ -834,18 +918,7 @@ async def apply_pickup_filter(page: Page, category_name: str) -> bool:
     Returns True if successfully applied and verified.
     """
 
-    pickup_selectors = [
-        'label:has-text("Get It Today")',
-        'label:has-text("Pickup Today")',
-        'label:has-text("Available Today")',
-        'button:has-text("Pickup")',
-        'button:has-text("Get It Today")',
-        'button:has-text("Get it fast")',
-        '[data-testid*="pickup"]',
-        '[aria-label*="Pickup"]',
-        '[aria-label*="Get it today"]',
-        'input[type="checkbox"][id*="pickup"]',
-    ]
+    pickup_selectors = PICKUP_SELECTORS
 
     availability_toggles = [
         'button:has-text("Availability")',
@@ -1172,11 +1245,32 @@ async def check_blocked(page: Page) -> bool:
 def build_url(base: str, offset: int = 0, store_id: str | None = None) -> str:
     parsed = urlparse(base)
     params = dict(parse_qsl(parsed.query, keep_blank_values=True))
+    params.setdefault("pickupType", "pickupToday")
+    params.setdefault("availability", "pickupToday")
+    params.setdefault("inStock", "1")
+    params.setdefault("rollUpVariants", "0")
     if offset > 0:
         params["offset"] = str(offset)
     if store_id and "storeNumber" not in {k for k in params}:
         params["storeNumber"] = store_id
     return parsed._replace(query=urlencode(params, doseq=True)).geturl()
+
+
+def build_search_url(term: str, store_id: str | None = None, offset: int = 0) -> str:
+    """Build a search URL with pickup-only filters."""
+
+    params = {
+        "searchTerm": term,
+        "pickupType": "pickupToday",
+        "availability": "pickupToday",
+        "inStock": "1",
+        "rollUpVariants": "0",
+    }
+    if offset > 0:
+        params["offset"] = str(offset)
+    if store_id:
+        params["storeNumber"] = store_id
+    return f"{BASE_URL}/search?{urlencode(params)}"
 
 
 async def scrape_category(
@@ -1201,14 +1295,26 @@ async def scrape_category(
             Actor.log.info(f"[{name}] Target URL: {target}")
 
         try:
+            fallback_used = False
             resp = await page.goto(target, wait_until="domcontentloaded", timeout=GOTO_TIMEOUT_MS)
 
             if resp and resp.status >= 400:
-                if resp.status == 404:
-                    Actor.log.warning(f"[{name}] 404 - skipping")
-                    break
-                Actor.log.warning(f"[{name}] HTTP {resp.status}")
-                continue
+                if resp.status == 403:
+                    fallback_target = build_search_url(name, store_id, offset)
+                    Actor.log.warning(f"[{name}] HTTP 403, retrying search fallback")
+                    resp = await page.goto(
+                        fallback_target,
+                        wait_until="domcontentloaded",
+                        timeout=GOTO_TIMEOUT_MS,
+                    )
+                    fallback_used = True
+
+                if resp and resp.status >= 400:
+                    if resp.status == 404:
+                        Actor.log.warning(f"[{name}] 404 - skipping")
+                        break
+                    Actor.log.warning(f"[{name}] HTTP {resp.status}")
+                    continue
 
             if not await _wait_for_akamai_clear(page):
                 Actor.log.error(f"[{name}] Akamai challenge did not clear")
@@ -1328,6 +1434,9 @@ async def main() -> None:
             Actor.log.info(f"Using proxy override for all stores: {_mask_proxy(proxy_override)}")
         else:
             Actor.log.warning("NO PROXY CONFIGURED - Akamai is likely to block this run")
+            if require_proxy_enabled():
+                Actor.log.error("Proxy requirement enforced by CHEAPSKATER_REQUIRE_PROXY")
+                return
 
         # Launch browser
         async with async_playwright() as pw:

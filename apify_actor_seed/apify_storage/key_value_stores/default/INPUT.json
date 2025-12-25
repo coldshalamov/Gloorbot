@@ -1,1 +1,9 @@
-{"maxPages": 1, "zipCode": "98101", "storeId": "1856", "proxyConfiguration": {"useApifyProxy": false}, "diagnostics": true, "fingerprintInjection": true}
+{
+  "stores": [
+    {"store_id": "0004", "name": "Rainier", "city": "Seattle", "state": "WA", "zip": "98144"}
+  ],
+  "categories": [
+    {"name": "Lumber", "url": "https://www.lowes.com/pl/Lumber-Building-supplies/4294850532"}
+  ],
+  "max_pages_per_category": 1
+}
