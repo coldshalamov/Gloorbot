@@ -208,9 +208,14 @@ def diagnostics_drift_check_enabled() -> bool:
 
 
 def fingerprint_injection_enabled() -> bool:
-    """Return True when custom fingerprint injection is enabled."""
+    """Return True when custom fingerprint injection is enabled.
 
-    return os.getenv("CHEAPSKATER_FINGERPRINT_INJECTION", "0").strip() == "1"
+    CRITICAL: Defaults to ENABLED because fingerprint injection is
+    essential for bypassing Akamai bot detection. This injects realistic
+    canvas, WebGL, audio context, and navigator fingerprints.
+    Set CHEAPSKATER_FINGERPRINT_INJECTION=0 to disable.
+    """
+    return os.getenv("CHEAPSKATER_FINGERPRINT_INJECTION", "1").strip() == "1"
 
 
 def persistent_context_enabled() -> bool:
