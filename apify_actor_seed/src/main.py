@@ -50,7 +50,7 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
-from urllib.parse import parse_qsl, urlencode, urlparse
+from urllib.parse import parse_qsl, urlencode, urlparse, unquote
 
 from apify import Actor
 from playwright.async_api import (
@@ -305,6 +305,25 @@ def _mask_proxy(proxy_url: str) -> str:
         return proxy_url
     host = f"{parsed.hostname}:{parsed.port}" if parsed.port else parsed.hostname
     return f"{parsed.scheme or 'http'}://{host}"
+
+
+def proxy_settings_from_url(proxy_url: str) -> dict[str, str]:
+    """Convert a proxy URL into Playwright proxy settings."""
+
+    parsed = urlparse(proxy_url)
+    if not parsed.hostname:
+        return {"server": proxy_url}
+
+    scheme = parsed.scheme or "http"
+    host = f"{parsed.hostname}:{parsed.port}" if parsed.port else parsed.hostname
+    settings: dict[str, str] = {"server": f"{scheme}://{host}"}
+
+    if parsed.username:
+        settings["username"] = unquote(parsed.username)
+    if parsed.password:
+        settings["password"] = unquote(parsed.password)
+
+    return settings
 
 
 async def compute_fingerprint_hash(page: Page) -> str:
@@ -1367,7 +1386,7 @@ async def main() -> None:
                 elif proxy_override:
                     proxy_url = proxy_override
                 if proxy_url:
-                    context_opts["proxy"] = {"server": proxy_url}
+                    context_opts["proxy"] = proxy_settings_from_url(proxy_url)
                     if diagnostics_enabled():
                         Actor.log.info(f"[{store_name}] Proxy: {_mask_proxy(proxy_url)}")
                 elif diagnostics_enabled():
@@ -1386,7 +1405,7 @@ async def main() -> None:
                     if channel:
                         launch_opts["channel"] = channel
                     if proxy_url:
-                        launch_opts["proxy"] = {"server": proxy_url}
+                        launch_opts["proxy"] = proxy_settings_from_url(proxy_url)
                     context = await pw.chromium.launch_persistent_context(
                         str(profile_dir),
                         **launch_opts,
