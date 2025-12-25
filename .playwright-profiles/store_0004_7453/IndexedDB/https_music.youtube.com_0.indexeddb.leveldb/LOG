@@ -1,0 +1,12 @@
+2025/08/05-20:06:27.028 b48 Reusing MANIFEST C:\Users\User\AppData\Local\Google\Chrome\User Data\Default\IndexedDB\https_music.youtube.com_0.indexeddb.leveldb/MANIFEST-000001
+2025/08/05-20:06:27.028 b48 Recovering log #4
+2025/08/05-20:06:27.035 b48 Reusing old log C:\Users\User\AppData\Local\Google\Chrome\User Data\Default\IndexedDB\https_music.youtube.com_0.indexeddb.leveldb/000004.log 
+2025/08/05-20:35:02.070 b48 Level-0 table #8: started
+2025/08/05-20:35:02.080 b48 Level-0 table #8: 1231817 bytes OK
+2025/08/05-20:35:02.082 b48 Delete type=0 #4
+2025/08/05-20:45:19.494 1348 Compacting 1@1 + 1@2 files
+2025/08/05-20:45:19.499 1348 Generated table #9@1: 467 keys, 34560 bytes
+2025/08/05-20:45:19.499 1348 Compacted 1@1 + 1@2 files => 34560 bytes
+2025/08/05-20:45:19.501 1348 compacted to: files[ 0 0 1 0 0 0 0 ]
+2025/08/05-20:45:19.501 1348 Delete type=2 #5
+2025/08/05-20:45:19.501 1348 Delete type=2 #8

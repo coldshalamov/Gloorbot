@@ -1,0 +1,24 @@
+2025/12/15-10:25:32.377 3adc Reusing MANIFEST C:\Users\User\AppData\Local\Google\Chrome\User Data\Default\IndexedDB\https_mail.google.com_0.indexeddb.leveldb/MANIFEST-000001
+2025/12/15-10:25:32.377 3adc Recovering log #16
+2025/12/15-10:25:32.383 3adc Reusing old log C:\Users\User\AppData\Local\Google\Chrome\User Data\Default\IndexedDB\https_mail.google.com_0.indexeddb.leveldb/000016.log 
+2025/12/15-10:25:48.241 3a70 Level-0 table #21: started
+2025/12/15-10:25:48.268 3a70 Level-0 table #21: 3085018 bytes OK
+2025/12/15-10:25:48.270 3a70 Delete type=0 #16
+2025/12/15-10:25:54.853 3a70 Compacting 1@1 + 1@2 files
+2025/12/15-10:25:54.867 3a70 Generated table #22@1: 234 keys, 1148871 bytes
+2025/12/15-10:25:54.867 3a70 Compacted 1@1 + 1@2 files => 1148871 bytes
+2025/12/15-10:25:54.868 3a70 compacted to: files[ 0 0 1 0 0 0 0 ]
+2025/12/15-10:25:54.868 3a70 Delete type=2 #18
+2025/12/15-10:25:54.868 3a70 Delete type=2 #21
+2025/12/16-06:45:28.677 3adc Level-0 table #24: started
+2025/12/16-06:45:28.706 3adc Level-0 table #24: 2982744 bytes OK
+2025/12/16-06:45:28.708 3adc Delete type=0 #20
+2025/12/16-06:45:28.709 3adc Manual compaction at level-0 from (begin) .. (end); will stop at (end)
+2025/12/16-06:45:28.709 3adc Manual compaction at level-1 from (begin) .. (end); will stop at '\x00\x01\x01\x02\x01(\x00S\x00t\x00o\x00r\x00e\x00d\x00N\x00e\x00t\x00w\x00o\x00r\x00k\x00F\x00e\x00t\x00c\x00h\x00C\x00o\x00u\x00n\x00t\x00e\x00r\x00s\x00:\x00:\x00S\x00T\x00A\x00T\x00I\x00C\x00_\x00A\x00S\x00S\x00E\x00T' @ 14135 : 0
+2025/12/16-06:45:28.709 3adc Compacting 1@1 + 1@2 files
+2025/12/16-06:45:28.725 3adc Generated table #25@1: 110 keys, 312954 bytes
+2025/12/16-06:45:28.725 3adc Compacted 1@1 + 1@2 files => 312954 bytes
+2025/12/16-06:45:28.726 3adc compacted to: files[ 0 0 1 0 0 0 0 ]
+2025/12/16-06:45:28.726 3adc Delete type=2 #22
+2025/12/16-06:45:28.726 3adc Delete type=2 #24
+2025/12/16-06:45:28.727 3adc Manual compaction at level-1 from '\x00\x01\x01\x02\x01(\x00S\x00t\x00o\x00r\x00e\x00d\x00N\x00e\x00t\x00w\x00o\x00r\x00k\x00F\x00e\x00t\x00c\x00h\x00C\x00o\x00u\x00n\x00t\x00e\x00r\x00s\x00:\x00:\x00S\x00T\x00A\x00T\x00I\x00C\x00_\x00A\x00S\x00S\x00E\x00T' @ 14135 : 0 .. (end); will stop at (end)

@@ -1,0 +1,11 @@
+2025/12/25-10:45:28.370 36bb4 Reusing MANIFEST C:\Users\User\Documents\GitHub\Telomere\Gloorbot\apify_actor_seed\.playwright-profiles\store_0004\Default\Local Storage\leveldb/MANIFEST-000001
+2025/12/25-10:45:28.377 36bb4 Recovering log #6
+2025/12/25-10:45:28.378 36bb4 Level-0 table #9: started
+2025/12/25-10:45:28.384 36bb4 Level-0 table #9: 31668 bytes OK
+2025/12/25-10:45:28.396 36bb4 Delete type=0 #6
+2025/12/25-10:46:25.341 3b920 Level-0 table #12: started
+2025/12/25-10:46:25.351 3b920 Level-0 table #12: 200390 bytes OK
+2025/12/25-10:46:25.354 3b920 Delete type=0 #10
+2025/12/25-10:47:32.133 3b920 Level-0 table #14: started
+2025/12/25-10:47:32.140 3b920 Level-0 table #14: 35544 bytes OK
+2025/12/25-10:47:32.142 3b920 Delete type=0 #11

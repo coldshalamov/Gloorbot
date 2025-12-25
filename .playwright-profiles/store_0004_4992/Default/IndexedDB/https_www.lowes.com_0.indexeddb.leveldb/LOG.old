@@ -1,0 +1,10 @@
+2025/12/25-10:23:10.440 2e33c Creating DB C:\Users\User\Documents\GitHub\Telomere\Gloorbot\.playwright-profiles\store_0004_4992\Default\IndexedDB\https_www.lowes.com_0.indexeddb.leveldb since it was missing.
+2025/12/25-10:23:10.446 2e33c Reusing MANIFEST C:\Users\User\Documents\GitHub\Telomere\Gloorbot\.playwright-profiles\store_0004_4992\Default\IndexedDB\https_www.lowes.com_0.indexeddb.leveldb/MANIFEST-000001
+2025/12/25-10:23:11.282 15140 Level-0 table #5: started
+2025/12/25-10:23:11.285 15140 Level-0 table #5: 2416 bytes OK
+2025/12/25-10:23:11.287 15140 Delete type=0 #3
+2025/12/25-10:23:11.287 180ec Manual compaction at level-0 from '\x00\x02\x00\x00\x00' @ 72057594037927935 : 1 .. '\x00\x03\x00\x00\x00' @ 0 : 0; will stop at (end)
+2025/12/25-10:23:12.364 15140 Level-0 table #7: started
+2025/12/25-10:23:12.366 15140 Level-0 table #7: 1839 bytes OK
+2025/12/25-10:23:12.368 15140 Delete type=0 #4
+2025/12/25-10:23:12.369 180ec Manual compaction at level-0 from '\x00\x03\x00\x00\x00' @ 72057594037927935 : 1 .. '\x00\x04\x00\x00\x00' @ 0 : 0; will stop at (end)

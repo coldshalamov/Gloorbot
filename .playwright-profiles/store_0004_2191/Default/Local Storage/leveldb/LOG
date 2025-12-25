@@ -1,0 +1,8 @@
+2025/12/25-10:19:18.860 be34 Creating DB C:\Users\User\Documents\GitHub\Telomere\Gloorbot\.playwright-profiles\store_0004_2191\Default\Local Storage\leveldb since it was missing.
+2025/12/25-10:19:18.940 be34 Reusing MANIFEST C:\Users\User\Documents\GitHub\Telomere\Gloorbot\.playwright-profiles\store_0004_2191\Default\Local Storage\leveldb/MANIFEST-000001
+2025/12/25-10:19:57.301 c860 Level-0 table #5: started
+2025/12/25-10:19:57.313 c860 Level-0 table #5: 385450 bytes OK
+2025/12/25-10:19:57.316 c860 Delete type=0 #3
+2025/12/25-10:20:22.274 c860 Level-0 table #7: started
+2025/12/25-10:20:22.278 c860 Level-0 table #7: 27218 bytes OK
+2025/12/25-10:20:22.281 c860 Delete type=0 #4

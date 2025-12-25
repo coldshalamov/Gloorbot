@@ -1,0 +1,17 @@
+2025/12/25-10:39:52.952 7180 Reusing MANIFEST C:\Users\User\Documents\GitHub\Telomere\Gloorbot\apify_actor_seed\.playwright-profiles\lowes-scraper\Default\Local Storage\leveldb/MANIFEST-000001
+2025/12/25-10:39:52.961 7180 Recovering log #12
+2025/12/25-10:39:52.961 7180 Level-0 table #14: started
+2025/12/25-10:39:52.969 7180 Level-0 table #14: 29641 bytes OK
+2025/12/25-10:39:52.970 7180 Recovering log #13
+2025/12/25-10:39:52.974 7180 Reusing old log C:\Users\User\Documents\GitHub\Telomere\Gloorbot\apify_actor_seed\.playwright-profiles\lowes-scraper\Default\Local Storage\leveldb/000013.log 
+2025/12/25-10:39:52.978 7180 Delete type=0 #12
+2025/12/25-10:39:52.978 4b470 Compacting 4@0 + 0@1 files
+2025/12/25-10:39:52.992 4b470 Generated table #15@0: 75 keys, 18848 bytes
+2025/12/25-10:39:52.993 4b470 Compacted 4@0 + 0@1 files => 18848 bytes
+2025/12/25-10:39:52.994 4b470 compacted to: files[ 0 1 1 0 0 0 0 ]
+2025/12/25-10:39:52.998 4b470 Delete type=2 #7
+2025/12/25-10:39:52.998 4b470 Delete type=2 #10
+2025/12/25-10:39:52.998 4b470 Delete type=2 #12
+2025/12/25-10:39:52.999 4b470 Delete type=2 #14
+2025/12/25-10:40:51.927 4b470 Level-0 table #17: started
+2025/12/25-10:40:51.934 4b470 Level-0 table #17: 30841 bytes OK

@@ -1,0 +1,53 @@
+2025/07/22-18:37:15.872 2594 Reusing MANIFEST C:\Users\User\AppData\Local\Google\Chrome\User Data\Default\IndexedDB\https_www.reddit.com_0.indexeddb.leveldb/MANIFEST-000001
+2025/07/22-18:37:15.872 2594 Recovering log #69
+2025/07/22-18:37:15.884 2594 Reusing old log C:\Users\User\AppData\Local\Google\Chrome\User Data\Default\IndexedDB\https_www.reddit.com_0.indexeddb.leveldb/000069.log 
+2025/07/22-18:37:15.884 2594 Delete type=2 #68
+2025/07/22-18:37:15.885 2594 Delete type=2 #70
+2025/07/22-18:59:26.985 20c4 Level-0 table #74: started
+2025/07/22-18:59:26.998 20c4 Level-0 table #74: 1145215 bytes OK
+2025/07/22-18:59:26.999 20c4 Delete type=0 #69
+2025/07/22-19:17:41.507 20c4 Compacting 1@1 + 1@2 files
+2025/07/22-19:17:41.513 20c4 Generated table #75@1: 147 keys, 12140 bytes
+2025/07/22-19:17:41.514 20c4 Compacted 1@1 + 1@2 files => 12140 bytes
+2025/07/22-19:17:41.515 20c4 compacted to: files[ 0 0 1 0 0 0 0 ]
+2025/07/24-19:17:28.835 27fc Level-0 table #77: started
+2025/07/24-19:17:28.846 27fc Level-0 table #77: 1145306 bytes OK
+2025/07/24-19:17:28.848 27fc Delete type=2 #71
+2025/07/24-19:17:28.848 27fc Delete type=0 #73
+2025/07/24-19:17:28.848 27fc Delete type=2 #74
+2025/07/24-19:28:03.646 20c4 Compacting 1@1 + 1@2 files
+2025/07/24-19:28:03.654 20c4 Generated table #78@1: 150 keys, 14438 bytes
+2025/07/24-19:28:03.654 20c4 Compacted 1@1 + 1@2 files => 14438 bytes
+2025/07/24-19:28:03.655 20c4 compacted to: files[ 0 0 1 0 0 0 0 ]
+2025/07/25-14:29:42.146 20c4 Level-0 table #80: started
+2025/07/25-14:29:42.161 20c4 Level-0 table #80: 1142111 bytes OK
+2025/07/25-14:29:42.162 20c4 Delete type=2 #75
+2025/07/25-14:29:42.162 20c4 Delete type=0 #76
+2025/07/25-14:29:42.163 20c4 Delete type=2 #77
+2025/07/25-14:37:15.019 1114 Compacting 1@1 + 1@2 files
+2025/07/25-14:37:15.025 1114 Generated table #81@1: 147 keys, 12149 bytes
+2025/07/25-14:37:15.025 1114 Compacted 1@1 + 1@2 files => 12149 bytes
+2025/07/25-14:37:15.026 1114 compacted to: files[ 0 0 1 0 0 0 0 ]
+2025/07/25-14:37:15.026 1114 Delete type=2 #78
+2025/07/25-14:37:15.026 1114 Delete type=2 #80
+2025/07/25-15:44:19.461 1114 Level-0 table #83: started
+2025/07/25-15:44:19.472 1114 Level-0 table #83: 1143083 bytes OK
+2025/07/25-15:44:19.473 1114 Delete type=0 #79
+2025/07/25-15:54:53.611 20c4 Compacting 1@1 + 1@2 files
+2025/07/25-15:54:53.620 20c4 Generated table #84@1: 150 keys, 14451 bytes
+2025/07/25-15:54:53.620 20c4 Compacted 1@1 + 1@2 files => 14451 bytes
+2025/07/25-15:54:53.622 20c4 compacted to: files[ 0 0 1 0 0 0 0 ]
+2025/07/25-15:54:53.622 20c4 Delete type=2 #81
+2025/07/25-15:54:53.622 20c4 Delete type=2 #83
+2025/07/25-18:04:04.082 1114 Level-0 table #86: started
+2025/07/25-18:04:04.094 1114 Level-0 table #86: 1139943 bytes OK
+2025/07/25-18:04:04.096 1114 Delete type=0 #82
+2025/07/25-18:14:10.343 1114 Compacting 1@1 + 1@2 files
+2025/07/25-18:14:10.352 1114 Generated table #87@1: 145 keys, 10371 bytes
+2025/07/25-18:14:10.352 1114 Compacted 1@1 + 1@2 files => 10371 bytes
+2025/07/25-18:14:10.354 1114 compacted to: files[ 0 0 1 0 0 0 0 ]
+2025/08/04-19:49:44.289 1114 Level-0 table #89: started
+2025/08/04-19:49:44.302 1114 Level-0 table #89: 1149574 bytes OK
+2025/08/04-19:49:44.304 1114 Delete type=2 #84
+2025/08/04-19:49:44.304 1114 Delete type=0 #85
+2025/08/04-19:49:44.305 1114 Delete type=2 #86

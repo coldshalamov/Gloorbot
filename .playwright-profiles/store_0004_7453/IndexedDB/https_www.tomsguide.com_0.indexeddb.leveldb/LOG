@@ -1,0 +1,6 @@
+2025/07/17-19:28:35.303 1ec0 Reusing MANIFEST C:\Users\User\AppData\Local\Google\Chrome\User Data\Default\IndexedDB\https_www.tomsguide.com_0.indexeddb.leveldb/MANIFEST-000001
+2025/07/17-19:28:35.303 1ec0 Recovering log #3
+2025/07/17-19:28:35.306 1ec0 Reusing old log C:\Users\User\AppData\Local\Google\Chrome\User Data\Default\IndexedDB\https_www.tomsguide.com_0.indexeddb.leveldb/000003.log 
+2025/07/17-19:28:49.348 1ec0 Level-0 table #5: started
+2025/07/17-19:28:49.368 1ec0 Level-0 table #5: 4196504 bytes OK
+2025/07/17-19:28:49.370 1ec0 Delete type=0 #3

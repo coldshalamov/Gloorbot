@@ -1,0 +1,30 @@
+2025/07/19-23:22:09.452 2058 Creating DB C:\Users\User\AppData\Local\Google\Chrome\User Data\Default\WebStorage\31\IndexedDB\indexeddb.leveldb since it was missing.
+2025/07/19-23:22:09.461 2058 Reusing MANIFEST C:\Users\User\AppData\Local\Google\Chrome\User Data\Default\WebStorage\31\IndexedDB\indexeddb.leveldb/MANIFEST-000001
+2025/07/19-23:22:09.488 a68 Level-0 table #5: started
+2025/07/19-23:22:09.492 a68 Level-0 table #5: 1623 bytes OK
+2025/07/19-23:22:09.495 a68 Delete type=0 #3
+2025/07/19-23:22:09.495 2058 Manual compaction at level-0 from '\x00\x01\x00\x00\x00' @ 72057594037927935 : 1 .. '\x00\x02\x00\x00\x00' @ 0 : 0; will stop at (end)
+2025/07/19-23:22:31.742 c78 Level-0 table #7: started
+2025/07/19-23:22:31.745 c78 Level-0 table #7: 1029 bytes OK
+2025/07/19-23:22:31.748 c78 Delete type=0 #4
+2025/07/19-23:22:31.748 2058 Manual compaction at level-0 from '\x00\x01\x00\x00\x00' @ 72057594037927935 : 1 .. '\x00\x02\x00\x00\x00' @ 0 : 0; will stop at (end)
+2025/07/19-23:22:31.748 2058 Manual compaction at level-1 from '\x00\x01\x00\x00\x00' @ 72057594037927935 : 1 .. '\x00\x02\x00\x00\x00' @ 0 : 0; will stop at '\x00\x02\x01\x1f\x03\x00\x00\xc5\xf3g\x82yB\x00\x01\x18\x000\x003\x001\x009\x00a\x005\x008\x007\x009\x005\x00c\x008\x00a\x008\x002\x003\x00b\x00c\x004\x008\x00f\x004\x009\x00c' @ 128 : 1
+2025/07/19-23:22:31.748 2058 Compacting 1@1 + 1@2 files
+2025/07/19-23:22:31.750 2058 Generated table #8@1: 27 keys, 761 bytes
+2025/07/19-23:22:31.751 2058 Compacted 1@1 + 1@2 files => 761 bytes
+2025/07/19-23:22:31.752 2058 compacted to: files[ 0 0 1 0 0 0 0 ]
+2025/07/19-23:22:31.753 2058 Delete type=2 #7
+2025/07/19-23:22:31.753 2058 Manual compaction at level-1 from '\x00\x02\x01\x1f\x03\x00\x00\xc5\xf3g\x82yB\x00\x01\x18\x000\x003\x001\x009\x00a\x005\x008\x007\x009\x005\x00c\x008\x00a\x008\x002\x003\x00b\x00c\x004\x008\x00f\x004\x009\x00c' @ 128 : 1 .. '\x00\x02\x00\x00\x00' @ 0 : 0; will stop at (end)
+2025/07/19-23:22:33.757 107c Level-0 table #10: started
+2025/07/19-23:22:33.760 107c Level-0 table #10: 261 bytes OK
+2025/07/19-23:22:33.762 107c Delete type=2 #5
+2025/07/19-23:22:33.762 107c Delete type=0 #6
+2025/07/19-23:22:33.762 107c Manual compaction at level-0 from (begin) .. (end); will stop at (end)
+2025/07/19-23:22:33.762 107c Manual compaction at level-1 from (begin) .. (end); will stop at '\x00\x00\x00\x002\x02\x07\x01\x00\x00\x00\x00\x00\x00\x00\x00' @ 163 : 0
+2025/07/19-23:22:33.762 107c Compacting 1@1 + 1@2 files
+2025/07/19-23:22:33.764 107c Generated table #11@1: 26 keys, 745 bytes
+2025/07/19-23:22:33.764 107c Compacted 1@1 + 1@2 files => 745 bytes
+2025/07/19-23:22:33.765 107c compacted to: files[ 0 0 1 0 0 0 0 ]
+2025/07/19-23:22:33.765 107c Delete type=2 #8
+2025/07/19-23:22:33.766 107c Delete type=2 #10
+2025/07/19-23:22:33.766 107c Manual compaction at level-1 from '\x00\x00\x00\x002\x02\x07\x01\x00\x00\x00\x00\x00\x00\x00\x00' @ 163 : 0 .. (end); will stop at (end)

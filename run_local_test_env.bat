@@ -1,0 +1,12 @@
+@echo off
+set APIFY_LOCAL_STORAGE_DIR=c:\Users\User\Documents\GitHub\Telomere\Gloorbot\apify_actor_seed\apify_storage
+set CHEAPSKATER_DIAGNOSTICS=1
+set CHEAPSKATER_DEBUG_BLOCKING=1
+set CHEAPSKATER_FINGERPRINT_INJECTION=1
+set CHEAPSKATER_RANDOM_UA=1
+set CHEAPSKATER_RANDOM_TZLOCALE=1
+set CHEAPSKATER_PERSISTENT_CONTEXT=1
+set CHEAPSKATER_BROWSER_CHANNEL=chrome
+set CHEAPSKATER_BLOCK_RESOURCES=0
+set CHEAPSKATER_TEST_MODE=1
+python c:\Users\User\Documents\GitHub\Telomere\Gloorbot\apify_actor_seed\src\main.py

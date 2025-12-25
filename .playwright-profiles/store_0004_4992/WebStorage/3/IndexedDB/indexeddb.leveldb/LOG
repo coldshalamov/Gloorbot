@@ -1,0 +1,15 @@
+2025/12/13-13:10:54.378 3a70 Reusing MANIFEST C:\Users\User\AppData\Local\Google\Chrome\User Data\Default\WebStorage\3\IndexedDB\indexeddb.leveldb/MANIFEST-000001
+2025/12/13-13:10:54.378 3a70 Recovering log #4
+2025/12/13-13:10:54.383 3a70 Reusing old log C:\Users\User\AppData\Local\Google\Chrome\User Data\Default\WebStorage\3\IndexedDB\indexeddb.leveldb/000004.log 
+2025/12/13-13:20:56.419 3adc Level-0 table #8: started
+2025/12/13-13:20:56.424 3adc Level-0 table #8: 418431 bytes OK
+2025/12/13-13:20:56.426 3adc Delete type=0 #4
+2025/12/13-13:20:56.426 3adc Manual compaction at level-0 from (begin) .. (end); will stop at (end)
+2025/12/13-13:20:56.426 3adc Manual compaction at level-1 from (begin) .. (end); will stop at '\x00\x03\x00\x00\xc8\x0b\x00S\x00W\x00H\x00e\x00a\x00l\x00t\x00h\x00L\x00o\x00g' @ 1142 : 1
+2025/12/13-13:20:56.426 3adc Compacting 1@1 + 1@2 files
+2025/12/13-13:20:56.429 3adc Generated table #9@1: 77 keys, 9038 bytes
+2025/12/13-13:20:56.429 3adc Compacted 1@1 + 1@2 files => 9038 bytes
+2025/12/13-13:20:56.430 3adc compacted to: files[ 0 0 1 0 0 0 0 ]
+2025/12/13-13:20:56.431 3adc Delete type=2 #5
+2025/12/13-13:20:56.431 3adc Delete type=2 #8
+2025/12/13-13:20:56.431 3adc Manual compaction at level-1 from '\x00\x03\x00\x00\xc8\x0b\x00S\x00W\x00H\x00e\x00a\x00l\x00t\x00h\x00L\x00o\x00g' @ 1142 : 1 .. (end); will stop at (end)

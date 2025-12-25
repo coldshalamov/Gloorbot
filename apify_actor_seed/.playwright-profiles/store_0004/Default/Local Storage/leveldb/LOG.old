@@ -1,0 +1,8 @@
+2025/12/25-10:42:24.427 225a8 Creating DB C:\Users\User\Documents\GitHub\Telomere\Gloorbot\apify_actor_seed\.playwright-profiles\store_0004\Default\Local Storage\leveldb since it was missing.
+2025/12/25-10:42:24.515 225a8 Reusing MANIFEST C:\Users\User\Documents\GitHub\Telomere\Gloorbot\apify_actor_seed\.playwright-profiles\store_0004\Default\Local Storage\leveldb/MANIFEST-000001
+2025/12/25-10:43:07.621 4c894 Level-0 table #5: started
+2025/12/25-10:43:07.629 4c894 Level-0 table #5: 45869 bytes OK
+2025/12/25-10:43:07.634 4c894 Delete type=0 #3
+2025/12/25-10:44:25.882 4c894 Level-0 table #7: started
+2025/12/25-10:44:25.893 4c894 Level-0 table #7: 71200 bytes OK
+2025/12/25-10:44:25.896 4c894 Delete type=0 #4
