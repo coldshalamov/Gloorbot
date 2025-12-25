@@ -1,0 +1,14 @@
+2025/12/23-06:01:52.056 366c4 Reusing MANIFEST C:\Users\User\Documents\GitHub\Telomere\Gloorbot\.playwright-profiles\store_0061_4871\Default\IndexedDB\https_www.lowes.com_0.indexeddb.leveldb/MANIFEST-000001
+2025/12/23-06:01:52.057 366c4 Recovering log #6
+2025/12/23-06:01:52.057 366c4 Reusing old log C:\Users\User\Documents\GitHub\Telomere\Gloorbot\.playwright-profiles\store_0061_4871\Default\IndexedDB\https_www.lowes.com_0.indexeddb.leveldb/000006.log 
+2025/12/23-06:01:52.868 39cb4 Manual compaction at level-0 from '\x00\x06\x00\x00\x00' @ 72057594037927935 : 1 .. '\x00\x07\x00\x00\x00' @ 0 : 0; will stop at (end)
+2025/12/23-06:01:53.993 1b8b4 Level-0 table #10: started
+2025/12/23-06:01:53.996 1b8b4 Level-0 table #10: 3851 bytes OK
+2025/12/23-06:01:53.998 1b8b4 Delete type=0 #6
+2025/12/23-06:01:53.999 366c4 Manual compaction at level-0 from '\x00\x07\x00\x00\x00' @ 72057594037927935 : 1 .. '\x00\x08\x00\x00\x00' @ 0 : 0; will stop at '\x00\x07\x01\x03\x03\x00\x00\x00\x00\x00\x00\xf0?' @ 521 : 1
+2025/12/23-06:01:53.999 366c4 Compacting 1@0 + 1@1 files
+2025/12/23-06:01:54.001 366c4 Generated table #11@0: 146 keys, 2318 bytes
+2025/12/23-06:01:54.001 366c4 Compacted 1@0 + 1@1 files => 2318 bytes
+2025/12/23-06:01:54.003 366c4 compacted to: files[ 0 1 1 0 0 0 0 ]
+2025/12/23-06:01:54.003 366c4 Delete type=2 #10
+2025/12/23-06:01:54.004 366c4 Manual compaction at level-0 from '\x00\x07\x01\x03\x03\x00\x00\x00\x00\x00\x00\xf0?' @ 521 : 1 .. '\x00\x08\x00\x00\x00' @ 0 : 0; will stop at (end)

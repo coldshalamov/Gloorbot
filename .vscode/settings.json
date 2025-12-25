@@ -2,5 +2,12 @@
     "claudeCode.allowDangerouslySkipPermissions": true,
     "claudeCode.disableLoginPrompt": true,
     "claudeCode.initialPermissionMode": "bypassPermissions",
-    "claudeCode.respectGitIgnore": false
+    "claudeCode.respectGitIgnore": false,
+    "antigravity.ghostFeatures": true,
+    "antigravity.webSearch": true,
+    "antigravity.fullSandboxAccess": "dangerfull",
+    "antigravity.approvalPolicy": "never",
+    "antigravity.unifiedExec": true,
+    "antigravity.streamableShell": true,
+    "antigravity.applyPatchFreeform": true
 }

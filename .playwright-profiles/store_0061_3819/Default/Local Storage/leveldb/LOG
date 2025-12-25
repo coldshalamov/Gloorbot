@@ -1,0 +1,24 @@
+2025/12/23-05:50:24.814 33730 Reusing MANIFEST C:\Users\User\Documents\GitHub\Telomere\Gloorbot\.playwright-profiles\store_0061_3819\Default\Local Storage\leveldb/MANIFEST-000001
+2025/12/23-05:50:24.844 33730 Recovering log #6
+2025/12/23-05:50:24.844 33730 Level-0 table #9: started
+2025/12/23-05:50:24.864 33730 Level-0 table #9: 50735 bytes OK
+2025/12/23-05:50:24.877 33730 Recovering log #8
+2025/12/23-05:50:24.886 33730 Level-0 table #10: started
+2025/12/23-05:50:24.934 33730 Level-0 table #10: 368764 bytes OK
+2025/12/23-05:50:24.946 33730 Delete type=0 #6
+2025/12/23-05:50:24.946 33730 Delete type=0 #8
+2025/12/23-05:51:45.124 5568 Level-0 table #13: started
+2025/12/23-05:51:45.134 5568 Level-0 table #13: 312949 bytes OK
+2025/12/23-05:51:45.140 5568 Delete type=0 #11
+2025/12/23-05:52:18.828 5568 Level-0 table #15: started
+2025/12/23-05:52:18.835 5568 Level-0 table #15: 25762 bytes OK
+2025/12/23-05:52:18.839 5568 Delete type=0 #12
+2025/12/23-05:52:18.861 5568 Compacting 4@0 + 1@1 files
+2025/12/23-05:52:18.882 5568 Generated table #16@0: 85 keys, 46894 bytes
+2025/12/23-05:52:18.882 5568 Compacted 4@0 + 1@1 files => 46894 bytes
+2025/12/23-05:52:18.887 5568 compacted to: files[ 0 1 1 0 0 0 0 ]
+2025/12/23-05:52:18.888 5568 Delete type=2 #7
+2025/12/23-05:52:18.889 5568 Delete type=2 #9
+2025/12/23-05:52:18.889 5568 Delete type=2 #10
+2025/12/23-05:52:18.889 5568 Delete type=2 #13
+2025/12/23-05:52:18.889 5568 Delete type=2 #15
