@@ -156,13 +156,19 @@ def store_context_enabled() -> bool:
 
 
 def browser_channel() -> str | None:
-    """Return a Playwright browser channel override (e.g., chrome, msedge)."""
+    """Return a Playwright browser channel override (e.g., chrome, msedge).
 
+    CRITICAL: Defaults to 'chrome' because Akamai can detect Chromium's
+    automation fingerprint. Real Chrome has different TLS/JA3 signatures
+    that are harder to detect. Set CHEAPSKATER_BROWSER_CHANNEL=chromium
+    to use Chromium instead.
+    """
     raw = os.getenv("CHEAPSKATER_BROWSER_CHANNEL")
     if not raw:
-        return None
+        # DEFAULT TO CHROME - Akamai blocks Chromium's automation fingerprint
+        return "chrome"
     trimmed = raw.strip()
-    return trimmed or None
+    return trimmed or "chrome"
 
 
 def diagnostics_enabled() -> bool:
