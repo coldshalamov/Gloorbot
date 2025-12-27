@@ -1,0 +1,1263 @@
+[
+  {
+    "c_url": "https://www.lowes.com/c/Appliance-parts-accessories-Appliances",
+    "blocked": false,
+    "shop_all_pl": [],
+    "show_more_clicked": false,
+    "title": "Appliance Parts & Accessories"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Commercial-appliances-Appliances",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/commercial-appliances/4294386835"
+    ],
+    "show_more_clicked": false,
+    "title": "Commercial Appliances at Lowes.com"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Cooktops-Appliances",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/cooktops/4294715801",
+      "https://www.lowes.com/pl/appliance-parts-accessories/cooktop-range-parts/1006930184"
+    ],
+    "show_more_clicked": false,
+    "title": "Cooktops at Lowes.com"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Dishwashers-Appliances",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/dishwashers/4294857925",
+      "https://www.lowes.com/pl/appliance-parts-accessories/dishwasher-parts/554129471"
+    ],
+    "show_more_clicked": false,
+    "title": "Dishwashers at Lowes.com"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Freezers-Appliances",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/freezers/4294857904"
+    ],
+    "show_more_clicked": false,
+    "title": "Freezers at Lowes.com"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Microwaves-Appliances",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/microwaves/4294715798"
+    ],
+    "show_more_clicked": false,
+    "title": "Microwaves & Microwave Ovens | Lowe's"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Range-hoods-Appliances",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/range-hoods/4294696750"
+    ],
+    "show_more_clicked": false,
+    "title": "Range Hoods at Lowe\u2019s"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Ranges-Appliances",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/ranges/4294715792"
+    ],
+    "show_more_clicked": false,
+    "title": "Ranges at Lowes.com"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Refrigerators-Appliances",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/refrigerators/4294857973",
+      "https://www.lowes.com/pl/appliance-parts-accessories/refrigerator-parts/861762907"
+    ],
+    "show_more_clicked": false,
+    "title": "Refrigerators at Lowe\u2019s"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Small-appliances-Appliances",
+    "blocked": false,
+    "shop_all_pl": [],
+    "show_more_clicked": false,
+    "title": "Small Appliances at Lowes.com"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Vacuum-cleaners-floor-care-Appliances",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/vacuum-cleaners-floor-care/4294810320"
+    ],
+    "show_more_clicked": false,
+    "title": "Vacuum Cleaners & Floor-Care Appliances at Lowes.com"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Wall-ovens-Appliances",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/wall-ovens/4294715808"
+    ],
+    "show_more_clicked": false,
+    "title": "Wall Ovens at Lowes.com"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Washers-dryers-Appliances",
+    "blocked": false,
+    "shop_all_pl": [],
+    "show_more_clicked": true,
+    "title": "Washers & Dryers at Lowes.com"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Bathroom-pedestal-sinks-Bathroom",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/bathroom-pedestal-sinks/4294737304"
+    ],
+    "show_more_clicked": false,
+    "title": "Bathroom & Pedestal Sinks at Lowe\u2019s"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Bathroom-accessories-hardware-Bathroom",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/bathroom-faucets-shower-heads/bathroom-sink-faucets/1879636657-1020640686869"
+    ],
+    "show_more_clicked": false,
+    "title": "Bathroom Accessories at Lowes.com"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Bathroom-exhaust-fans-parts-Bathroom",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/bathroom-exhaust-fans-parts/3559461481"
+    ],
+    "show_more_clicked": false,
+    "title": "Bathroom Exhaust Fans & Parts at Lowes.com"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Bathroom-faucets-shower-heads-Bathroom",
+    "blocked": false,
+    "shop_all_pl": [],
+    "show_more_clicked": false,
+    "title": "Bathroom Faucets & Shower Heads at Lowe\u2019s"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Bathroom-safety-Bathroom",
+    "blocked": false,
+    "shop_all_pl": [],
+    "show_more_clicked": false,
+    "title": "Bathroom Safety at Lowes.com"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Bathroom-storage-Bathroom",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/bathroom-storage/4294737170-4294866894-810805845429-4294820748-4294965416"
+    ],
+    "show_more_clicked": false,
+    "title": "Bathroom Storage at Lowes.com"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Bathroom-vanities-vanity-tops-Bathroom",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/bathroom-vanities-vanity-tops/bathroom-vanities/4294684461"
+    ],
+    "show_more_clicked": false,
+    "title": "Bathroom Vanities & Vanity Tops at Lowes.com"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Bathtubs-whirlpool-tubs-Bathroom",
+    "blocked": false,
+    "shop_all_pl": [],
+    "show_more_clicked": false,
+    "title": "Bathtubs & Whirlpool Tubs at Lowes.com"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Showers-Bathroom",
+    "blocked": false,
+    "shop_all_pl": [],
+    "show_more_clicked": false,
+    "title": "Showers at Lowes.com"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Toilets-toilet-seats-Bathroom",
+    "blocked": false,
+    "shop_all_pl": [],
+    "show_more_clicked": false,
+    "title": "Toilets & Toilet Seats at Lowes.com"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Ceilings-Building-supplies",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/ceilings/4294858304",
+      "https://www.lowes.com/pl/ceilings/ceiling-tiles/4294858303"
+    ],
+    "show_more_clicked": false,
+    "title": "Ceilings at Lowes.com"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Concrete-cement-masonry-Building-supplies",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/concrete-cement-masonry/242869498",
+      "https://www.lowes.com/pl/concrete-cement-masonry/masonry-tools/4294515392",
+      "https://www.lowes.com/pl/concrete-cement-masonry/concrete-blocks/4294515403"
+    ],
+    "show_more_clicked": false,
+    "title": "Concrete, Cement & Masonry"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Decking-Building-supplies",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/decking/4294858359"
+    ],
+    "show_more_clicked": false,
+    "title": "Decking & Decking Materials | Lowe\u2019s"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Drywall-Building-supplies",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/drywall/4294864808"
+    ],
+    "show_more_clicked": false,
+    "title": "Drywall at Lowes.com"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Fencing-gates-Building-supplies",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/fencing-gates/4294858178",
+      "https://www.lowes.com/pl/fencing-gates/4294858178-7-8"
+    ],
+    "show_more_clicked": false,
+    "title": "Fencing & Gates | Lowe\u2019s"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Gutters-accessories-Building-supplies",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/gutters-accessories/4294524350",
+      "https://www.lowes.com/pl/gutters-accessories/gutters/4294524340"
+    ],
+    "show_more_clicked": false,
+    "title": "Gutters & Accessories at Lowes.com"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Insulation-accessories-Building-supplies",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/insulation-accessories/4294925567"
+    ],
+    "show_more_clicked": false,
+    "title": "Insulation & Accessories at Lowes.com"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Lumber-composites-Building-supplies",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/lumber-composites/4294934154"
+    ],
+    "show_more_clicked": false,
+    "title": "Lumber & Composites at Lowe\u2019s"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Roofing-Building-supplies",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/roofing/4294934230"
+    ],
+    "show_more_clicked": false,
+    "title": "Roofing at Lowes.com"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Siding-stone-veneer-Building-supplies",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/siding-stone-veneer/4294934233"
+    ],
+    "show_more_clicked": false,
+    "title": "Siding & Stone Veneer"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Stairs-railings-Building-supplies",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/stairs-railings/4294715745"
+    ],
+    "show_more_clicked": false,
+    "title": "Stairs & Railings at Lowes.com"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Cleaning-tools-Cleaning-supplies",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/cleaning-tools/4294599021"
+    ],
+    "show_more_clicked": false,
+    "title": "Cleaning Tools, Equipment & More at Lowes.com"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Laundry-supplies-Cleaning-supplies",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/laundry-supplies/4294598994"
+    ],
+    "show_more_clicked": false,
+    "title": "Laundry Supplies"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Electrical-outlets-plugs-Electrical",
+    "blocked": false,
+    "shop_all_pl": [],
+    "show_more_clicked": false,
+    "title": "Shop Electrical Outlets & Plugs at Lowes.com"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Electrical-testers-tools-Electrical",
+    "blocked": false,
+    "shop_all_pl": [],
+    "show_more_clicked": false,
+    "title": "Electrical Testers & Tools"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Electrical-wire-cable-Electrical",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/electrical-wire-cable/4294722493"
+    ],
+    "show_more_clicked": false,
+    "title": "Electrical Wire & Cable"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Electronics-Electrical",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/electronics/1311709713229",
+      "https://www.lowes.com/pl/electronics/audio/1721473435020",
+      "https://www.lowes.com/pl/electronics/computers-peripherals/2721216753901",
+      "https://www.lowes.com/pl/wi-fi-networking-devices/2821202638033"
+    ],
+    "show_more_clicked": false,
+    "title": "Electronics - Lowe\u2019s"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Fire-safety-Electrical",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/fire-safety/1897086949"
+    ],
+    "show_more_clicked": false,
+    "title": "Fire Safety & Electrical Supplies | Lowe\u2019s"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Generators-Electrical",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/generators/4294641574",
+      "https://www.lowes.com/pl/generators/generator-accessories/4294641571",
+      "https://www.lowes.com/pl/Generators-Electrical/4294641574"
+    ],
+    "show_more_clicked": false,
+    "title": "Portable, Electric & Home Standby Generators | Lowe\u2019s"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Light-switches-dimmers-Electrical",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/light-switches-dimmers/4294722447",
+      "https://www.lowes.com/pl/light-switches-dimmers/light-switches/3491337573",
+      "https://www.lowes.com/pl/light-switches-dimmers/dimmer-switches/3116508836"
+    ],
+    "show_more_clicked": false,
+    "title": "Light Switches & Dimmers"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Power-distribution-circuit-protection-Electrical",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/power-distribution-circuit-protection/1862844205"
+    ],
+    "show_more_clicked": false,
+    "title": "Power Distribution & Circuit Protection"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Solar-power-Electrical",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/solar-power/4294722437"
+    ],
+    "show_more_clicked": false,
+    "title": "Solar Power"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Wall-plates-inserts-Electrical",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/wall-plates-inserts/wall-plates/4294722460"
+    ],
+    "show_more_clicked": false,
+    "title": "Shop Wall Plates & Inserts at Lowes.com"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Carpet-carpet-tile-Flooring",
+    "blocked": false,
+    "shop_all_pl": [],
+    "show_more_clicked": false,
+    "title": "Carpet & Carpet Tile"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Floor-wall-tile-Flooring",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/floor-wall-tile/tile/4294856525"
+    ],
+    "show_more_clicked": false,
+    "title": "Floor & Wall Tile at Lowes.com"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Flooring-tools-supplies-Flooring",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/flooring-tools-supplies/tile-tools-supplies/509604447",
+      "https://www.lowes.com/pl/flooring-tools-supplies/carpet-tools-supplies/4294417358"
+    ],
+    "show_more_clicked": false,
+    "title": "Flooring Tools & Supplies at Lowe's"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Hardwood-Flooring",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/hardwood/hardwood-flooring/4294856493"
+    ],
+    "show_more_clicked": false,
+    "title": "Hardwood Flooring at Lowe\u2019s"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Laminate-Flooring",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/laminate/laminate-flooring/4294856495"
+    ],
+    "show_more_clicked": false,
+    "title": "Laminate Flooring"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Vinyl-flooring-Flooring",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/vinyl-flooring/4294856531"
+    ],
+    "show_more_clicked": false,
+    "title": "Vinyl Flooring at Lowes.com"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Glues-Glues-tapes",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/glues/4294417404"
+    ],
+    "show_more_clicked": false,
+    "title": "Shop Glues at Lowes.com"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Tapes-Glues-tapes",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/tapes/4294417421"
+    ],
+    "show_more_clicked": false,
+    "title": "Shop Tapes at Lowes.com"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Air-conditioners-fans-Heating-cooling",
+    "blocked": false,
+    "shop_all_pl": [],
+    "show_more_clicked": false,
+    "title": "Air Conditioners & Fans at Lowes.com"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Air-filters-accessories-Heating-cooling",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/air-filters-accessories/air-filter-accessories/4238032680",
+      "https://www.lowes.com/pl/air-filters-accessories/air-filters/4294761659-4294559564-4294559562",
+      "https://www.lowes.com/pl/air-filters-accessories/air-filters/4294761659-4294760493-4294760441",
+      "https://www.lowes.com/pl/air-filters-accessories/air-filters/4294761659-4294564241-4012250160-721219528369-4294760401-4294760405-4294760435",
+      "https://www.lowes.com/pl/air-filters-accessories/air-filters/4294761659"
+    ],
+    "show_more_clicked": false,
+    "title": "Air Filters: A/C & Furnace Filters"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Air-purifiers-accessories-Heating-cooling",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/air-purifiers-accessories/4294856705"
+    ],
+    "show_more_clicked": false,
+    "title": "Air Purifiers & Accessories"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Ductless-mini-splits-Heating-cooling",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/ductless-mini-splits/3538099968"
+    ],
+    "show_more_clicked": false,
+    "title": "Mini Split Air Conditioners at Lowes.com"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Fireplaces-stoves-Heating-cooling",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/fireplaces-stoves/fireplaces/4294599058",
+      "https://www.lowes.com/pl/fireplaces-stoves/freestanding-stoves-accessories/4294599053",
+      "https://www.lowes.com/pl/fireplaces-stoves/fireplace-logs/4294599070",
+      "https://www.lowes.com/pl/fireplaces-stoves/fireplace-tools-accessories/4294599066"
+    ],
+    "show_more_clicked": false,
+    "title": "Shop Fireplaces & Stoves at Lowes.com"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Humidifiers-dehumidifiers-Heating-cooling",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/humidifiers-dehumidifiers/dehumidifiers/4294620974",
+      "https://www.lowes.com/pl/humidifiers-dehumidifiers/humidifiers/4294620973"
+    ],
+    "show_more_clicked": false,
+    "title": "Humidifiers & Dehumidifiers at Lowes.com"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Portable-space-heaters-Heating-cooling",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/portable-space-heaters/3897400963"
+    ],
+    "show_more_clicked": false,
+    "title": "Portable & Space Heaters at Lowes.com"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Registers-grilles-Heating-cooling",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/registers-grilles/4294512215"
+    ],
+    "show_more_clicked": false,
+    "title": "Registers & Grilles at Lowes.com"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Thermostats-Heating-cooling",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/thermostats/4294821952"
+    ],
+    "show_more_clicked": false,
+    "title": "Thermostats at Lowes.com"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Christmas-decorations-Holiday-decorations",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/christmas-decorations/4294586714",
+      "https://www.lowes.com/pl/christmas-decorations/animatronic/4294586714-4294619964"
+    ],
+    "show_more_clicked": false,
+    "title": "Best Christmas Decorations of 2025 at Lowes.com"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Area-rugs-mats-Home-decor",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/area-rugs-mats/mats/3764878449"
+    ],
+    "show_more_clicked": false,
+    "title": "Area Rugs & Mats at Lowes.com"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Furniture-Home-decor",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/Office-furniture-Furniture-Home-decor/4294769470"
+    ],
+    "show_more_clicked": false,
+    "title": "Furniture"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Home-accents-Home-decor",
+    "blocked": false,
+    "shop_all_pl": [],
+    "show_more_clicked": false,
+    "title": "Home Accents at Lowes.com"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Mirrors-mirror-accessories-Home-decor",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/mirrors-mirror-accessories/mirrors/4294416631"
+    ],
+    "show_more_clicked": false,
+    "title": "Shop Mirrors & Mirror Accessories at Lowes.com"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Wall-art-decor-Home-decor",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/wall-art-decor/4158724125",
+      "https://www.lowes.com/pl/Trending-Wall-Art-Looks-We-Love/2811115763361"
+    ],
+    "show_more_clicked": false,
+    "title": "Wall Art & D\u00e9cor"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Wallpaper-accessories-Home-decor",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/wallpaper-accessories/wallpaper/4294929280"
+    ],
+    "show_more_clicked": false,
+    "title": "Shop Wallpaper & Accessories at Lowes.com"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Window-treatments-Home-decor",
+    "blocked": false,
+    "shop_all_pl": [],
+    "show_more_clicked": false,
+    "title": "Window Treatments"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Kitchen-bar-sinks-Kitchen",
+    "blocked": false,
+    "shop_all_pl": [],
+    "show_more_clicked": false,
+    "title": "Kitchen & Bar Sinks"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Kitchen-cabinetry-Kitchen",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/kitchen-cabinetry/4294735668",
+      "https://www.lowes.com/pl/kitchen-cabinetry/kitchen-cabinet-samples/2228736298"
+    ],
+    "show_more_clicked": false,
+    "title": "Kitchen Cabinetry at Lowes.com"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Kitchen-countertops-accessories-Kitchen",
+    "blocked": false,
+    "shop_all_pl": [],
+    "show_more_clicked": false,
+    "title": "Kitchen Countertops & Accessories"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Kitchen-faucets-water-dispensers-Kitchen",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/kitchen-faucets-water-dispensers/kitchen-faucets/4294735696",
+      "https://www.lowes.com/pl/Budget-friendly-faucets-and-bath-hardware/3421623026194",
+      "https://www.lowes.com/pl/Showroom-styles-faucets-and-bath-hardware/3721555479950"
+    ],
+    "show_more_clicked": false,
+    "title": "Kitchen Faucets & Water Dispensers"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Kitchenware-Kitchen",
+    "blocked": false,
+    "shop_all_pl": [],
+    "show_more_clicked": false,
+    "title": "Kitchenware at Lowe's"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Garden-decor-Lawn-garden",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/garden-decor/4294612864"
+    ],
+    "show_more_clicked": false,
+    "title": "Garden D\u00e9cor at Lowes.com"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Garden-hoses-accessories-Lawn-garden",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/garden-hoses-accessories/4294612483"
+    ],
+    "show_more_clicked": false,
+    "title": "Garden Hoses & Accessories at Lowes.com"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Insect-pest-control-Lawn-garden",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/insect-pest-control/4294612824"
+    ],
+    "show_more_clicked": false,
+    "title": "Shop Insect & Pest Control at Lowes.com"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Irrigation-Lawn-garden",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/irrigation/irrigation-timers-accessories/4294612470"
+    ],
+    "show_more_clicked": false,
+    "title": "Shop Irrigation & Irrigation Supplies at Lowes.com"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Landscaping-Lawn-garden",
+    "blocked": false,
+    "shop_all_pl": [],
+    "show_more_clicked": false,
+    "title": "Shop Landscaping at Lowes.com"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Lawn-care-Lawn-garden",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/lawn-care/1422029666934",
+      "https://www.lowes.com/pl/lawn-care/natural/1422029666934-4277702534"
+    ],
+    "show_more_clicked": false,
+    "title": "Shop Lawn Care at Lowes.com"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Outdoor-drainage-Lawn-garden",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/outdoor-drainage/outdoor-drainage-accessories/4294612448"
+    ],
+    "show_more_clicked": false,
+    "title": "Shop Outdoor Drainage at Lowes.com"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Pavers-retaining-walls-Lawn-garden",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/pavers-retaining-walls/4294612599"
+    ],
+    "show_more_clicked": false,
+    "title": "Shop Pavers & Retaining Walls at Lowes.com"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Planters-stands-garden-beds-Lawn-garden",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/planters-stands-garden-beds/4294612575"
+    ],
+    "show_more_clicked": false,
+    "title": "Shop Planters, Stands & Garden Beds at Lowes.com"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Plants-bulbs-seeds-Lawn-garden",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/Succulents-Plants-bulbs-seeds-Plants-planters-Lawn-garden/4294392552"
+    ],
+    "show_more_clicked": false,
+    "title": "Plants, Bulbs & Seeds at Lowes.com."
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Bathroom-wall-lighting-Lighting-ceiling-fans",
+    "blocked": false,
+    "shop_all_pl": [],
+    "show_more_clicked": false,
+    "title": "Bathroom Light Fixtures at Lowes.com"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Ceiling-fans-Lighting-ceiling-fans",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/ceiling-fans/4294395604",
+      "https://www.lowes.com/pl/ceiling-fan-parts-accessories/4294395603"
+    ],
+    "show_more_clicked": false,
+    "title": "Ceiling Fans at Lowe\u2019s"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Light-bulbs-Lighting-ceiling-fans",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/light-bulbs/4294801215"
+    ],
+    "show_more_clicked": false,
+    "title": "Light Bulbs at Lowes.com"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Outdoor-lighting-Lighting-ceiling-fans",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/outdoor-lighting/solar/4294857035-4294817572"
+    ],
+    "show_more_clicked": false,
+    "title": "Outdoor Lighting at Lowes.com"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Under-cabinet-lighting-Lighting-ceiling-fans",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/under-cabinet-lighting/4294690587"
+    ],
+    "show_more_clicked": false,
+    "title": "Under Cabinet Lighting at Lowes.com"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Moulding-Moulding-millwork",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/moulding/1237671492"
+    ],
+    "show_more_clicked": false,
+    "title": "Shop Moulding at Lowes.com"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Wall-panels-planks-Moulding-millwork",
+    "blocked": false,
+    "shop_all_pl": [],
+    "show_more_clicked": false,
+    "title": "Wall Panels & Planks at Lowes.com"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Fire-pits-patio-heaters-Outdoors",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/fire-pits-patio-heaters/fire-pits-accessories/4294610148",
+      "https://www.lowes.com/pl/fire-pits-patio-heaters/patio-heaters-accessories/4294610145"
+    ],
+    "show_more_clicked": false,
+    "title": "Fire Pits & Patio Heaters at Lowes.com"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Grills-outdoor-cooking-Outdoors",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/grills-outdoor-cooking/4294610397",
+      "https://www.lowes.com/pl/grills-outdoor-cooking/grilling-fuels/673904248",
+      "https://www.lowes.com/pl/grills-outdoor-cooking/4294610397-1020640686869"
+    ],
+    "show_more_clicked": false,
+    "title": "Grills & Outdoor Cooking | Lowe\u2019s"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Outdoor-games-toys-Outdoors",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/outdoor-games-toys/4294610319"
+    ],
+    "show_more_clicked": false,
+    "title": "Shop Outdoor Games & Toys at Lowes.com"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Outdoor-tools-equipment-Outdoors",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/outdoor-tools-equipment/4294612780",
+      "https://www.lowes.com/pl/outdoor-tools-equipment/lawn-mowers/lawn-mower-parts-accessories/4294612713"
+    ],
+    "show_more_clicked": false,
+    "title": "Outdoor Tools & Equipment at Lowes.com"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Patio-furniture-Outdoors",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/patio-furniture/4294610451"
+    ],
+    "show_more_clicked": false,
+    "title": "Outdoor Patio Furniture at Lowes.com"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Playsets-Outdoors",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/playsets/playsets-swing-sets/4294610301"
+    ],
+    "show_more_clicked": false,
+    "title": "Playsets & Swing Sets at Lowes.com"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Pools-Outdoors",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/pools/760377631",
+      "https://www.lowes.com/pl/hot-tubs-spas-components/hot-tub-spa-chemicals/4294610258",
+      "https://www.lowes.com/pl/pools/pool-maintenance/4294610237"
+    ],
+    "show_more_clicked": false,
+    "title": "Pools at Lowe\u2019s"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Sheds-outdoor-storage-Outdoors",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/sheds-outdoor-storage/sheds/4294612525",
+      "https://www.lowes.com/pl/sheds-outdoor-storage/storage-shed-accessories/4294612517"
+    ],
+    "show_more_clicked": false,
+    "title": "Shop Sheds & Outdoor Storage"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Caulking-Paint",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/caulking/4294729417",
+      "https://www.lowes.com/pl/caulking/caulk/4294729414",
+      "https://www.lowes.com/pl/caulking/caulk/kitchen-bath/4294729414-1421293786215",
+      "https://www.lowes.com/pl/caulking/caulk/window-door/4294729414-1211296254632",
+      "https://www.lowes.com/pl/caulking/caulk/exterior-specialty/4294729414-1810421585938",
+      "https://www.lowes.com/pl/caulking/caulk/interior-paint-trim/4294729414-1411293683550"
+    ],
+    "show_more_clicked": false,
+    "title": "Caulking at Lowes.com"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Exterior-paint-Paint",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/exterior-paint/4294698949"
+    ],
+    "show_more_clicked": false,
+    "title": "Exterior Paint at Lowes.com"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Exterior-wood-coatings-Paint",
+    "blocked": false,
+    "shop_all_pl": [],
+    "show_more_clicked": false,
+    "title": "Exterior Wood Coatings at Lowes.com"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Interior-paint-Paint",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/interior-paint/4294729373"
+    ],
+    "show_more_clicked": false,
+    "title": "Interior Paint at Lowes.com"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Interior-stains-finishes-Paint",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/interior-stains-finishes/1738513883"
+    ],
+    "show_more_clicked": false,
+    "title": "Interior Stains & Finishes at Lowes.com"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Paint-samples-Paint",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/paint-samples/1320194522183"
+    ],
+    "show_more_clicked": false,
+    "title": "Shop Paint Samples at Lowes.com"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Paint-supplies-Paint",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/paint-supplies/2892139816",
+      "https://www.lowes.com/pl/Paint-rollers-Paint-applicators-Paint-supplies-Paint/2915943890",
+      "https://www.lowes.com/pl/paint-supplies/paint-applicators/paint-brushes/4294729393"
+    ],
+    "show_more_clicked": false,
+    "title": "Paint Supplies"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Patching-repair-Paint",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/patching-repair/4294729323",
+      "https://www.lowes.com/pl/patching-repair/sandpaper-steel-wool/4294607597"
+    ],
+    "show_more_clicked": false,
+    "title": "Patching & Repair"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Primer-Paint",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/primer/4294729370"
+    ],
+    "show_more_clicked": false,
+    "title": "Shop Primer at Lowes.com"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Specialty-commercial-paint-Paint",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/specialty-commercial-paint/2221620969646"
+    ],
+    "show_more_clicked": false,
+    "title": "Specialty & Commercial Paint at Lowe's"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Spray-paint-accessories-Paint",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/spray-paint-accessories/spray-paint/4294720379"
+    ],
+    "show_more_clicked": false,
+    "title": "Spray Paint & Accessories at Lowes.com"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Augers-plungers-drain-openers-Plumbing",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/augers-plungers-drain-openers/4294857208"
+    ],
+    "show_more_clicked": false,
+    "title": "Augers, Plungers & Drain Openers \u2014 Plumbing"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Pipe-fittings-Plumbing",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/pipe-fittings/4294935753"
+    ],
+    "show_more_clicked": false,
+    "title": "Pipe & Fittings at Lowes.com"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Valves-valve-repair-Plumbing",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/valves-valve-repair/4294700945"
+    ],
+    "show_more_clicked": false,
+    "title": "Valves & Valve Repair at Lowes.com"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Water-filtration-water-softeners-Plumbing",
+    "blocked": false,
+    "shop_all_pl": [],
+    "show_more_clicked": false,
+    "title": "Water Filtration & Water Softeners at Lowes.com"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Water-heaters-Plumbing",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/water-heaters/4294859099"
+    ],
+    "show_more_clicked": false,
+    "title": "Water Heaters at Lowes.com"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Water-pumps-tanks-Plumbing",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/water-pumps-tanks/water-pumps/4294820778",
+      "https://www.lowes.com/pl/water-pumps-tanks/water-pumps/4294820778-4294821449-4294821276-4294763660-4294763508-4294589151-4294701719-4294763558-4294763530-4294763505-4294763345",
+      "https://www.lowes.com/pl/water-pumps-tanks/water-pumps/4294820778-4294821430-4294821107",
+      "https://www.lowes.com/pl/water-pumps-tanks/pressure-tanks/4294820777",
+      "https://www.lowes.com/pl/water-pumps-tanks/water-pump-accessories/4294763912"
+    ],
+    "show_more_clicked": false,
+    "title": "Water Pumps & Tanks at Lowes.com"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Child-safety-Safety",
+    "blocked": false,
+    "shop_all_pl": [],
+    "show_more_clicked": false,
+    "title": "Child Safety at Lowes.com"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Safes-Hardware",
+    "blocked": false,
+    "shop_all_pl": [],
+    "show_more_clicked": false,
+    "title": "Safes at Lowes.com"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Smart-home-security-wi-fi",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/smart-home-security-wi-fi/1911764466115",
+      "https://www.lowes.com/pl/Smart-home-bundles-Smart-devices-Smart-home-Smart-home-security-wi-fi/2311714614847"
+    ],
+    "show_more_clicked": false,
+    "title": "Shop Smart Home, Security & Wi-Fi at Lowes.com"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Baskets-storage-containers-Storage-organization",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/baskets-storage-containers/4294936623",
+      "https://www.lowes.com/pl/baskets-storage-containers/holiday-storage/3021215667324"
+    ],
+    "show_more_clicked": false,
+    "title": "Baskets & Storage Containers \u2013 Lowe\u2019s"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Closet-organization-Storage-organization",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/closet-organization/4294857752",
+      "https://www.lowes.com/pl/closet-organization/4294857752-1020640686869"
+    ],
+    "show_more_clicked": false,
+    "title": "Closet Organization at Lowes.com"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Garage-organization-Storage-organization",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/shelves-shelving/freestanding-shelving-units/4294857717-4294965831-4294965809-4294868245-4294965728",
+      "https://www.lowes.com/pl/garage-organization/garage-cabinets-storage-systems/2207678993-4294964195-3252463372-4294965883-340184705"
+    ],
+    "show_more_clicked": false,
+    "title": "Garage Organization"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Moving-boxes-supplies-Storage-organization",
+    "blocked": false,
+    "shop_all_pl": [],
+    "show_more_clicked": false,
+    "title": "Moving Boxes & Supplies"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Shelves-shelving-Storage-organization",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/shelves-shelving/4294936608"
+    ],
+    "show_more_clicked": false,
+    "title": "Shelves & Shelving at Lowes.com"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Air-tools-compressors-Tools",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/air-tools-compressors/air-compressors/2911831268",
+      "https://www.lowes.com/pl/air-tools-compressors/nailers/pneumatic/1481902067-811437049662",
+      "https://www.lowes.com/pl/air-tools-compressors/air-compressor-parts-hoses/816127281"
+    ],
+    "show_more_clicked": false,
+    "title": "Air Tools & Compressors at Lowes.com"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Hand-tools-Tools",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/hand-tools/wrenches-wrench-sets/4294607674",
+      "https://www.lowes.com/pl/levels-measuring-tools/4294607864",
+      "https://www.lowes.com/pl/hand-tools/pliers-plier-sets/4294425055",
+      "https://www.lowes.com/pl/hand-tools/ratchets-breaker-bars/ratchets-ratchet-sets/2883530986",
+      "https://www.lowes.com/pl/Screwdrivers-Hand-tools-Tools/4294857613",
+      "https://www.lowes.com/pl/hand-tools/sockets-socket-adapters/2419313453"
+    ],
+    "show_more_clicked": false,
+    "title": "Hand Tools at Lowes.com"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Ladders-scaffolding-Tools",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/ladders-scaffolding/4294607607",
+      "https://www.lowes.com/pl/ladders-scaffolding/fiberglass/4294607607-4294964908",
+      "https://www.lowes.com/pl/ladders-scaffolding/extension-ladders/fiberglass/3173018057-4294964908",
+      "https://www.lowes.com/pl/ladders-scaffolding/multi-position-ladders/fiberglass/4254984164-4294964908",
+      "https://www.lowes.com/pl/ladders-scaffolding/step-ladders/fiberglass/3574040724-4294964908",
+      "https://www.lowes.com/pl/ladders-scaffolding/aluminum/4294607607-4294965691",
+      "https://www.lowes.com/pl/ladders-scaffolding/extension-ladders/aluminum/3173018057-4294965691",
+      "https://www.lowes.com/pl/ladders-scaffolding/multi-position-ladders/aluminum/4254984164-4294965691",
+      "https://www.lowes.com/pl/ladders-scaffolding/step-ladders/aluminum/3574040724-4294965691",
+      "https://www.lowes.com/pl/ladders-scaffolding/ladder-scaffolding-accessories/4294607603"
+    ],
+    "show_more_clicked": false,
+    "title": "Ladders & Scaffolding at Lowes.com"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Power-tool-accessories-Tools",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/power-tool-accessories/on-sale/4294526429-2",
+      "https://www.lowes.com/pl/power-tool-accessories/drill-bits/4294607757",
+      "https://www.lowes.com/pl/power-tool-accessories/saw-blades/4294607793",
+      "https://www.lowes.com/pl/power-tool-accessories/saw-parts-attachments/2557498305",
+      "https://www.lowes.com/pl/power-tools/rotary-tools-oscillating-tools/4294607824",
+      "https://www.lowes.com/pl/power-tool-accessories/abrasive-wheels/4251180261",
+      "https://www.lowes.com/pl/power-tool-accessories/power-tool-sandpaper/706284871"
+    ],
+    "show_more_clicked": false,
+    "title": "Power Tool Accessories at Lowes.com"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Tool-storage-work-benches-Tools",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/tool-storage-work-benches/portable-tool-boxes/stackable/4294707881-4294791448"
+    ],
+    "show_more_clicked": false,
+    "title": "Tool Storage & Work Benches at Lowes.com"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Welding-soldering-Tools",
+    "blocked": false,
+    "shop_all_pl": [],
+    "show_more_clicked": false,
+    "title": "Welding & Soldering Equipment at Lowes.com"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Exterior-doors-Windows-doors",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/exterior-doors/1154397505",
+      "https://www.lowes.com/pl/exterior-doors/front-doors/4294482094"
+    ],
+    "show_more_clicked": false,
+    "title": "Exterior Doors at Lowes.com"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Exterior-shutters-accessories-Windows-doors",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/exterior-shutters-accessories/exterior-shutters/4294775786",
+      "https://www.lowes.com/pl/exterior-shutters-accessories/exterior-shutters/polystyrene/4294775786-4294962804"
+    ],
+    "show_more_clicked": false,
+    "title": "Exterior Window Shutters at Lowes.com"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Garage-doors-openers-Windows-doors",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/garage-doors-openers/garage-doors/4294858019",
+      "https://www.lowes.com/pl/garage-doors-openers/garage-door-openers/4294858020"
+    ],
+    "show_more_clicked": false,
+    "title": "Garage Doors & Garage Door Openers at Lowes.com"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Interior-doors-Windows-doors",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/interior-doors/4294417385",
+      "https://www.lowes.com/pl/interior-doors/barn-doors/89341247"
+    ],
+    "show_more_clicked": false,
+    "title": "Interior Doors at Lowe\u2019s"
+  },
+  {
+    "c_url": "https://www.lowes.com/c/Windows-Windows-doors",
+    "blocked": false,
+    "shop_all_pl": [
+      "https://www.lowes.com/pl/windows/4294858060"
+    ],
+    "show_more_clicked": false,
+    "title": "Windows at Lowes.com"
+  }
+]

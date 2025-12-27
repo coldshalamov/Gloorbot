@@ -94,7 +94,7 @@ class WorkerProcess:
         worker_output = self.output_dir / f"worker_{self.worker_id}_store_{store_id}.jsonl"
 
         # Check for checkpoint
-        check_file = Path("scrape_logs") / f"checkpoint_{store_id}.txt"
+        check_file = Path("checkpoints") / f"store_{store_id}.txt"
         start_idx = 0
         if check_file.exists():
             try:
@@ -104,10 +104,10 @@ class WorkerProcess:
                 pass
 
         # Launch scraper process for this specific store
-        # We use run_single_store.py which imports main.py
+        # We use worker.py which imports scraper.py
         cmd = [
             sys.executable,
-            "run_single_store.py",
+            "worker.py",
             "--store-id", store_id,
             "--state", state,
             "--output", str(worker_output),
@@ -116,7 +116,7 @@ class WorkerProcess:
         ]
 
         # Redirect output to log file to avoid deadlock
-        log_dir = Path("scrape_logs")
+        log_dir = Path("logs")
         log_dir.mkdir(exist_ok=True)
         self.log_file = open(log_dir / f"worker_{self.worker_id}_{store_id}.log", "w", encoding='utf-8')
 
@@ -195,7 +195,7 @@ class IntelligentOrchestrator:
 
         self.workers = []
         self.stores = []
-        self.output_dir = Path("scrape_output_parallel")
+        self.output_dir = Path("output")
         self.output_dir.mkdir(exist_ok=True)
 
         self.stats = {
@@ -236,28 +236,18 @@ class IntelligentOrchestrator:
         log.info("Cleanup complete.")
 
     def load_stores(self):
-        """Load stores from LowesMap_Final_Pruned.txt (or LowesMap.txt as fallback)"""
-        # Try finding the map in various locations
-        possible_paths = [
-            Path("LowesMap_Final_Pruned.txt"),
-            Path("LowesMap.txt")
-        ]
+        """Load stores from urls.txt"""
+        urls_file = Path("urls.txt")
         
-        lowes_map = None
-        for p in possible_paths:
-            if p.exists():
-                lowes_map = p
-                break
-        
-        if not lowes_map:
-            log.error("LowesMap not found!")
+        if not urls_file.exists():
+            log.error("urls.txt not found!")
             return
 
         # Support comma-separated states (e.g., "WA,OR")
         states = [s.strip().upper() for s in self.state.split(',')]
 
         stores = []
-        with open(lowes_map) as f:
+        with open(urls_file) as f:
             for line in f:
                 line = line.strip()
                 # Match any of the specified states
@@ -277,7 +267,7 @@ class IntelligentOrchestrator:
                         break
 
         self.stores = stores
-        log.info(f"Loaded {len(self.stores)} stores for states {states} from {lowes_map}")
+        log.info(f"Loaded {len(self.stores)} stores for states {states} from urls.txt")
 
     async def analyze_performance(self):
         """Analyze current performance and decide on scaling"""

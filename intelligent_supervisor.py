@@ -100,13 +100,27 @@ class WorkerMonitor:
             import time
             time.sleep(2)  # Let system clean up
 
+        # Checkpoint file to track progress
+        checkpoint_file = self.output_dir / f"checkpoint_{store_id}.txt"
+        start_idx = 0
+
+        # If checkpoint exists, resume from where we left off
+        if checkpoint_file.exists():
+            try:
+                start_idx = int(checkpoint_file.read_text().strip())
+                self.log(f"Resuming from category index {start_idx}")
+            except (ValueError, IOError):
+                start_idx = 0
+
         cmd = [
             sys.executable,
             "run_single_store.py",
             "--store-id", store_id,
             "--state", state,
             "--output", str(worker_output),
-            "--categories", "515"
+            "--categories", "605",
+            "--start-idx", str(start_idx),
+            "--check-file", str(checkpoint_file)
         ]
 
         self.log(f"Starting for {self.store_info['name']}")

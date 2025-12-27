@@ -1,23 +1,21 @@
-# Lowe's Parallel Scraper - Final Version
+# Lowe's Parallel Scraper - Clean Version
 # ========================================
 # A robust, resumable, parallel scraper for Lowe's product listings.
+# This version uses ephemeral browser contexts (no disk bloat).
 #
 # USAGE:
-#   python orchestrator.py --state WA --max-workers 5
-#   python orchestrator.py --state WA,OR --max-workers 5
-#   python orchestrator.py --all-stores --max-workers 5
+#   python run.py
+#   python run.py --state WA,OR --workers 5
+#   python run.py --state WA --workers 3
 #
-# FILES:
-#   - orchestrator.py    : Main entry point, manages worker processes
-#   - worker.py          : Single-store scraper with resume support
-#   - scraper_core.py    : Playwright browser logic (from apify_actor_seed)
-#   - urls.txt           : Store + Category URLs (copy of LowesMap_Final_Pruned.txt)
-#   - output/            : JSONL output files per store
-#   - logs/              : Worker logs
-#   - checkpoints/       : Resume progress files
+# OUTPUT:
+#   - output/          : JSONL product data per store
+#   - logs/            : Worker logs
+#   - checkpoints/     : Resume progress files
 #
 # FEATURES:
 #   - Resumable: Workers save progress after each category
 #   - Parallel: Multiple Chrome instances scraping different stores
+#   - No disk bloat: Uses temp browser profiles that auto-delete
 #   - Anti-block: Headful Chrome with human-like behavior
 #   - Self-healing: Restarts workers that crash or get blocked
