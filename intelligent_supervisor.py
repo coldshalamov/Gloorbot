@@ -79,6 +79,27 @@ class WorkerMonitor:
         # Create profile directory
         self.profile_dir.mkdir(parents=True, exist_ok=True)
 
+        # CRITICAL: Kill any orphaned Chrome processes for this profile before starting
+        self.log("Checking for orphaned Chrome processes...")
+        killed_count = 0
+        profile_marker = f"store-{store_id}"
+
+        for proc in psutil.process_iter(['name', 'cmdline', 'pid']):
+            try:
+                if 'chrome' in proc.name().lower():
+                    cmdline = ' '.join(proc.cmdline() or [])
+                    if profile_marker in cmdline:
+                        self.log(f"Killing orphaned Chrome process: PID {proc.pid}")
+                        proc.kill()
+                        killed_count += 1
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                pass
+
+        if killed_count > 0:
+            self.log(f"Killed {killed_count} orphaned Chrome processes")
+            import time
+            time.sleep(2)  # Let system clean up
+
         cmd = [
             sys.executable,
             "run_single_store.py",
