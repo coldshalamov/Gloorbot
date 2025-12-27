@@ -189,15 +189,47 @@ class WorkerMonitor:
         # TODO: Send signal to worker to take screenshot
 
     async def stop(self):
-        """Gracefully stop worker"""
-        if self.process:
-            self.log("Stopping...")
-            self.process.terminate()
+        """Gracefully stop worker and ALL Chrome processes"""
+        if self.process and self.pid:
+            self.log("Stopping worker and cleaning up Chrome processes...")
+
             try:
-                self.process.wait(timeout=10)
-            except subprocess.TimeoutExpired:
-                self.log("Force killing...", "WARNING")
-                self.process.kill()
+                # Get the worker process and all its children (Chrome processes)
+                parent = psutil.Process(self.pid)
+                children = parent.children(recursive=True)
+
+                # First, kill all child processes (Chrome and subprocesses)
+                for child in children:
+                    try:
+                        self.log(f"Killing child process: {child.name()} (PID {child.pid})")
+                        child.kill()
+                    except (psutil.NoSuchProcess, psutil.AccessDenied):
+                        pass
+
+                # Give processes time to die
+                import time
+                time.sleep(2)
+
+                # Then terminate the main worker process
+                self.process.terminate()
+                try:
+                    self.process.wait(timeout=10)
+                except subprocess.TimeoutExpired:
+                    self.log("Worker didn't exit gracefully, force killing...", "WARNING")
+                    self.process.kill()
+
+                self.log("Worker and all Chrome processes stopped successfully")
+
+            except psutil.NoSuchProcess:
+                self.log("Process already dead", "WARNING")
+            except Exception as e:
+                self.log(f"Error during cleanup: {e}", "ERROR")
+                # Force kill as fallback
+                try:
+                    self.process.kill()
+                except:
+                    pass
+
         self.is_alive = False
 
 
