@@ -1,3 +1,13 @@
 third_party_tmp/
 __pycache__/
 *.pyc
+
+# Local/Runtime files
+.playwright-profiles/
+.playwright-profile/
+.playwright-mcp/
+logs/
+scrape_output*/
+*.log
+*.db
+.env

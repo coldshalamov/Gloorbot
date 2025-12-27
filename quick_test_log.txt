@@ -1,0 +1,61 @@
+[INFO] ======================================================================
+[INFO] Lowe's Full Catalog Scraper
+[INFO] ======================================================================
+[INFO] Test mode: False
+[INFO] Max stores: 99999
+[INFO] Max categories: 2
+[INFO] Loaded 49 stores and 515 categories
+[INFO] Filtered to store: Arlington, WA (#0061)
+[INFO] Scraping 1 stores x 2 categories
+[INFO] 
+======================================================================
+[INFO] Starting store: Arlington, WA (#0061)
+[INFO] ======================================================================
+[INFO] Warming up session...
+[INFO] Warmup complete
+[INFO] Setting store: Arlington, WA (#0061)
+[INFO] Store set successfully
+[INFO] Arlington, WA (#0061) - 9-volt-batteries-Batteries-Ele p1: 24 products
+[INFO] Arlington, WA (#0061) - 9-volt-batteries-Batteries-Ele p2: 24 products
+[INFO] Arlington, WA (#0061) - 9-volt-batteries-Batteries-Ele p3: 24 products
+[INFO] Arlington, WA (#0061) - 9-volt-batteries-Batteries-Ele p4: 24 products
+[INFO] Arlington, WA (#0061) - 9-volt-batteries-Batteries-Ele p5: 24 products
+[INFO] Arlington, WA (#0061) - 9-volt-batteries-Batteries-Ele p6: 24 products
+[INFO] Arlington, WA (#0061) - 9-volt-batteries-Batteries-Ele p7: 24 products
+[INFO] Arlington, WA (#0061) - 9-volt-batteries-Batteries-Ele p8: 24 products
+[INFO] Arlington, WA (#0061) - 9-volt-batteries-Batteries-Ele p9: 24 products
+[INFO] Arlington, WA (#0061) - 9-volt-batteries-Batteries-Ele p10: 24 products
+[INFO] Arlington, WA (#0061) - 9-volt-batteries-Batteries-Ele p11: 24 products
+[INFO] Arlington, WA (#0061) - 9-volt-batteries-Batteries-Ele p12: 24 products
+[ERROR] Error scraping Arlington, WA (#0061): Mouse.wheel: Connection closed while reading from the driver
+Traceback (most recent call last):
+  File "C:\Users\User\Documents\GitHub\Telomere\Gloorbot\run_single_store.py", line 96, in <module>
+    asyncio.run(main.main())
+    ~~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Python313\Lib\asyncio\runners.py", line 195, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "C:\Python313\Lib\asyncio\runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "C:\Python313\Lib\asyncio\base_events.py", line 725, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "C:\Users\User\Documents\GitHub\Telomere\Gloorbot\apify_actor_seed/src\main.py", line 352, in main
+    await context.close()
+  File "C:\Users\User\AppData\Roaming\Python\Python313\site-packages\playwright\async_api\_generated.py", line 13481, in close
+    return mapping.from_maybe_impl(await self._impl_obj.close(reason=reason))
+                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\User\AppData\Roaming\Python\Python313\site-packages\playwright\_impl\_browser_context.py", line 590, in close
+    await self.request.dispose(reason=reason)
+  File "C:\Users\User\AppData\Roaming\Python\Python313\site-packages\playwright\_impl\_fetch.py", line 114, in dispose
+    await self._channel.send("dispose", None, {"reason": reason})
+  File "C:\Users\User\AppData\Roaming\Python\Python313\site-packages\playwright\_impl\_connection.py", line 69, in send
+    return await self._connection.wrap_api_call(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\User\AppData\Roaming\Python\Python313\site-packages\playwright\_impl\_connection.py", line 559, in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+Exception: BrowserContext.close: Connection closed while reading from the driver

@@ -1,4 +1,17 @@
-2025/12/25-10:49:33.226 2cae8 Creating DB C:\Users\User\Documents\GitHub\Telomere\Gloorbot\apify_actor_seed\.playwright-profiles\test_final\Default\Local Storage\leveldb since it was missing.
-2025/12/25-10:49:33.260 2cae8 Reusing MANIFEST C:\Users\User\Documents\GitHub\Telomere\Gloorbot\apify_actor_seed\.playwright-profiles\test_final\Default\Local Storage\leveldb/MANIFEST-000001
-2025/12/25-10:50:17.214 18604 Level-0 table #5: started
-2025/12/25-10:50:17.235 18604 Level-0 table #5: 51603 bytes OK
+2025/12/26-00:37:57.906 39f98 Reusing MANIFEST C:\Users\User\Documents\GitHub\Telomere\Gloorbot\apify_actor_seed\.playwright-profiles\test_final\Default\Local Storage\leveldb/MANIFEST-000001
+2025/12/26-00:37:57.915 39f98 Recovering log #7
+2025/12/26-00:37:57.919 39f98 Level-0 table #10: started
+2025/12/26-00:37:57.932 39f98 Level-0 table #10: 386427 bytes OK
+2025/12/26-00:37:57.933 39f98 Recovering log #9
+2025/12/26-00:37:57.938 39f98 Reusing old log C:\Users\User\Documents\GitHub\Telomere\Gloorbot\apify_actor_seed\.playwright-profiles\test_final\Default\Local Storage\leveldb/000009.log 
+2025/12/26-00:37:57.942 39f98 Delete type=0 #7
+2025/12/26-00:37:57.943 4f20c Compacting 4@0 + 0@1 files
+2025/12/26-00:37:57.961 4f20c Generated table #11@0: 91 keys, 381567 bytes
+2025/12/26-00:37:57.963 4f20c Compacted 4@0 + 0@1 files => 381567 bytes
+2025/12/26-00:37:57.964 4f20c compacted to: files[ 0 1 0 0 0 0 0 ]
+2025/12/26-00:37:57.966 4f20c Delete type=2 #3
+2025/12/26-00:37:57.966 4f20c Delete type=2 #6
+2025/12/26-00:37:57.966 4f20c Delete type=2 #8
+2025/12/26-00:37:57.966 4f20c Delete type=2 #10
+2025/12/26-00:38:39.283 b3d8 Level-0 table #13: started
+2025/12/26-00:38:39.289 b3d8 Level-0 table #13: 30244 bytes OK

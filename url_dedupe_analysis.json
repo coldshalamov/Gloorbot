@@ -1,0 +1,114 @@
+{
+  "total_urls": 515,
+  "unique_ids": 505,
+  "duplicate_ids_count": 3,
+  "duplicate_ids_sample": [
+    [
+      "4294737158",
+      [
+        "bathroom-safety/bathroom-safety-accessories",
+        "bathroom-safety/bathroom-safety-accessories/toilet-seat-riser"
+      ]
+    ],
+    [
+      "4294737274",
+      [
+        "bathtubs-whirlpool-tubs/bathtubs/alcove",
+        "bathtubs-whirlpool-tubs/bathtubs/clawfoot",
+        "bathtubs-whirlpool-tubs/bathtubs/corner",
+        "bathtubs-whirlpool-tubs/bathtubs/drop-in",
+        "bathtubs-whirlpool-tubs/bathtubs/freestanding",
+        "bathtubs-whirlpool-tubs/bathtubs/walk-in"
+      ]
+    ],
+    [
+      "4294713162",
+      [
+        "exterior-wood-coatings/exterior-stains/clear",
+        "exterior-wood-coatings/exterior-stains/semi-solid",
+        "exterior-wood-coatings/exterior-stains/semi-transparent",
+        "exterior-wood-coatings/exterior-stains/solid",
+        "exterior-wood-coatings/exterior-stains/transparent"
+      ]
+    ]
+  ],
+  "potential_hierarchies": [
+    {
+      "parent": "safes",
+      "potential_children": [
+        "Keys-key-safes-Hardware"
+      ]
+    },
+    {
+      "parent": "safety",
+      "potential_children": [
+        "fire-safety",
+        "Child-safety-Safety",
+        "bathroom-safety/grab-bars",
+        "bathroom-safety/shower-seats",
+        "Traffic-safety-equipment-Safety"
+      ]
+    },
+    {
+      "parent": "windows",
+      "potential_children": [
+        "windows-doors"
+      ]
+    },
+    {
+      "parent": "flooring",
+      "potential_children": [
+        "vinyl-flooring",
+        "Gym-flooring-Flooring",
+        "Vinyl-flooring-Flooring",
+        "Garage-flooring-Flooring",
+        "Hardwood-flooring-Flooring"
+      ]
+    },
+    {
+      "parent": "moulding",
+      "potential_children": [
+        "moulding-millwork",
+        "moulding/wall-panel-moulding"
+      ]
+    },
+    {
+      "parent": "ceiling-fans",
+      "potential_children": [
+        "Chandeliers-Lighting-ceiling-fans",
+        "Wall-lights-Lighting-ceiling-fans",
+        "Ceiling-fans-Lighting-ceiling-fans",
+        "Night-lights-Lighting-ceiling-fans",
+        "Ceiling-lights-Lighting-ceiling-fans"
+      ]
+    },
+    {
+      "parent": "Drinks-snacks",
+      "potential_children": [
+        "Water-Drinks-snacks",
+        "Coffee-Drinks-snacks",
+        "Gift-center-Drinks-snacks",
+        "Soft-drinks-Drinks-snacks",
+        "Snacks-candy-Drinks-snacks"
+      ]
+    },
+    {
+      "parent": "Locks-Hardware",
+      "potential_children": [
+        "Locks-Hardware"
+      ]
+    },
+    {
+      "parent": "paint-supplies",
+      "potential_children": [
+        "craft-paint-supplies/craft-paint"
+      ]
+    },
+    {
+      "parent": "shelves-shelving",
+      "potential_children": [
+        "shelves-shelving/freestanding-shelving-units"
+      ]
+    }
+  ]
+}

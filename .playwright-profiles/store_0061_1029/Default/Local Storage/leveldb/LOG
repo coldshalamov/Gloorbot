@@ -1,9 +1,0 @@
-2025/12/22-19:48:51.441 14630 Reusing MANIFEST C:\Users\User\Documents\GitHub\Telomere\Gloorbot\.playwright-profiles\store_0061_1029\Default\Local Storage\leveldb/MANIFEST-000001
-2025/12/22-19:48:51.474 14630 Recovering log #6
-2025/12/22-19:48:51.474 14630 Level-0 table #9: started
-2025/12/22-19:48:51.485 14630 Level-0 table #9: 50735 bytes OK
-2025/12/22-19:48:51.508 14630 Recovering log #8
-2025/12/22-19:48:51.514 14630 Level-0 table #10: started
-2025/12/22-19:48:51.529 14630 Level-0 table #10: 368764 bytes OK
-2025/12/22-19:48:51.536 14630 Delete type=0 #6
-2025/12/22-19:48:51.536 14630 Delete type=0 #8

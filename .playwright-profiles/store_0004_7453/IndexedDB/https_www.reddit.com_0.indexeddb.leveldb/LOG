@@ -1,9 +1,0 @@
-2025/08/07-19:34:08.281 f48 Reusing MANIFEST C:\Users\User\AppData\Local\Google\Chrome\User Data\Default\IndexedDB\https_www.reddit.com_0.indexeddb.leveldb/MANIFEST-000001
-2025/08/07-19:34:08.281 f48 Recovering log #88
-2025/08/07-19:34:08.282 f48 Reusing old log C:\Users\User\AppData\Local\Google\Chrome\User Data\Default\IndexedDB\https_www.reddit.com_0.indexeddb.leveldb/000088.log 
-2025/08/07-19:35:57.462 11c8 Compacting 1@1 + 1@2 files
-2025/08/07-19:35:57.467 11c8 Generated table #91@1: 150 keys, 14485 bytes
-2025/08/07-19:35:57.467 11c8 Compacted 1@1 + 1@2 files => 14485 bytes
-2025/08/07-19:35:57.468 11c8 compacted to: files[ 0 0 1 0 0 0 0 ]
-2025/08/07-19:35:57.468 11c8 Delete type=2 #87
-2025/08/07-19:35:57.469 11c8 Delete type=2 #89

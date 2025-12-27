@@ -1,6 +1,0 @@
-2025/07/17-16:16:38.583 1ec0 Creating DB C:\Users\User\AppData\Local\Google\Chrome\User Data\Default\IndexedDB\https_www.wired.com_0.indexeddb.leveldb since it was missing.
-2025/07/17-16:16:38.588 1ec0 Reusing MANIFEST C:\Users\User\AppData\Local\Google\Chrome\User Data\Default\IndexedDB\https_www.wired.com_0.indexeddb.leveldb/MANIFEST-000001
-2025/07/17-19:14:15.087 1ec0 Level-0 table #5: started
-2025/07/17-19:14:15.089 1ec0 Level-0 table #5: 42723 bytes OK
-2025/07/17-19:14:15.097 1ec0 Delete type=0 #3
-2025/07/17-19:14:15.097 1ec0 Manual compaction at level-0 from (begin) .. (end); will stop at (end)

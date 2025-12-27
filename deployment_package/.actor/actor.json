@@ -1,0 +1,16 @@
+{
+    "actorSpecification": 1,
+    "name": "lowes-pickup-today-scraper",
+    "title": "Lowe's Pickup Today Inventory Scraper",
+    "description": "Scrape 'Pickup Today' inventory across 49 Lowe's stores in WA/OR. 3x parallel execution for sub-12-hour completion. Robust pickup filter with multi-factor verification.",
+    "version": "2.1",
+    "buildTag": "latest",
+    "minMemoryMbytes": 4096,
+    "maxMemoryMbytes": 8192,
+    "dockerfile": "../Dockerfile",
+    "readme": "../README.md",
+    "input": "./input_schema.json",
+    "storages": {
+        "dataset": "./dataset_schema.json"
+    }
+}

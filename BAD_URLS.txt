@@ -1,0 +1,97 @@
+# Bad / Problematic URLs - Validation Report
+
+## Status: INCOMPLETE
+Only partial testing completed (1-2 categories from 515 total)
+
+## Findings from Limited Testing
+
+### Categories with 0 Products Found
+**None identified yet** - The single category tested (9-volt batteries) returned ~32-50 products per store
+
+### Categories Not Reached
+Due to scraper timeout/stall after ~30 minutes:
+- Categories 6-50 in LowesMap.txt were not scraped in Phase 3b
+- Status: UNKNOWN - need full run to verify
+
+### Known Issue Categories (from DUPLICATE_GROUPS.md)
+
+These categories appear to be duplicates and should be reviewed:
+
+1. **Home-Office-Furniture** (duplicate set)
+   - Multiple URLs may be redundant
+   - Recommendation: Test and keep only canonical URL
+
+2. **Bathroom-Sink-Faucets** (duplicate set)
+   - Multiple URLs with same products
+   - Recommendation: Consolidate
+
+3. **Lighting-Ceiling-Fans** (duplicate set)
+   - Overlap detected
+   - Recommendation: Verify coverage before production
+
+## Recommendations for URL Validation
+
+### Phase 1: Before Production Deployment
+- [ ] Run full 515-category test on minimum 1 store
+- [ ] Identify all categories returning 0 products
+- [ ] Document category names for zero-product URLs
+- [ ] Verify no Lowe's website structure changes
+
+### Phase 2: Before Apify Deployment  
+- [ ] Cross-reference with sitemap URLs (see SITEMAP_COVERAGE_REPORT.md)
+- [ ] Verify duplicate URL handling
+- [ ] Test all 49 stores to ensure category availability
+
+### Phase 3: Ongoing Maintenance
+- [ ] Track category availability changes monthly
+- [ ] Update BAD_URLS.txt with actual findings
+- [ ] Monitor for new categories
+
+## Identified Missing Categories
+From AUTONOMOUS_SCRAPING_INSTRUCTIONS.md, these categories were noted as missing:
+- Furniture
+- Patio
+- Outdoor Tools
+- Grills
+- Lighting
+- And ~275 more sitemap URLs
+
+These should be added to LowesMap.txt for complete coverage.
+
+## URL Testing Results
+**Current Status**: Need full production run to complete validation
+
+Categories to test in next run:
+- All 515 URLs in LowesMap.txt (minimum 1 store)
+- OR state stores (14 total)
+- WA state stores (35 total)
+
+## Instructions for URL Validation
+
+Run this after full data collection:
+```bash
+python analyze_results.py  # Shows all statistics
+# Then manually review:
+# 1. Zero-product categories
+# 2. Categories with <10 products
+# 3. Store-specific availability differences
+```
+
+## To Be Completed After Production Run
+
+This file will be updated with:
+```json
+{
+  "zero_product_urls": ["url1", "url2", ...],
+  "low_product_urls": ["url3", "url4", ...],
+  "duplicate_urls": ["url5", "url6", ...],
+  "validation_date": "2025-12-26",
+  "stores_tested": 49,
+  "categories_tested": 515
+}
+```
+
+---
+Generated: 2025-12-26
+Status: Awaiting full production run for complete validation
+

@@ -1,0 +1,2905 @@
+{
+  "1611079983848": {
+    "name": "Shop All Bathroom Deals",
+    "path": "Deals",
+    "parent_id": null,
+    "children": []
+  },
+  "4294806353": {
+    "name": "Safes",
+    "path": "safes",
+    "parent_id": null,
+    "children": []
+  },
+  "4294710936": {
+    "name": "Hooks",
+    "path": "hooks",
+    "parent_id": null,
+    "children": []
+  },
+  "5": {
+    "name": "5 gallon Paint",
+    "path": "paint",
+    "parent_id": null,
+    "children": [
+      "4294729418"
+    ]
+  },
+  "855642652": {
+    "name": "Lockers",
+    "path": "lockers",
+    "parent_id": null,
+    "children": []
+  },
+  "48": {
+    "name": "48 in bathroom vanity with top Bathroom",
+    "path": "bathroom",
+    "parent_id": null,
+    "children": [
+      "4294737305"
+    ]
+  },
+  "72": {
+    "name": "72 in bathroom vanity with top Bathroom",
+    "path": "bathroom",
+    "parent_id": null,
+    "children": []
+  },
+  "42": {
+    "name": "42 in bathroom vanity Bathroom",
+    "path": "bathroom",
+    "parent_id": null,
+    "children": []
+  },
+  "4294414320": {
+    "name": "Ice Melt",
+    "path": "ice-melt",
+    "parent_id": null,
+    "children": []
+  },
+  "4294925630": {
+    "name": "Grip-Rite",
+    "path": "fasteners",
+    "parent_id": null,
+    "children": [
+      "4294710832",
+      "4294710887",
+      "4294710931",
+      "4294710855",
+      "4294690615",
+      "4294710912"
+    ]
+  },
+  "4294515331": {
+    "name": "Jack Posts",
+    "path": "jack-posts",
+    "parent_id": null,
+    "children": []
+  },
+  "4294857647": {
+    "name": "Shop All Hand Tools",
+    "path": "hand-tools",
+    "parent_id": null,
+    "children": [
+      "4294857564",
+      "4294857613",
+      "4294425055",
+      "4294607674",
+      "4294607651",
+      "2419313453",
+      "4294607611",
+      "4294607610",
+      "4294857573"
+    ]
+  },
+  "4294858190": {
+    "name": "Ventilation",
+    "path": "ventilation",
+    "parent_id": null,
+    "children": [
+      "4294512312"
+    ]
+  },
+  "4294936564": {
+    "name": "Hooks & Racks",
+    "path": "hooks-racks",
+    "parent_id": null,
+    "children": []
+  },
+  "4294607842": {
+    "name": "Power Tools",
+    "path": "power-tools",
+    "parent_id": null,
+    "children": [
+      "4294607777",
+      "4294607800",
+      "4294607831",
+      "4294607725",
+      "4294607722",
+      "4294607824"
+    ]
+  },
+  "2018528687": {
+    "name": "Flashlights & Headlamps",
+    "path": "flashlights",
+    "parent_id": null,
+    "children": [
+      "4294644948"
+    ]
+  },
+  "1920054565179": {
+    "name": "Klein Tools",
+    "path": "Klein-tools",
+    "parent_id": null,
+    "children": []
+  },
+  "1149069550": {
+    "name": "Supply Lines",
+    "path": "supply-lines",
+    "parent_id": null,
+    "children": []
+  },
+  "4294515431": {
+    "name": "Gym Flooring",
+    "path": "gym-flooring",
+    "parent_id": null,
+    "children": []
+  },
+  "4294395604": {
+    "name": "Ceiling Fans",
+    "path": "ceiling-fans",
+    "parent_id": null,
+    "children": []
+  },
+  "4294857028": {
+    "name": "Night Lights",
+    "path": "night-lights",
+    "parent_id": null,
+    "children": []
+  },
+  "4294936478": {
+    "name": "DEWALT\u00ae",
+    "path": "tools/dewalt",
+    "parent_id": null,
+    "children": []
+  },
+  "4294859099": {
+    "name": "Water Heaters",
+    "path": "water-heaters",
+    "parent_id": null,
+    "children": []
+  },
+  "4294857973": {
+    "name": "Shop All",
+    "path": "refrigerators",
+    "parent_id": null,
+    "children": [
+      "290928573",
+      "4294857963",
+      "4294789497",
+      "4294857970",
+      "4294789499"
+    ]
+  },
+  "1511187220575": {
+    "name": "Bathroom Collections",
+    "path": "bathroom-sets",
+    "parent_id": null,
+    "children": []
+  },
+  "4294713161": {
+    "name": "Glass & Acrylic",
+    "path": "glass-acrylic",
+    "parent_id": null,
+    "children": [
+      "2821608155459",
+      "186605902"
+    ]
+  },
+  "1237671492": {
+    "name": "wood moulding and trim",
+    "path": "moulding/wood",
+    "parent_id": null,
+    "children": []
+  },
+  "4294856551": {
+    "name": "Gate Hardware",
+    "path": "gate-hardware",
+    "parent_id": null,
+    "children": []
+  },
+  "4294766248": {
+    "name": "Lock Sets",
+    "path": "door-hardware",
+    "parent_id": null,
+    "children": [
+      "275844998",
+      "1974090709",
+      "4294710983",
+      "946307085"
+    ]
+  },
+  "611625339713": {
+    "name": "Ceiling Paint",
+    "path": "ceiling-paint",
+    "parent_id": null,
+    "children": []
+  },
+  "36": {
+    "name": "36 in x 36 in Windows doors",
+    "path": "windows-doors",
+    "parent_id": null,
+    "children": [
+      "4294937086"
+    ]
+  },
+  "32": {
+    "name": "32 in x 32 in Windows doors",
+    "path": "windows-doors",
+    "parent_id": null,
+    "children": []
+  },
+  "60": {
+    "name": "60 in x 60 in Windows doors",
+    "path": "windows-doors",
+    "parent_id": null,
+    "children": []
+  },
+  "2021454685607": {
+    "name": "These deals are too good to last. Shop the Closeout Event now. >",
+    "path": "The-back-aisle",
+    "parent_id": null,
+    "children": []
+  },
+  "4294857981": {
+    "name": "Shop All",
+    "path": "washers-dryers",
+    "parent_id": null,
+    "children": [
+      "4294857980",
+      "4294857977",
+      "2711977280210",
+      "4294791544",
+      "4294653877"
+    ]
+  },
+  "4294711033": {
+    "name": "Keys & Key Safes",
+    "path": "keys-key-safes",
+    "parent_id": null,
+    "children": []
+  },
+  "4294710832": {
+    "name": "Nuts",
+    "path": "fasteners/nuts",
+    "parent_id": "4294925630",
+    "children": []
+  },
+  "4294400565": {
+    "name": "Locks",
+    "path": "Locks-Hardware",
+    "parent_id": null,
+    "children": []
+  },
+  "1514558678": {
+    "name": "Lighting",
+    "path": "ceiling-lights",
+    "parent_id": null,
+    "children": [
+      "4294687722",
+      "4294929669",
+      "4294687723",
+      "4294566040"
+    ]
+  },
+  "1510843523410": {
+    "name": "Floor Coatings",
+    "path": "floor-coatings",
+    "parent_id": null,
+    "children": []
+  },
+  "4294653871": {
+    "name": "Erosion Control Products",
+    "path": "erosion-control",
+    "parent_id": null,
+    "children": []
+  },
+  "4294642654": {
+    "name": "Garage Flooring",
+    "path": "garage-flooring",
+    "parent_id": null,
+    "children": []
+  },
+  "4294710790": {
+    "name": "Picture Hangers",
+    "path": "picture-hangers",
+    "parent_id": null,
+    "children": []
+  },
+  "4294711110": {
+    "name": "Window Hardware",
+    "path": "window-hardware",
+    "parent_id": null,
+    "children": []
+  },
+  "4294710887": {
+    "name": "Nails",
+    "path": "fasteners/nails",
+    "parent_id": "4294925630",
+    "children": [
+      "4294710869"
+    ]
+  },
+  "4294710931": {
+    "name": "Bolts",
+    "path": "fasteners/bolts",
+    "parent_id": "4294925630",
+    "children": []
+  },
+  "24": {
+    "name": "24 volt transformer Heating cooling",
+    "path": "heating-cooling",
+    "parent_id": null,
+    "children": [
+      "4294934542"
+    ]
+  },
+  "2410111951795": {
+    "name": "Exterior Brackets & Braces",
+    "path": "brackets-braces",
+    "parent_id": null,
+    "children": []
+  },
+  "861738257": {
+    "name": "Door & Trim Paint",
+    "path": "door-trim-paint",
+    "parent_id": null,
+    "children": []
+  },
+  "4294639583": {
+    "name": "Trash Compactors",
+    "path": "trash-compactors",
+    "parent_id": null,
+    "children": []
+  },
+  "4294737205": {
+    "name": "Bathroom & Vanity Mirrors",
+    "path": "bathroom-mirrors",
+    "parent_id": null,
+    "children": []
+  },
+  "1411043670781": {
+    "name": "",
+    "path": "hybrid-resilient",
+    "parent_id": null,
+    "children": [
+      "1911170674233"
+    ]
+  },
+  "4294710855": {
+    "name": "Screws",
+    "path": "fasteners/screws",
+    "parent_id": "4294925630",
+    "children": []
+  },
+  "4294934474": {
+    "name": "Hillman",
+    "path": "hardware/hillman",
+    "parent_id": null,
+    "children": []
+  },
+  "4294857035": {
+    "name": "Outdoor Lighting",
+    "path": "outdoor-lighting",
+    "parent_id": null,
+    "children": [
+      "4294418680",
+      "1761741921",
+      "871465582",
+      "4294606015",
+      "4294798225"
+    ]
+  },
+  "4294566036": {
+    "name": "Novelty Lighting",
+    "path": "novelty-lighting",
+    "parent_id": null,
+    "children": []
+  },
+  "4294607777": {
+    "name": "Saws",
+    "path": "power-tools/saws",
+    "parent_id": "4294607842",
+    "children": [
+      "4294607768"
+    ]
+  },
+  "4294929691": {
+    "name": "Weatherstripping",
+    "path": "weatherstripping",
+    "parent_id": null,
+    "children": []
+  },
+  "4294639585": {
+    "name": "Garbage Disposals",
+    "path": "garbage-disposals",
+    "parent_id": null,
+    "children": []
+  },
+  "4294934297": {
+    "name": "Shop All Building Supplies",
+    "path": "building-supplies",
+    "parent_id": null,
+    "children": []
+  },
+  "4294690615": {
+    "name": "Anchors",
+    "path": "fasteners/anchors",
+    "parent_id": "4294925630",
+    "children": []
+  },
+  "4294710912": {
+    "name": "Washers",
+    "path": "fasteners/washers",
+    "parent_id": "4294925630",
+    "children": []
+  },
+  "4294612789": {
+    "name": "Mulch",
+    "path": "landscaping/mulch",
+    "parent_id": null,
+    "children": [
+      "4294612788"
+    ]
+  },
+  "1011552124422": {
+    "name": "Romex Lawn garden",
+    "path": "lawn-garden/romex",
+    "parent_id": null,
+    "children": []
+  },
+  "4294925668": {
+    "name": "Table & Floor Lamps",
+    "path": "lamps-lamp-shades",
+    "parent_id": null,
+    "children": [
+      "4294798237",
+      "4294565995"
+    ]
+  },
+  "4294518252": {
+    "name": "Shop All Moulding & Millwork",
+    "path": "moulding-millwork",
+    "parent_id": null,
+    "children": []
+  },
+  "1": {
+    "name": "1 inch wide Moulding millwork",
+    "path": "moulding-millwork",
+    "parent_id": null,
+    "children": []
+  },
+  "4294937007": {
+    "name": "Appliance Deals",
+    "path": "appliances/on-sale",
+    "parent_id": null,
+    "children": []
+  },
+  "4294711128": {
+    "name": "Furniture Hardware",
+    "path": "furniture-hardware",
+    "parent_id": null,
+    "children": [
+      "4294711119"
+    ]
+  },
+  "4294711047": {
+    "name": "Specialty Hardware",
+    "path": "specialty-hardware",
+    "parent_id": null,
+    "children": []
+  },
+  "4294512241": {
+    "name": "HVAC Parts & Accessories",
+    "path": "hvac-duct-fittings",
+    "parent_id": null,
+    "children": []
+  },
+  "4294612585": {
+    "name": "Landscape Edging",
+    "path": "landscaping/edging",
+    "parent_id": null,
+    "children": []
+  },
+  "4294857564": {
+    "name": "hammer",
+    "path": "hand-tools/hammers",
+    "parent_id": "4294857647",
+    "children": []
+  },
+  "2220627017920": {
+    "name": "Up to 40% Off Select Vanities",
+    "path": "SHOP-BATHROOM-DEALS",
+    "parent_id": null,
+    "children": []
+  },
+  "4294934373": {
+    "name": "Waterproof Flooring",
+    "path": "flooring/waterproof",
+    "parent_id": null,
+    "children": []
+  },
+  "4294737305": {
+    "name": "Allen + Roth\u00ae",
+    "path": "bathroom/allen-roth",
+    "parent_id": "48",
+    "children": []
+  },
+  "4294425046": {
+    "name": "Columns",
+    "path": "columns-accessories",
+    "parent_id": null,
+    "children": [
+      "4294425045"
+    ]
+  },
+  "4294402491": {
+    "name": "Deck Stairs",
+    "path": "decking/deck-stairs",
+    "parent_id": null,
+    "children": []
+  },
+  "4294410357": {
+    "name": "Rugs",
+    "path": "area-rugs-mats/rugs",
+    "parent_id": null,
+    "children": []
+  },
+  "4294607587": {
+    "name": "Hardware Lubricant",
+    "path": "hardware-lubricants",
+    "parent_id": null,
+    "children": []
+  },
+  "4294417366": {
+    "name": "Clocks",
+    "path": "home-accents/clocks",
+    "parent_id": null,
+    "children": []
+  },
+  "3596460801": {
+    "name": "Bed & Bath",
+    "path": "Bed-bath-Home-decor",
+    "parent_id": null,
+    "children": []
+  },
+  "4294612534": {
+    "name": "Plant Care & Supplies",
+    "path": "plant-care-supplies",
+    "parent_id": null,
+    "children": [
+      "4294612532"
+    ]
+  },
+  "1062031207": {
+    "name": "Faux Wood Beams",
+    "path": "moulding/faux-beams",
+    "parent_id": null,
+    "children": []
+  },
+  "4294417406": {
+    "name": "Painters Tape",
+    "path": "tapes/painters-tape",
+    "parent_id": null,
+    "children": []
+  },
+  "2867482404": {
+    "name": "Replacement Screens",
+    "path": "replacement-screens",
+    "parent_id": null,
+    "children": []
+  },
+  "4294858060": {
+    "name": "Replacing windows",
+    "path": "windows/replacement",
+    "parent_id": null,
+    "children": []
+  },
+  "4294856525": {
+    "name": "Bathroom Tile",
+    "path": "floor-wall-tile/tile",
+    "parent_id": null,
+    "children": []
+  },
+  "4294737256": {
+    "name": "Shower Doors",
+    "path": "showers/shower-doors",
+    "parent_id": null,
+    "children": []
+  },
+  "3180370882": {
+    "name": "flatware",
+    "path": "kitchenware/flatware",
+    "parent_id": null,
+    "children": []
+  },
+  "4294936624": {
+    "name": "Shop All Storage & Organization",
+    "path": "storage-organization",
+    "parent_id": null,
+    "children": []
+  },
+  "195306503": {
+    "name": "Jobsite Radios",
+    "path": "Jobsite-radios-Tools",
+    "parent_id": null,
+    "children": []
+  },
+  "1332684016": {
+    "name": "Walkie Talkies",
+    "path": "Walkie-talkies-Tools",
+    "parent_id": null,
+    "children": []
+  },
+  "1154397505": {
+    "name": "Exterior steel doors",
+    "path": "exterior-doors/steel",
+    "parent_id": null,
+    "children": []
+  },
+  "4294857980": {
+    "name": "Dryers",
+    "path": "washers-dryers/dryers",
+    "parent_id": "4294857981",
+    "children": [
+      "4294791297",
+      "4294857979"
+    ]
+  },
+  "4294796261": {
+    "name": "Ice Makers",
+    "path": "Ice-makers-Appliances",
+    "parent_id": null,
+    "children": []
+  },
+  "4294935833": {
+    "name": "Plumbing Parts & Repair",
+    "path": "plumbing-parts-repair",
+    "parent_id": null,
+    "children": [
+      "4294753292"
+    ]
+  },
+  "4294711114": {
+    "name": "Signs, Letters & Numbers",
+    "path": "signs-letters-numbers",
+    "parent_id": null,
+    "children": [
+      "4294711113"
+    ]
+  },
+  "4294735712": {
+    "name": "Butcher block Kitchen",
+    "path": "kitchen/butcher-block",
+    "parent_id": null,
+    "children": []
+  },
+  "2119880144": {
+    "name": "serveware",
+    "path": "kitchenware/serveware",
+    "parent_id": null,
+    "children": []
+  },
+  "4294639563": {
+    "name": "Utility Sinks & Faucets",
+    "path": "utility-sinks-faucets",
+    "parent_id": null,
+    "children": []
+  },
+  "4294936608": {
+    "name": "Wood Shelving",
+    "path": "shelves-shelving/wood",
+    "parent_id": null,
+    "children": []
+  },
+  "1621060592225": {
+    "name": "Work Clothing & Footwear",
+    "path": "Clothing-work-apparel",
+    "parent_id": null,
+    "children": []
+  },
+  "4294934403": {
+    "name": "Chains, Ropes & Tie-Downs",
+    "path": "chains-ropes-tie-downs",
+    "parent_id": null,
+    "children": []
+  },
+  "2111568621127": {
+    "name": "Home D\u00e9cor Collections",
+    "path": "home-decor-collections",
+    "parent_id": null,
+    "children": []
+  },
+  "4294798247": {
+    "name": "Bathroom Lighting",
+    "path": "bathroom-wall-lighting",
+    "parent_id": null,
+    "children": [
+      "4294798246",
+      "4294798245"
+    ]
+  },
+  "4294607602": {
+    "name": "Plumbing Tools & Cements",
+    "path": "plumbing-tools-cements",
+    "parent_id": null,
+    "children": []
+  },
+  "4211758077": {
+    "name": "Small Parts Organizers",
+    "path": "small-parts-organizers",
+    "parent_id": null,
+    "children": []
+  },
+  "4294526429": {
+    "name": "Shop All Power Tool Accessories",
+    "path": "power-tool-accessories",
+    "parent_id": null,
+    "children": [
+      "4294607757",
+      "4294607793",
+      "2365331415",
+      "4294607832"
+    ]
+  },
+  "4294607864": {
+    "name": "Levels & Measuring Tools",
+    "path": "levels-measuring-tools",
+    "parent_id": null,
+    "children": [
+      "3352150828",
+      "4294607857"
+    ]
+  },
+  "1511792640827": {
+    "name": "Kitchenettes",
+    "path": "Kitchenettes-Appliances",
+    "parent_id": null,
+    "children": []
+  },
+  "4294653960": {
+    "name": "Electrical Boxes & Covers",
+    "path": "electrical-boxes-covers",
+    "parent_id": null,
+    "children": []
+  },
+  "4294722561": {
+    "name": "Carole towne Electrical",
+    "path": "electrical/carole-towne",
+    "parent_id": null,
+    "children": []
+  },
+  "1794897186": {
+    "name": "Boilers",
+    "path": "Boilers-Heating-cooling",
+    "parent_id": null,
+    "children": []
+  },
+  "4294612466": {
+    "name": "Rain Barrels",
+    "path": "irrigation/rain-barrels",
+    "parent_id": null,
+    "children": []
+  },
+  "4294518246": {
+    "name": "Crown Moulding",
+    "path": "moulding/crown-moulding",
+    "parent_id": null,
+    "children": []
+  },
+  "4294857613": {
+    "name": "Screwdrivers & Screwdriver Sets",
+    "path": "hand-tools/screwdrivers",
+    "parent_id": "4294857647",
+    "children": []
+  },
+  "4294607707": {
+    "name": "stick welding",
+    "path": "welding-soldering/stick",
+    "parent_id": null,
+    "children": []
+  },
+  "4294772369": {
+    "name": "Sliding Windows",
+    "path": "windows/sliding-windows",
+    "parent_id": null,
+    "children": []
+  },
+  "4294639621": {
+    "name": "Bathroom Towels",
+    "path": "bed-bath/bathroom-towels",
+    "parent_id": null,
+    "children": []
+  },
+  "2922688282": {
+    "name": "Metal Rods, Shapes & Sheets",
+    "path": "metal-rods-shapes-sheets",
+    "parent_id": null,
+    "children": []
+  },
+  "275844998": {
+    "name": "Door Knobs",
+    "path": "door-hardware/door-knobs",
+    "parent_id": "4294766248",
+    "children": []
+  },
+  "4294710793": {
+    "name": "Marine Hardware",
+    "path": "Marine-hardware-Hardware",
+    "parent_id": null,
+    "children": []
+  },
+  "3721327500": {
+    "name": "Utility Storage Cabinets",
+    "path": "utility-storage-cabinets",
+    "parent_id": null,
+    "children": []
+  },
+  "4294857473": {
+    "name": "Shop Vacuums",
+    "path": "shop-vacuums-accessories",
+    "parent_id": null,
+    "children": []
+  },
+  "4294736344": {
+    "name": "Casement Windows",
+    "path": "windows/casement-windows",
+    "parent_id": null,
+    "children": []
+  },
+  "4294857902": {
+    "name": "upright freezer",
+    "path": "freezers/upright-freezers",
+    "parent_id": null,
+    "children": []
+  },
+  "255140825": {
+    "name": "Luggage & Travel",
+    "path": "Luggage-travel-Home-decor",
+    "parent_id": null,
+    "children": []
+  },
+  "902277247": {
+    "name": "Pillows & Throws",
+    "path": "Pillows-throws-Home-decor",
+    "parent_id": null,
+    "children": []
+  },
+  "4294395588": {
+    "name": "Backsplash Panels",
+    "path": "Backsplash-panels-Kitchen",
+    "parent_id": null,
+    "children": []
+  },
+  "2610376442062": {
+    "name": "Fertilizer",
+    "path": "lawn-care/lawn-fertilizer",
+    "parent_id": null,
+    "children": []
+  },
+  "1638440136": {
+    "name": "Shop the Latest in Lighting",
+    "path": "New-and-Trending-Lighting",
+    "parent_id": null,
+    "children": []
+  },
+  "37721669146453": {
+    "name": "Smart Lighting",
+    "path": "smart-home/smart-lighting",
+    "parent_id": null,
+    "children": [
+      "37721669146457",
+      "37721669146458"
+    ]
+  },
+  "1911764466115": {
+    "name": "Shop All Smart Home, Security, Wi-Fi",
+    "path": "smart-home-security-wi-fi",
+    "parent_id": null,
+    "children": []
+  },
+  "4294857661": {
+    "name": "Shop All Tool Storage & Work Benches",
+    "path": "tool-storage-work-benches",
+    "parent_id": null,
+    "children": [
+      "4294857655",
+      "1457212135",
+      "4294707881"
+    ]
+  },
+  "89341247": {
+    "name": "Barn Doors",
+    "path": "interior-doors/barn-doors",
+    "parent_id": null,
+    "children": []
+  },
+  "4294610549": {
+    "name": "Pet Doors",
+    "path": "pet-doors-gates/pet-doors",
+    "parent_id": null,
+    "children": []
+  },
+  "2386220524": {
+    "name": "Slab Doors",
+    "path": "interior-doors/slab-doors",
+    "parent_id": null,
+    "children": []
+  },
+  "2020942007672": {
+    "name": "Kitchen Appliance Packages",
+    "path": "kitchen-appliance-packages",
+    "parent_id": null,
+    "children": []
+  },
+  "290928573": {
+    "name": "Mini Fridges",
+    "path": "refrigerators/mini-fridges",
+    "parent_id": "4294857973",
+    "children": []
+  },
+  "4294736334": {
+    "name": "Saunas & Components",
+    "path": "Saunas-components-Bathroom",
+    "parent_id": null,
+    "children": []
+  },
+  "2410226966401": {
+    "name": "Wood Fencing",
+    "path": "fencing-gates/wood-fencing",
+    "parent_id": null,
+    "children": []
+  },
+  "2121250443857": {
+    "name": "Speakers",
+    "path": "electronics/audio/speakers",
+    "parent_id": null,
+    "children": []
+  },
+  "4294856495": {
+    "name": "",
+    "path": "laminate/laminate-flooring",
+    "parent_id": null,
+    "children": []
+  },
+  "4294856493": {
+    "name": "",
+    "path": "hardwood/hardwood-flooring",
+    "parent_id": null,
+    "children": []
+  },
+  "4294608591": {
+    "name": "Luxury Vinyl Plank",
+    "path": "vinyl-flooring/vinyl-plank",
+    "parent_id": null,
+    "children": []
+  },
+  "4294618089": {
+    "name": "Heat Pumps",
+    "path": "Heat-pumps-Heating-cooling",
+    "parent_id": null,
+    "children": []
+  },
+  "2211581922820": {
+    "name": "Grass & Grass Seed",
+    "path": "lawn-care/grass-grass-seed",
+    "parent_id": null,
+    "children": []
+  },
+  "4294687722": {
+    "name": "Chandeliers",
+    "path": "ceiling-lights/chandeliers",
+    "parent_id": "1514558678",
+    "children": []
+  },
+  "4294518228": {
+    "name": "",
+    "path": "wall-panels-planks/shiplap",
+    "parent_id": null,
+    "children": []
+  },
+  "4294935907": {
+    "name": "Faucet hole cover Plumbing",
+    "path": "plumbing/faucet-hole-cover",
+    "parent_id": null,
+    "children": []
+  },
+  "4294416642": {
+    "name": "Apple home automation",
+    "path": "Works-with-apple-home-kits",
+    "parent_id": null,
+    "children": []
+  },
+  "4294937086": {
+    "name": "Shop Custom Doors",
+    "path": "windows-doors/customizable",
+    "parent_id": "36",
+    "children": []
+  },
+  "4294772361": {
+    "name": "Screen Tools",
+    "path": "Screen-tools-Windows-doors",
+    "parent_id": null,
+    "children": []
+  },
+  "4294737136": {
+    "name": "Bathroom Rugs & Mats",
+    "path": "bed-bath/bathroom-rugs-mats",
+    "parent_id": null,
+    "children": []
+  },
+  "3520967948023": {
+    "name": "Vinyl Fencing",
+    "path": "fencing-gates/vinyl-fencing",
+    "parent_id": null,
+    "children": []
+  },
+  "4294402513": {
+    "name": "Metal Fencing",
+    "path": "fencing-gates/metal-fencing",
+    "parent_id": null,
+    "children": []
+  },
+  "4294620967": {
+    "name": "Picture Frames & Albums",
+    "path": "home-accents/picture-frames",
+    "parent_id": null,
+    "children": []
+  },
+  "1997216187": {
+    "name": "Wall Accents",
+    "path": "wall-art-decor/wall-accents",
+    "parent_id": null,
+    "children": []
+  },
+  "3593506291": {
+    "name": "induction",
+    "path": "cooktops/induction-cooktops",
+    "parent_id": null,
+    "children": []
+  },
+  "4294612580": {
+    "name": "Plants & Planters",
+    "path": "Plants-planters-Lawn-garden",
+    "parent_id": null,
+    "children": []
+  },
+  "4294798237": {
+    "name": "matching lamps",
+    "path": "lamps-lamp-shades/lamp-sets",
+    "parent_id": "4294925668",
+    "children": []
+  },
+  "4294518239": {
+    "name": "Baseboard Moulding",
+    "path": "moulding/baseboard-moulding",
+    "parent_id": null,
+    "children": []
+  },
+  "4294607768": {
+    "name": "Miter Saw",
+    "path": "power-tools/saws/miter-saws",
+    "parent_id": "4294607777",
+    "children": []
+  },
+  "4294417392": {
+    "name": "Construction Adhesive",
+    "path": "glues/construction-adhesive",
+    "parent_id": null,
+    "children": []
+  },
+  "4294858043": {
+    "name": "Awnings",
+    "path": "awnings-accessories/awnings",
+    "parent_id": null,
+    "children": []
+  },
+  "2760522020": {
+    "name": "French Doors",
+    "path": "interior-doors/french-doors",
+    "parent_id": null,
+    "children": []
+  },
+  "4294772368": {
+    "name": "Single Hung Windows",
+    "path": "windows/single-hung-windows",
+    "parent_id": null,
+    "children": []
+  },
+  "4294772367": {
+    "name": "Double Hung Windows",
+    "path": "windows/double-hung-windows",
+    "parent_id": null,
+    "children": []
+  },
+  "4294772364": {
+    "name": "Screen Spline",
+    "path": "Screen-spline-Windows-doors",
+    "parent_id": null,
+    "children": []
+  },
+  "4294402483": {
+    "name": "Deck Railings",
+    "path": "decking/deck-railing-systems",
+    "parent_id": null,
+    "children": []
+  },
+  "4294402516": {
+    "name": "Rolled Fencing",
+    "path": "fencing-gates/rolled-fencing",
+    "parent_id": null,
+    "children": []
+  },
+  "4294618086": {
+    "name": "Furnaces & Furnace Accessories",
+    "path": "furnaces-furnace-accessories",
+    "parent_id": null,
+    "children": [
+      "4294618084"
+    ]
+  },
+  "4294934542": {
+    "name": "Space heater Heating cooling",
+    "path": "heating-cooling/space-heater",
+    "parent_id": "24",
+    "children": []
+  },
+  "4294794067": {
+    "name": "accent pillows",
+    "path": "pillows-throws/throw-pillows",
+    "parent_id": null,
+    "children": []
+  },
+  "4294612782": {
+    "name": "Landscaping Rock",
+    "path": "landscaping/landscaping-rock",
+    "parent_id": null,
+    "children": []
+  },
+  "2568833479": {
+    "name": "sprinkler systems",
+    "path": "irrigation/sprinkler-systems",
+    "parent_id": null,
+    "children": []
+  },
+  "4294418680": {
+    "name": "Deck Lights",
+    "path": "outdoor-lighting/deck-lights",
+    "parent_id": "4294857035",
+    "children": []
+  },
+  "2720446600024": {
+    "name": "",
+    "path": "Whole-home-lighting-packages",
+    "parent_id": null,
+    "children": []
+  },
+  "4294518229": {
+    "name": "Round & Shoe Moulding",
+    "path": "moulding/shoe-round-moulding",
+    "parent_id": null,
+    "children": []
+  },
+  "4294518249": {
+    "name": "Chair Rail Moulding",
+    "path": "moulding/chair-rail-moulding",
+    "parent_id": null,
+    "children": []
+  },
+  "4294425055": {
+    "name": "Pliers & Plier Sets",
+    "path": "hand-tools/pliers-plier-sets",
+    "parent_id": "4294857647",
+    "children": []
+  },
+  "1015369011": {
+    "name": "",
+    "path": "Shop-appliance-special-values",
+    "parent_id": null,
+    "children": []
+  },
+  "3599024516": {
+    "name": "Composite Deck Boards",
+    "path": "decking/composite-deck-boards",
+    "parent_id": null,
+    "children": []
+  },
+  "2410496261192": {
+    "name": "Cables & Connectors",
+    "path": "electronics/cables-connectors",
+    "parent_id": null,
+    "children": []
+  },
+  "4294512345": {
+    "name": "stair risers and treads",
+    "path": "stairs-railings/treads-risers",
+    "parent_id": null,
+    "children": []
+  },
+  "3088100347": {
+    "name": "Drawer Pulls",
+    "path": "cabinet-hardware/drawer-pulls",
+    "parent_id": null,
+    "children": []
+  },
+  "3897400963": {
+    "name": "indoor portable space heater",
+    "path": "portable-space-heaters/indoor",
+    "parent_id": null,
+    "children": []
+  },
+  "4294935484": {
+    "name": "Wallpaper adhesive Home decor",
+    "path": "home-decor/wallpaper-adhesive",
+    "parent_id": null,
+    "children": []
+  },
+  "4294929669": {
+    "name": "Track Lighting",
+    "path": "ceiling-lights/track-lighting",
+    "parent_id": "1514558678",
+    "children": []
+  },
+  "4294565995": {
+    "name": "floor lamp",
+    "path": "lamps-lamp-shades/floor-lamps",
+    "parent_id": "4294925668",
+    "children": []
+  },
+  "3163521573": {
+    "name": "Window & Door Trim",
+    "path": "moulding/window-door-moulding",
+    "parent_id": null,
+    "children": []
+  },
+  "1481902067": {
+    "name": "Nail Gun",
+    "path": "air-tools-compressors/nailers",
+    "parent_id": null,
+    "children": []
+  },
+  "4294684405": {
+    "name": "Paint Sprayers",
+    "path": "paint-supplies/paint-sprayers",
+    "parent_id": null,
+    "children": []
+  },
+  "4294400570": {
+    "name": "HVLP paint sprayers",
+    "path": "paint-supplies/paint-sprayers",
+    "parent_id": null,
+    "children": []
+  },
+  "4294607800": {
+    "name": "Sanders & Polishers",
+    "path": "power-tools/sanders-polishers",
+    "parent_id": "4294607842",
+    "children": []
+  },
+  "4294644714": {
+    "name": "Surface & Chip Repair",
+    "path": "patching-repair/surface-repair",
+    "parent_id": null,
+    "children": []
+  },
+  "4294858286": {
+    "name": "premixed drywall",
+    "path": "drywall/drywall-joint-compound",
+    "parent_id": null,
+    "children": []
+  },
+  "4294641569": {
+    "name": "portable generator",
+    "path": "generators/portable-generators",
+    "parent_id": null,
+    "children": []
+  },
+  "4294777204": {
+    "name": "Cabinet Knobs",
+    "path": "cabinet-hardware/cabinet-knobs",
+    "parent_id": null,
+    "children": []
+  },
+  "4294696746": {
+    "name": "island",
+    "path": "range-hoods/island-range-hoods",
+    "parent_id": null,
+    "children": []
+  },
+  "4294857695": {
+    "name": "pot racks",
+    "path": "kitchen-organization/pot-racks",
+    "parent_id": null,
+    "children": []
+  },
+  "4294935637": {
+    "name": "Kitchen Lighting",
+    "path": "lighting-ceiling-fans/kitchens",
+    "parent_id": null,
+    "children": []
+  },
+  "1761741921": {
+    "name": "Post Lights",
+    "path": "outdoor-lighting/post-lighting",
+    "parent_id": "4294857035",
+    "children": []
+  },
+  "4294518225": {
+    "name": "Wall Planks",
+    "path": "wall-panels-planks/wall-planks",
+    "parent_id": null,
+    "children": []
+  },
+  "4294518226": {
+    "name": "Wall Panels",
+    "path": "wall-panels-planks/wall-panels",
+    "parent_id": null,
+    "children": []
+  },
+  "1897086949": {
+    "name": "Nest Smoke Alarm",
+    "path": "Google--Fire-safety-Electrical",
+    "parent_id": null,
+    "children": []
+  },
+  "4294772360": {
+    "name": "Accent & Picture Windows",
+    "path": "windows/accent-picture-windows",
+    "parent_id": null,
+    "children": []
+  },
+  "4294857977": {
+    "name": "Washers",
+    "path": "washers-dryers/washing-machines",
+    "parent_id": "4294857981",
+    "children": [
+      "4294857976",
+      "4294857975"
+    ]
+  },
+  "4294402479": {
+    "name": "Deck Balusters",
+    "path": "decking/deck-railing-components",
+    "parent_id": null,
+    "children": [
+      "4294858356"
+    ]
+  },
+  "2721200526769": {
+    "name": "Composite Fencing",
+    "path": "fencing-gates/composite-fencing",
+    "parent_id": null,
+    "children": []
+  },
+  "4294607604": {
+    "name": "Step Stools",
+    "path": "ladders-scaffolding/step-stools",
+    "parent_id": null,
+    "children": []
+  },
+  "4294607605": {
+    "name": "Scaffolding",
+    "path": "ladders-scaffolding/scaffolding",
+    "parent_id": null,
+    "children": []
+  },
+  "542366694": {
+    "name": "HVAC Components",
+    "path": "HVAC-components-Heating-cooling",
+    "parent_id": null,
+    "children": []
+  },
+  "4294395587": {
+    "name": "Radiator Covers",
+    "path": "Radiator-covers-Heating-cooling",
+    "parent_id": null,
+    "children": []
+  },
+  "4294929280": {
+    "name": "wallpaper",
+    "path": "wallpaper-accessories/wallpaper",
+    "parent_id": null,
+    "children": []
+  },
+  "4294687723": {
+    "name": "Pendants",
+    "path": "ceiling-lights/pendant-lighting",
+    "parent_id": "1514558678",
+    "children": []
+  },
+  "4294710869": {
+    "name": "Specialty Nails",
+    "path": "fasteners/nails/specialty-nails",
+    "parent_id": "4294710887",
+    "children": []
+  },
+  "1341360358": {
+    "name": "Folding Furniture",
+    "path": "furniture/folding-tables-chairs",
+    "parent_id": null,
+    "children": []
+  },
+  "4294607674": {
+    "name": "Wrenches & Wrench Sets",
+    "path": "hand-tools/wrenches-wrench-sets",
+    "parent_id": "4294857647",
+    "children": []
+  },
+  "4294482089": {
+    "name": "Home 3D Printers & Filament",
+    "path": "Home-3d-printers-filament-Tools",
+    "parent_id": null,
+    "children": []
+  },
+  "4294607651": {
+    "name": "grease gun",
+    "path": "hand-tools/grease-guns-fittings",
+    "parent_id": "4294857647",
+    "children": []
+  },
+  "4294772358": {
+    "name": "Basement Windows",
+    "path": "windows/basement-hopper-windows",
+    "parent_id": null,
+    "children": []
+  },
+  "555679654": {
+    "name": "Screening Systems",
+    "path": "Screening-systems-Windows-doors",
+    "parent_id": null,
+    "children": []
+  },
+  "2711977280210": {
+    "name": "Washer & Dryer Sets",
+    "path": "washers-dryers/washer-dryer-sets",
+    "parent_id": "4294857981",
+    "children": []
+  },
+  "4294791297": {
+    "name": "Gas Dryers",
+    "path": "washers-dryers/dryers/gas-dryers",
+    "parent_id": "4294857980",
+    "children": []
+  },
+  "4294857924": {
+    "name": "Dishwasher Finder",
+    "path": "dishwashers/built-in-dishwashers",
+    "parent_id": null,
+    "children": []
+  },
+  "4220563625165": {
+    "name": "Chain Link Fencing",
+    "path": "fencing-gates/chain-link-fencing",
+    "parent_id": null,
+    "children": []
+  },
+  "3574040724": {
+    "name": "Step Ladders",
+    "path": "ladders-scaffolding/step-ladders",
+    "parent_id": null,
+    "children": []
+  },
+  "4294425045": {
+    "name": "column wraps",
+    "path": "columns-accessories/column-wraps",
+    "parent_id": "4294425046",
+    "children": []
+  },
+  "4294722554": {
+    "name": "Cable & Wire Connectors",
+    "path": "Cable-wire-connectors-Electrical",
+    "parent_id": null,
+    "children": []
+  },
+  "4294644948": {
+    "name": "flashlights",
+    "path": "flashlights/handheld-flashlights",
+    "parent_id": "2018528687",
+    "children": []
+  },
+  "1974090709": {
+    "name": "Barn Door Hardware",
+    "path": "door-hardware/barn-door-hardware",
+    "parent_id": "4294766248",
+    "children": []
+  },
+  "4294715797": {
+    "name": "countertop microwaves",
+    "path": "microwaves/countertop-microwaves",
+    "parent_id": null,
+    "children": []
+  },
+  "2450073601": {
+    "name": "Soil",
+    "path": "landscaping/soil-soil-amendments",
+    "parent_id": null,
+    "children": [
+      "4294612793",
+      "1992532911"
+    ]
+  },
+  "3773368881": {
+    "name": "Paint Brushes & Rollers",
+    "path": "paint-supplies/paint-applicators",
+    "parent_id": null,
+    "children": []
+  },
+  "4294482094": {
+    "name": "Steel Doors",
+    "path": "exterior-doors/front-doors/steel",
+    "parent_id": null,
+    "children": []
+  },
+  "2352008713": {
+    "name": "Beverage & Wine Chillers",
+    "path": "Beverage-wine-chillers-Appliances",
+    "parent_id": null,
+    "children": []
+  },
+  "479649473": {
+    "name": "Water Coolers & Pitchers",
+    "path": "Water-coolers-pitchers-Appliances",
+    "parent_id": null,
+    "children": []
+  },
+  "4294761676": {
+    "name": "kegerators",
+    "path": "beverage-wine-chillers/kegerators",
+    "parent_id": null,
+    "children": []
+  },
+  "4294414317": {
+    "name": "Attic Ladders",
+    "path": "ladders-scaffolding/attic-ladders",
+    "parent_id": null,
+    "children": []
+  },
+  "2821608155459": {
+    "name": "rubber sheets and rolls",
+    "path": "glass-acrylic/rubber-sheets-rolls",
+    "parent_id": "4294713161",
+    "children": []
+  },
+  "4294722560": {
+    "name": "Light Sockets & Adapters",
+    "path": "Light-sockets-adapters-Electrical",
+    "parent_id": null,
+    "children": []
+  },
+  "4294775312": {
+    "name": "",
+    "path": "carpet-carpet-tile/carpet-samples",
+    "parent_id": null,
+    "children": []
+  },
+  "4294711119": {
+    "name": "rubber furniture casters",
+    "path": "furniture-hardware/casters/rubber",
+    "parent_id": "4294711128",
+    "children": []
+  },
+  "4294856641": {
+    "name": "mailboxes",
+    "path": "mailboxes-mailbox-posts/mailboxes",
+    "parent_id": null,
+    "children": []
+  },
+  "1352416560": {
+    "name": "Septic Tanks & Accessories",
+    "path": "Septic-tanks-accessories-Plumbing",
+    "parent_id": null,
+    "children": []
+  },
+  "2311849919312": {
+    "name": "Tubing & Hoses (By-the-Foot)",
+    "path": "Tubing-hoses-by-the-foot-Plumbing",
+    "parent_id": null,
+    "children": []
+  },
+  "688954782": {
+    "name": "Shoe Storage",
+    "path": "Shoe-storage-Storage-organization",
+    "parent_id": null,
+    "children": []
+  },
+  "4294607831": {
+    "name": "Power Tool Combo Kits",
+    "path": "power-tools/power-tool-combo-kits",
+    "parent_id": "4294607842",
+    "children": []
+  },
+  "4294607757": {
+    "name": "Drill Bits",
+    "path": "power-tool-accessories/drill-bits",
+    "parent_id": "4294526429",
+    "children": []
+  },
+  "4294607793": {
+    "name": "Saw Blades",
+    "path": "power-tool-accessories/saw-blades",
+    "parent_id": "4294526429",
+    "children": []
+  },
+  "4294644684": {
+    "name": "LARSON",
+    "path": "exterior-doors/storm-doors/larson",
+    "parent_id": null,
+    "children": []
+  },
+  "4294858045": {
+    "name": "Awnings & Accessories",
+    "path": "Awnings-accessories-Windows-doors",
+    "parent_id": null,
+    "children": []
+  },
+  "4294858019": {
+    "name": "garage doors",
+    "path": "garage-doors-openers/garage-doors",
+    "parent_id": null,
+    "children": []
+  },
+  "4294417346": {
+    "name": "Medicine Cabinets",
+    "path": "bathroom-storage/medicine-cabinets",
+    "parent_id": null,
+    "children": []
+  },
+  "1898196271": {
+    "name": "",
+    "path": "kitchen-cabinetry/kitchen-cabinets",
+    "parent_id": null,
+    "children": []
+  },
+  "2419313453": {
+    "name": "Sockets & Socket Sets",
+    "path": "hand-tools/sockets-socket-adapters",
+    "parent_id": "4294857647",
+    "children": []
+  },
+  "2705116348": {
+    "name": "Bifold Doors",
+    "path": "interior-doors/closet-doors/bifold",
+    "parent_id": null,
+    "children": []
+  },
+  "131738180": {
+    "name": "Wine Coolers",
+    "path": "beverage-wine-chillers/wine-coolers",
+    "parent_id": null,
+    "children": []
+  },
+  "4294512312": {
+    "name": "dryer vents and accessories",
+    "path": "ventilation/dryer-vents-accessories",
+    "parent_id": "4294858190",
+    "children": []
+  },
+  "1236481888": {
+    "name": "Drones & Drone Accessories",
+    "path": "Drones-drone-accessories-Electrical",
+    "parent_id": null,
+    "children": []
+  },
+  "4294856700": {
+    "name": "Portable Fans",
+    "path": "air-conditioners-fans/portable-fans",
+    "parent_id": null,
+    "children": []
+  },
+  "4294798246": {
+    "name": "Wall Lights",
+    "path": "bathroom-wall-lighting/wall-sconces",
+    "parent_id": "4294798247",
+    "children": []
+  },
+  "1409907717": {
+    "name": "Landscape Fabric",
+    "path": "landscaping/landscape-fabric-stakes",
+    "parent_id": null,
+    "children": []
+  },
+  "4294512248": {
+    "name": "Greenhouses & Accessories",
+    "path": "Greenhouses-accessories-Lawn-garden",
+    "parent_id": null,
+    "children": []
+  },
+  "4294566040": {
+    "name": "Flush Mount Lighting",
+    "path": "ceiling-lights/flush-mount-lighting",
+    "parent_id": "1514558678",
+    "children": []
+  },
+  "871465582": {
+    "name": "Landscape Lighting",
+    "path": "outdoor-lighting/landscape-lighting",
+    "parent_id": "4294857035",
+    "children": []
+  },
+  "4294402555": {
+    "name": "Dowels & Dowel Pins",
+    "path": "Dowels-dowel-pins-Moulding-millwork",
+    "parent_id": null,
+    "children": []
+  },
+  "4294729418": {
+    "name": "HGTV Home\u00ae by Sherwin-Williams",
+    "path": "paint/hgtv-home-by-sherwin-williams",
+    "parent_id": "5",
+    "children": []
+  },
+  "4294821952": {
+    "name": "ecobee thermostats",
+    "path": "Ecobee--Thermostats-Heating-cooling",
+    "parent_id": null,
+    "children": []
+  },
+  "3220908814632": {
+    "name": "Candles & Home Fragrances",
+    "path": "home-accents/candles-home-fragrances",
+    "parent_id": null,
+    "children": []
+  },
+  "4294612532": {
+    "name": "Plant Protection",
+    "path": "plant-care-supplies/plant-protection",
+    "parent_id": "4294612534",
+    "children": []
+  },
+  "4294612592": {
+    "name": "Patio Pavers",
+    "path": "pavers-retaining-walls/stones-pavers",
+    "parent_id": null,
+    "children": []
+  },
+  "4294798245": {
+    "name": "Vanity Lights",
+    "path": "bathroom-wall-lighting/vanity-lights",
+    "parent_id": "4294798247",
+    "children": []
+  },
+  "4294606015": {
+    "name": "Outdoor Wall Lights",
+    "path": "outdoor-lighting/outdoor-wall-lights",
+    "parent_id": "4294857035",
+    "children": []
+  },
+  "37721669146452": {
+    "name": "Smart Home",
+    "path": "Smart-home-Smart-home-security-wi-fi",
+    "parent_id": null,
+    "children": []
+  },
+  "1866777393": {
+    "name": "video doorbell",
+    "path": "Video-doorbells-Doorbells-Electrical",
+    "parent_id": null,
+    "children": []
+  },
+  "4294857979": {
+    "name": "Electric Dryers",
+    "path": "washers-dryers/dryers/electric-dryers",
+    "parent_id": "4294857980",
+    "children": []
+  },
+  "3173018057": {
+    "name": "Extension Ladders",
+    "path": "ladders-scaffolding/extension-ladders",
+    "parent_id": null,
+    "children": []
+  },
+  "4294620973": {
+    "name": "Humidifiers",
+    "path": "humidifiers-dehumidifiers/humidifiers",
+    "parent_id": null,
+    "children": []
+  },
+  "4294418655": {
+    "name": "Lamp Parts",
+    "path": "lighting-parts-accessories/lamp-parts",
+    "parent_id": null,
+    "children": []
+  },
+  "2911831268": {
+    "name": "air compressors",
+    "path": "air-tools-compressors/air-compressors",
+    "parent_id": null,
+    "children": []
+  },
+  "1728603825": {
+    "name": "Prehung Doors",
+    "path": "interior-doors/prehung-interior-doors",
+    "parent_id": null,
+    "children": []
+  },
+  "2155437395": {
+    "name": "Screen Frame Connectors",
+    "path": "Screen-frame-connectors-Windows-doors",
+    "parent_id": null,
+    "children": []
+  },
+  "4294791544": {
+    "name": "Stacked Laundry Centers",
+    "path": "washers-dryers/stacked-laundry-centers",
+    "parent_id": "4294857981",
+    "children": []
+  },
+  "37721669146479": {
+    "name": "Sewing Machines & Accessories",
+    "path": "Sewing-machines-accessories-Appliances",
+    "parent_id": null,
+    "children": []
+  },
+  "2514133835": {
+    "name": "Studs",
+    "path": "lumber-composites/framing-lumber/studs",
+    "parent_id": null,
+    "children": []
+  },
+  "4294524376": {
+    "name": "Batt Insulation",
+    "path": "insulation-accessories/batt-insulation",
+    "parent_id": null,
+    "children": []
+  },
+  "4294524370": {
+    "name": "Roll Insulation",
+    "path": "insulation-accessories/roll-insulation",
+    "parent_id": null,
+    "children": []
+  },
+  "953779431": {
+    "name": "Asphalt Repair & Tools",
+    "path": "Asphalt-repair-tools-Building-supplies",
+    "parent_id": null,
+    "children": []
+  },
+  "4294936606": {
+    "name": "Decorative Shelves",
+    "path": "shelves-shelving/wall-mounted-shelving",
+    "parent_id": null,
+    "children": []
+  },
+  "761937993": {
+    "name": "Artificial Plants & Flowers",
+    "path": "home-accents/artificial-plants-flowers",
+    "parent_id": null,
+    "children": []
+  },
+  "4294798225": {
+    "name": "Security & Flood Lights",
+    "path": "outdoor-lighting/security-flood-lights",
+    "parent_id": "4294857035",
+    "children": []
+  },
+  "2586650892": {
+    "name": "headlamps",
+    "path": "flashlights-flashlight-bulbs/headlamps",
+    "parent_id": null,
+    "children": []
+  },
+  "4294857963": {
+    "name": "French Door Refrigerators",
+    "path": "refrigerators/french-door-refrigerators",
+    "parent_id": "4294857973",
+    "children": []
+  },
+  "4294789497": {
+    "name": "Top-Freezer Refrigerators",
+    "path": "refrigerators/top-freezer-refrigerators",
+    "parent_id": "4294857973",
+    "children": []
+  },
+  "4294653877": {
+    "name": "All-In-One Washer Dryers",
+    "path": "washers-dryers/all-in-one-washer-dryers",
+    "parent_id": "4294857981",
+    "children": []
+  },
+  "4294737179": {
+    "name": "Commercial Bathroom Components",
+    "path": "Commercial-bathroom-components-Bathroom",
+    "parent_id": null,
+    "children": []
+  },
+  "3221732066751": {
+    "name": "OSB",
+    "path": "lumber-composites/plywood-sheathing/osb",
+    "parent_id": null,
+    "children": []
+  },
+  "4294684428": {
+    "name": "Brick Veneer",
+    "path": "siding-stone-veneer/brick-veneer-siding",
+    "parent_id": null,
+    "children": []
+  },
+  "4294858106": {
+    "name": "Foam Board Insulation",
+    "path": "insulation-accessories/board-insulation",
+    "parent_id": null,
+    "children": []
+  },
+  "3869279455": {
+    "name": "battery chargers",
+    "path": "batteries/rechargeable-battery-chargers",
+    "parent_id": null,
+    "children": []
+  },
+  "4294620974": {
+    "name": "Dehumidifiers",
+    "path": "humidifiers-dehumidifiers/dehumidifiers",
+    "parent_id": null,
+    "children": []
+  },
+  "4294386103": {
+    "name": "Light Shades",
+    "path": "lighting-parts-accessories/light-shades",
+    "parent_id": null,
+    "children": []
+  },
+  "2310003785690": {
+    "name": "Water Heater Parts & Accessories",
+    "path": "Water-heater-parts-accessories-Plumbing",
+    "parent_id": null,
+    "children": []
+  },
+  "2957059063": {
+    "name": "Home Security",
+    "path": "Home-security-Smart-home-security-wi-fi",
+    "parent_id": null,
+    "children": []
+  },
+  "4294857970": {
+    "name": "Side-by-Side Refrigerators",
+    "path": "refrigerators/side-by-side-refrigerators",
+    "parent_id": "4294857973",
+    "children": []
+  },
+  "37721669146480": {
+    "name": "Crafting Machines & Accessories",
+    "path": "Crafting-machines-accessories-Appliances",
+    "parent_id": null,
+    "children": []
+  },
+  "4294773819": {
+    "name": "peel-and-stick floor tile",
+    "path": "vinyl-flooring/vinyl-tile/peel-and-stick",
+    "parent_id": null,
+    "children": []
+  },
+  "4294620968": {
+    "name": "Vases",
+    "path": "home-accents/decorative-accessories/vase",
+    "parent_id": null,
+    "children": []
+  },
+  "3250133351": {
+    "name": "Lattice",
+    "path": "moulding/square-lattice-moulding/lattice",
+    "parent_id": null,
+    "children": []
+  },
+  "2521972965619": {
+    "name": "Paint Cleaners, Chemicals & Additives",
+    "path": "Paint-cleaners-chemicals-additives-Paint",
+    "parent_id": null,
+    "children": []
+  },
+  "640979041": {
+    "name": "Cube Storage Organizers",
+    "path": "shelves-shelving/cube-storage-organizers",
+    "parent_id": null,
+    "children": []
+  },
+  "4294607611": {
+    "name": "Mechanics Tool Sets",
+    "path": "hand-tools/tool-sets/mechanics-tool-sets",
+    "parent_id": "4294857647",
+    "children": []
+  },
+  "4294607610": {
+    "name": "Household Tool Sets",
+    "path": "hand-tools/tool-sets/household-tool-sets",
+    "parent_id": "4294857647",
+    "children": []
+  },
+  "4013895981": {
+    "name": "Pressure Treated Lumber",
+    "path": "lumber-composites/pressure-treated-lumber",
+    "parent_id": null,
+    "children": []
+  },
+  "4294722553": {
+    "name": "Plugs & Connectors",
+    "path": "electrical-outlets-plugs/plugs-connectors",
+    "parent_id": null,
+    "children": []
+  },
+  "4294859078": {
+    "name": "Evaporative Coolers",
+    "path": "air-conditioners-fans/evaporative-coolers",
+    "parent_id": null,
+    "children": []
+  },
+  "4294821970": {
+    "name": "hand auger",
+    "path": "augers-plungers-drain-openers/hand-augers",
+    "parent_id": null,
+    "children": []
+  },
+  "4294857701": {
+    "name": "Kitchen Organization",
+    "path": "Kitchen-organization-Storage-organization",
+    "parent_id": null,
+    "children": []
+  },
+  "4294857708": {
+    "name": "Laundry Organization",
+    "path": "Laundry-organization-Storage-organization",
+    "parent_id": null,
+    "children": []
+  },
+  "4294607725": {
+    "name": "Impact Drivers",
+    "path": "power-tools/drills-drivers/impact-drivers",
+    "parent_id": "4294607842",
+    "children": []
+  },
+  "4294789499": {
+    "name": "Bottom-Freezer Refrigerators",
+    "path": "refrigerators/bottom-freezer-refrigerators",
+    "parent_id": "4294857973",
+    "children": []
+  },
+  "4145676203": {
+    "name": "Shower Heads",
+    "path": "bathroom-faucets-shower-heads/shower-heads",
+    "parent_id": null,
+    "children": []
+  },
+  "4294858108": {
+    "name": "Blown-In Insulation",
+    "path": "insulation-accessories/blown-in-insulation",
+    "parent_id": null,
+    "children": []
+  },
+  "4254984164": {
+    "name": "Multi-Position Ladders",
+    "path": "ladders-scaffolding/multi-position-ladders",
+    "parent_id": null,
+    "children": []
+  },
+  "186605902": {
+    "name": "Polycarbonate and acrylic sheets",
+    "path": "glass-acrylic/polycarbonate-acrylic-sheets",
+    "parent_id": "4294713161",
+    "children": []
+  },
+  "1911170674233": {
+    "name": "Hybrid Resilient Flooring",
+    "path": "hybrid-resilient/hybrid-resilient-flooring",
+    "parent_id": "1411043670781",
+    "children": []
+  },
+  "4294612788": {
+    "name": "Pine Needles & Straw",
+    "path": "landscaping/mulch/pine-needles-straw-mulch",
+    "parent_id": "4294612789",
+    "children": []
+  },
+  "4294392550": {
+    "name": "Plant Bulbs",
+    "path": "plants-bulbs-seeds/seeds-bulbs/plant-bulbs",
+    "parent_id": null,
+    "children": []
+  },
+  "41520782626695": {
+    "name": "Storage Drawers",
+    "path": "baskets-storage-containers/storage-drawers",
+    "parent_id": null,
+    "children": []
+  },
+  "4294607722": {
+    "name": "Cordless Drills",
+    "path": "power-tools/drills-drivers/drills/cordless",
+    "parent_id": "4294607842",
+    "children": []
+  },
+  "4294607824": {
+    "name": "Rotary & Oscillating Tools",
+    "path": "power-tools/rotary-tools-oscillating-tools",
+    "parent_id": "4294607842",
+    "children": []
+  },
+  "4294737213": {
+    "name": "toilets with bidets",
+    "path": "toilets-toilet-seats/toilets/bidet-function",
+    "parent_id": null,
+    "children": []
+  },
+  "2365411302": {
+    "name": "Wood Siding",
+    "path": "siding-stone-veneer/wood-siding-accessories",
+    "parent_id": null,
+    "children": []
+  },
+  "4294546213": {
+    "name": "Security Cameras",
+    "path": "home-security/security-surveillance-cameras",
+    "parent_id": null,
+    "children": []
+  },
+  "4294542242": {
+    "name": "Extension Cords & Surge Protectors",
+    "path": "Extension-cords-surge-protectors-Electrical",
+    "parent_id": null,
+    "children": []
+  },
+  "4294722475": {
+    "name": "GFCI",
+    "path": "electrical-outlets-plugs/electrical-outlets",
+    "parent_id": null,
+    "children": []
+  },
+  "4294859046": {
+    "name": "Surface Preparation",
+    "path": "flooring-tools-supplies/surface-preparation",
+    "parent_id": null,
+    "children": []
+  },
+  "509604447": {
+    "name": "Tile Tools & Supplies",
+    "path": "flooring-tools-supplies/tile-tools-supplies",
+    "parent_id": null,
+    "children": []
+  },
+  "4294711113": {
+    "name": "house numbers",
+    "path": "signs-letters-numbers/house-letters-numbers",
+    "parent_id": "4294711114",
+    "children": []
+  },
+  "37721669146457": {
+    "name": "Smart Light Bulbs",
+    "path": "smart-home/smart-lighting/smart-light-bulbs",
+    "parent_id": "37721669146453",
+    "children": []
+  },
+  "2311714614847": {
+    "name": "Smart Home Bundles",
+    "path": "smart-home/smart-devices/smart-home-bundles",
+    "parent_id": null,
+    "children": []
+  },
+  "2611667535867": {
+    "name": "Office & School Supplies",
+    "path": "Office-school-supplies-Storage-organization",
+    "parent_id": null,
+    "children": []
+  },
+  "4294857655": {
+    "name": "Work Benches",
+    "path": "tool-storage-work-benches/work-benches-tops",
+    "parent_id": "4294857661",
+    "children": []
+  },
+  "1267692970": {
+    "name": "Shower Faucets",
+    "path": "bathroom-faucets-shower-heads/shower-faucets",
+    "parent_id": null,
+    "children": []
+  },
+  "4189457540": {
+    "name": "Faucet Handles",
+    "path": "bathroom-faucets-shower-heads/faucet-handles",
+    "parent_id": null,
+    "children": []
+  },
+  "4294512292": {
+    "name": "Vinyl Siding",
+    "path": "siding-stone-veneer/vinyl-siding-accessories",
+    "parent_id": null,
+    "children": []
+  },
+  "4294781310": {
+    "name": "Stone Veneer",
+    "path": "siding-stone-veneer/stone-veneer-accessories",
+    "parent_id": null,
+    "children": []
+  },
+  "4294858110": {
+    "name": "Spray Foam Insulation",
+    "path": "insulation-accessories/spray-foam-insulation",
+    "parent_id": null,
+    "children": []
+  },
+  "37721669146458": {
+    "name": "Smart Ceiling Fans",
+    "path": "smart-home/smart-lighting/smart-ceiling-fans",
+    "parent_id": "37721669146453",
+    "children": []
+  },
+  "1479393200": {
+    "name": "Beverage Refrigerators",
+    "path": "beverage-wine-chillers/beverage-refrigerators",
+    "parent_id": null,
+    "children": []
+  },
+  "4294418636": {
+    "name": "Flooring Underlayment",
+    "path": "flooring-tools-supplies/flooring-underlayment",
+    "parent_id": null,
+    "children": []
+  },
+  "4294710983": {
+    "name": "screen doors",
+    "path": "door-hardware/screen-door-storm-door-hardware",
+    "parent_id": "4294766248",
+    "children": []
+  },
+  "4294735655": {
+    "name": "",
+    "path": "kitchen-countertops-accessories/solid-surface",
+    "parent_id": null,
+    "children": []
+  },
+  "4294392549": {
+    "name": "house plants",
+    "path": "plants-bulbs-seeds/indoor-plants/house-plants",
+    "parent_id": null,
+    "children": []
+  },
+  "4294857573": {
+    "name": "Pry Bar",
+    "path": "hand-tools/chisels-pry-bars/crowbars-pry-bars",
+    "parent_id": "4294857647",
+    "children": []
+  },
+  "4294721048": {
+    "name": "wireless thermostats",
+    "path": "Smart-thermostats-Thermostats-Heating-cooling",
+    "parent_id": null,
+    "children": []
+  },
+  "4294857959": {
+    "name": "three-vessel slow cooker",
+    "path": "small-appliances/cookers-steamers/slow-cookers",
+    "parent_id": null,
+    "children": []
+  },
+  "2710500486399": {
+    "name": "radio",
+    "path": "electronics/audio/boomboxes-radios/am-fm-radio",
+    "parent_id": null,
+    "children": []
+  },
+  "4294644953": {
+    "name": "Work gloves",
+    "path": "workwear/work-footwear-accessories/work-gloves",
+    "parent_id": null,
+    "children": []
+  },
+  "4294618087": {
+    "name": "Central Air Conditioners",
+    "path": "air-conditioners-fans/central-air-conditioners",
+    "parent_id": null,
+    "children": []
+  },
+  "4294612575": {
+    "name": "Outdoor Planters, Stands & Window Boxes",
+    "path": "planters-stands-garden-beds/window-box/outdoor",
+    "parent_id": null,
+    "children": []
+  },
+  "4294612793": {
+    "name": "topsoil",
+    "path": "landscaping/soil-soil-amendments/soil/top-soil",
+    "parent_id": "2450073601",
+    "children": []
+  },
+  "2365331415": {
+    "name": "Drill Attachments",
+    "path": "power-tool-accessories/drill-parts-attachments",
+    "parent_id": "4294526429",
+    "children": []
+  },
+  "1721501296": {
+    "name": "welding supplies",
+    "path": "welding-soldering/welding-supplies-accessories",
+    "parent_id": null,
+    "children": []
+  },
+  "4294612607": {
+    "name": "Wheelbarrows & Yard Carts",
+    "path": "outdoor-tools-equipment/wheelbarrows-yard-carts",
+    "parent_id": null,
+    "children": []
+  },
+  "4294395594": {
+    "name": "Ceiling Fan Parts",
+    "path": "ceiling-fan-parts-accessories/ceiling-fan-parts",
+    "parent_id": null,
+    "children": []
+  },
+  "4294713240": {
+    "name": "Storage Bins & Baskets",
+    "path": "baskets-storage-containers/storage-bins-baskets",
+    "parent_id": null,
+    "children": []
+  },
+  "4294775786": {
+    "name": "Exterior Shutters",
+    "path": "exterior-shutters-accessories/exterior-shutters",
+    "parent_id": null,
+    "children": []
+  },
+  "4294858024": {
+    "name": "Hurricane Shutter Panels & Hardware",
+    "path": "Hurricane-shutter-panels-hardware-Windows-doors",
+    "parent_id": null,
+    "children": []
+  },
+  "4294857976": {
+    "name": "Top-Load Washers",
+    "path": "washers-dryers/washing-machines/top-load-washers",
+    "parent_id": "4294857977",
+    "children": []
+  },
+  "2220649144959": {
+    "name": "Composite & Engineered Wood Siding",
+    "path": "siding-stone-veneer/composite-siding-accessories",
+    "parent_id": null,
+    "children": []
+  },
+  "4294542238": {
+    "name": "Extension Cords",
+    "path": "extension-cords-surge-protectors/extension-cords",
+    "parent_id": null,
+    "children": []
+  },
+  "4294599054": {
+    "name": "Electric Fireplaces",
+    "path": "fireplaces-stoves/fireplaces/electric-fireplaces",
+    "parent_id": null,
+    "children": []
+  },
+  "1992532911": {
+    "name": "Soil Amendments",
+    "path": "landscaping/soil-soil-amendments/soil-amendments",
+    "parent_id": "2450073601",
+    "children": []
+  },
+  "4294565986": {
+    "name": "Timers & Light Controls",
+    "path": "lighting-parts-accessories/timers-light-controls",
+    "parent_id": null,
+    "children": []
+  },
+  "4294925669": {
+    "name": "Lighting Parts & Accessories",
+    "path": "Lighting-parts-accessories-Lighting-ceiling-fans",
+    "parent_id": null,
+    "children": []
+  },
+  "4294735696": {
+    "name": "faucet.",
+    "path": "kitchen-faucets-water-dispensers/kitchen-faucets",
+    "parent_id": null,
+    "children": []
+  },
+  "4294542236": {
+    "name": "surge protectors",
+    "path": "extension-cords-surge-protectors/surge-protectors",
+    "parent_id": null,
+    "children": []
+  },
+  "4294612473": {
+    "name": "garden hoses",
+    "path": "Garden-hoses-Garden-hoses-accessories-Lawn-garden",
+    "parent_id": null,
+    "children": []
+  },
+  "4294857975": {
+    "name": "Front-Load Washers",
+    "path": "washers-dryers/washing-machines/front-load-washers",
+    "parent_id": "4294857977",
+    "children": []
+  },
+  "4294639614": {
+    "name": "Shower Curtains, Liners & Rods",
+    "path": "bathroom-accessories-hardware/shower-curtains-rods",
+    "parent_id": null,
+    "children": []
+  },
+  "2911360719587": {
+    "name": "Tub & Tile Paint & Coatings",
+    "path": "specialty-commercial-paint/tub-tile-paint-coatings",
+    "parent_id": null,
+    "children": []
+  },
+  "2226107462": {
+    "name": "spice racks",
+    "path": "kitchen-organization/cabinet-organizers/spice-rack",
+    "parent_id": null,
+    "children": []
+  },
+  "37721669146431": {
+    "name": "Cabinet & Furniture Paint",
+    "path": "specialty-commercial-paint/cabinet-furniture-paint",
+    "parent_id": null,
+    "children": []
+  },
+  "2821202638033": {
+    "name": "",
+    "path": "Wi-fi-networking-devices-Smart-home-security-wi-fi",
+    "parent_id": null,
+    "children": []
+  },
+  "2520363798302": {
+    "name": "smart home automation",
+    "path": "Smart-devices-Smart-home-Smart-home-security-wi-fi",
+    "parent_id": null,
+    "children": []
+  },
+  "1879636657": {
+    "name": "Bathroom Sink Faucets",
+    "path": "bathroom-faucets-shower-heads/bathroom-sink-faucets",
+    "parent_id": null,
+    "children": []
+  },
+  "4294644809": {
+    "name": "TOTO bidets",
+    "path": "toilets-toilet-seats/bidets-bidet-parts/bidets/toto",
+    "parent_id": null,
+    "children": []
+  },
+  "4294402500": {
+    "name": "Dimensional Lumber",
+    "path": "lumber-composites/framing-lumber/dimensional-lumber",
+    "parent_id": null,
+    "children": []
+  },
+  "3313868589": {
+    "name": "Fiber Cement Siding",
+    "path": "siding-stone-veneer/fiber-cement-siding-accessories",
+    "parent_id": null,
+    "children": []
+  },
+  "4294770537": {
+    "name": "rattan-inspired chairs",
+    "path": "furniture/living-room-furniture/chairs/rattan-frame",
+    "parent_id": null,
+    "children": []
+  },
+  "4294696736": {
+    "name": "",
+    "path": "kitchen-countertops-accessories/kitchen-countertops",
+    "parent_id": null,
+    "children": []
+  },
+  "4294518281": {
+    "name": "Ceiling Medallions & Rings",
+    "path": "lighting-parts-accessories/ceiling-medallions-rings",
+    "parent_id": null,
+    "children": [
+      "4294518280"
+    ]
+  },
+  "4294395603": {
+    "name": "Ceiling Fan Parts & Accessories",
+    "path": "Ceiling-fan-parts-accessories-Lighting-ceiling-fans",
+    "parent_id": null,
+    "children": []
+  },
+  "2207678993": {
+    "name": "Garage Storage",
+    "path": "garage-organization/garage-cabinets-storage-systems",
+    "parent_id": null,
+    "children": []
+  },
+  "1457212135": {
+    "name": "Tool storage",
+    "path": "tool-storage-work-benches/tool-chests-tool-cabinets",
+    "parent_id": "4294857661",
+    "children": [
+      "4294607609",
+      "346867792",
+      "4294607608"
+    ]
+  },
+  "946307085": {
+    "name": "Smart Electronic Door Locks",
+    "path": "door-hardware/electronic-door-locks/smart-compatible",
+    "parent_id": "4294766248",
+    "children": []
+  },
+  "37721669146434": {
+    "name": "Countertop Paint & Coatings",
+    "path": "specialty-commercial-paint/countertop-paint-coatings",
+    "parent_id": null,
+    "children": []
+  },
+  "4294821951": {
+    "name": "programmable thermostat",
+    "path": "Programmable-thermostats-Thermostats-Heating-cooling",
+    "parent_id": null,
+    "children": []
+  },
+  "4294607832": {
+    "name": "Power Tool Batteries & Chargers",
+    "path": "power-tool-accessories/power-tool-batteries-chargers",
+    "parent_id": "4294526429",
+    "children": []
+  },
+  "3352150828": {
+    "name": "tape measure",
+    "path": "levels-measuring-tools/measuring-tools/tape-measures",
+    "parent_id": "4294607864",
+    "children": []
+  },
+  "4294749561": {
+    "name": "Top-Rated Air Conditioners",
+    "path": "air-conditioners-fans/room-air-conditioners/top-rated",
+    "parent_id": null,
+    "children": []
+  },
+  "4294395592": {
+    "name": "Ceiling Fan Accessories",
+    "path": "ceiling-fan-parts-accessories/ceiling-fan-accessories",
+    "parent_id": null,
+    "children": []
+  },
+  "4294713243": {
+    "name": "Plastic Storage Containers",
+    "path": "baskets-storage-containers/plastic-storage-containers",
+    "parent_id": null,
+    "children": []
+  },
+  "4294707881": {
+    "name": "Rolling Tool Boxes",
+    "path": "tool-storage-work-benches/portable-tool-boxes/rolling",
+    "parent_id": "4294857661",
+    "children": []
+  },
+  "2426063645": {
+    "name": "Supports",
+    "path": "insulation-accessories/insulation-accessories-supports",
+    "parent_id": null,
+    "children": []
+  },
+  "4294722478": {
+    "name": "Circuit Breakers",
+    "path": "power-distribution-circuit-protection/circuit-breakers",
+    "parent_id": null,
+    "children": []
+  },
+  "4294858356": {
+    "name": "Deck Posts",
+    "path": "decking/deck-railing-components/deck-posts-post-sleeves",
+    "parent_id": "4294402479",
+    "children": []
+  },
+  "4294859079": {
+    "name": "",
+    "path": "Smart-compatible--Air-conditioners-fans-Heating-cooling",
+    "parent_id": null,
+    "children": []
+  },
+  "4294607684": {
+    "name": "welding helmets",
+    "path": "welding-soldering/welding-safety-apparel/welding-helmets",
+    "parent_id": null,
+    "children": []
+  },
+  "4294618084": {
+    "name": "Electric furnaces",
+    "path": "furnaces-furnace-accessories/forced-air-furnaces/electric",
+    "parent_id": "4294618086",
+    "children": []
+  },
+  "4294612645": {
+    "name": "Push Spreaders",
+    "path": "outdoor-tools-equipment/spreaders-sprayers/push-spreaders",
+    "parent_id": null,
+    "children": []
+  },
+  "4294769481": {
+    "name": "Dining & Kitchen Storage",
+    "path": "furniture/dining-kitchen-furniture/dining-kitchen-storage",
+    "parent_id": null,
+    "children": []
+  },
+  "1363677797": {
+    "name": "Garden Sprayers",
+    "path": "outdoor-tools-equipment/spreaders-sprayers/garden-sprayers",
+    "parent_id": null,
+    "children": []
+  },
+  "4294610146": {
+    "name": "gas fire pit",
+    "path": "fire-pits-patio-heaters/fire-pits-accessories/gas-fire-pits",
+    "parent_id": null,
+    "children": []
+  },
+  "4294414338": {
+    "name": "Snow Shovels",
+    "path": "outdoor-tools-equipment/lawn-garden-hand-tools/snow-shovels",
+    "parent_id": null,
+    "children": []
+  },
+  "1217527669": {
+    "name": "Home Alarm Systems & Sensors",
+    "path": "Home-alarms-sensors-Home-security-Smart-home-security-wi-fi",
+    "parent_id": null,
+    "children": []
+  },
+  "4294753292": {
+    "name": "toilet repair kits",
+    "path": "plumbing-parts-repair/toilet-parts-repair/toilet-repair-kits",
+    "parent_id": "4294935833",
+    "children": []
+  },
+  "2511177665352": {
+    "name": "",
+    "path": "Smart-compatible--Tvs-TV-home-theater-Electronics-Electrical",
+    "parent_id": null,
+    "children": []
+  },
+  "4294607857": {
+    "name": "Stud Finder",
+    "path": "levels-measuring-tools/laser-levels-stud-finders/stud-finders",
+    "parent_id": "4294607864",
+    "children": []
+  },
+  "4294639616": {
+    "name": "Towel Bars",
+    "path": "bathroom-accessories-hardware/towel-holders-warmers/towel-bars",
+    "parent_id": null,
+    "children": []
+  },
+  "3150204282": {
+    "name": "hot and cold water dispensers",
+    "path": "kitchen-faucets-water-dispensers/water-dispensers/hot-and-cold",
+    "parent_id": null,
+    "children": []
+  },
+  "4294639618": {
+    "name": "bathroom sets",
+    "path": "bathroom-accessories-hardware/decorative-bathroom-hardware-sets",
+    "parent_id": null,
+    "children": []
+  },
+  "4294753260": {
+    "name": "electric models",
+    "path": "portable-space-heaters/electric-heaters/electric-garage-heaters",
+    "parent_id": null,
+    "children": []
+  },
+  "218816294": {
+    "name": "water filtration systems",
+    "path": "water-filtration-water-softeners/whole-house-filtration-systems",
+    "parent_id": null,
+    "children": []
+  },
+  "4294856527": {
+    "name": "Underfloor Heating",
+    "path": "flooring-tools-supplies/floor-heating-systems/underfloor-heating",
+    "parent_id": null,
+    "children": []
+  },
+  "3538099968": {
+    "name": "Mini Split Air Conditioners",
+    "path": "air-conditioners-fans/room-air-conditioners/ductless-mini-splits",
+    "parent_id": null,
+    "children": []
+  },
+  "4294607691": {
+    "name": "plasma cutters",
+    "path": "welding-soldering/welding-machines-plasma-cutters/plasma-cutters",
+    "parent_id": null,
+    "children": []
+  },
+  "4294735654": {
+    "name": "",
+    "path": "kitchen-countertops-accessories/kitchen-countertop-samples/quartz",
+    "parent_id": null,
+    "children": []
+  },
+  "3820839146462": {
+    "name": "classroom decorations",
+    "path": "Classroom-decorations-Office-school-supplies-Storage-organization",
+    "parent_id": null,
+    "children": []
+  },
+  "4294765322": {
+    "name": "Baseboard Heaters",
+    "path": "portable-space-heaters/electric-heaters/electric-baseboard-heaters",
+    "parent_id": null,
+    "children": []
+  },
+  "4294698953": {
+    "name": "coffee table",
+    "path": "furniture/living-room-furniture/accent-coffee-tables/coffee-tables",
+    "parent_id": null,
+    "children": []
+  },
+  "3788568798": {
+    "name": "Window Air Conditioners",
+    "path": "air-conditioners-fans/room-air-conditioners/window-air-conditioners",
+    "parent_id": null,
+    "children": []
+  },
+  "4294386841": {
+    "name": "Fire Pit Kits",
+    "path": "fire-pits-patio-heaters/fire-pits-accessories/fire-pit-project-kits",
+    "parent_id": null,
+    "children": []
+  },
+  "4294607609": {
+    "name": "Top Tool Chests",
+    "path": "tool-storage-work-benches/tool-chests-tool-cabinets/top-tool-chests",
+    "parent_id": "1457212135",
+    "children": []
+  },
+  "37721669146467": {
+    "name": "",
+    "path": "Streaming-devices-Smart-devices-Smart-home-Smart-home-security-wi-fi",
+    "parent_id": null,
+    "children": []
+  },
+  "2830525945": {
+    "name": "Portable Air Conditioners",
+    "path": "air-conditioners-fans/room-air-conditioners/portable-air-conditioners",
+    "parent_id": null,
+    "children": []
+  },
+  "346867792": {
+    "name": "Tool Chest Combos",
+    "path": "tool-storage-work-benches/tool-chests-tool-cabinets/tool-chest-combos",
+    "parent_id": "1457212135",
+    "children": []
+  },
+  "4294518280": {
+    "name": "Ceiling Medallions",
+    "path": "lighting-parts-accessories/ceiling-medallions-rings/ceiling-medallions",
+    "parent_id": "4294518281",
+    "children": []
+  },
+  "4321851016717": {
+    "name": "Breaker Boxes",
+    "path": "power-distribution-circuit-protection/breaker-boxes-parts/breaker-boxes",
+    "parent_id": null,
+    "children": []
+  },
+  "3020376786800": {
+    "name": "",
+    "path": "Smart-outlets-plugs-Smart-lighting-Smart-home-Smart-home-security-wi-fi",
+    "parent_id": null,
+    "children": []
+  },
+  "3011071920472": {
+    "name": "",
+    "path": "Smart-water-heaters-Smart-plumbing-Smart-home-Smart-home-security-wi-fi",
+    "parent_id": null,
+    "children": []
+  },
+  "37721669146456": {
+    "name": "",
+    "path": "Smart-light-switches-Smart-lighting-Smart-home-Smart-home-security-wi-fi",
+    "parent_id": null,
+    "children": []
+  },
+  "4294858020": {
+    "name": "",
+    "path": "Smart-compatible--Garage-door-openers-Garage-doors-openers-Windows-doors",
+    "parent_id": null,
+    "children": []
+  },
+  "3421267733816": {
+    "name": "Google Wi-Fi",
+    "path": "Google--Wi-fi-routers-Wi-fi-networking-devices-Smart-home-security-wi-fi",
+    "parent_id": null,
+    "children": []
+  },
+  "4294607608": {
+    "name": "Bottom Tool Cabinets",
+    "path": "tool-storage-work-benches/tool-chests-tool-cabinets/bottom-tool-cabinets",
+    "parent_id": "1457212135",
+    "children": []
+  },
+  "2011455432077": {
+    "name": "Smart Hub Speakers & Displays",
+    "path": "Smart-speakers-displays-Smart-devices-Smart-home-Smart-home-security-wi-fi",
+    "parent_id": null,
+    "children": []
+  },
+  "37721669146466": {
+    "name": "",
+    "path": "Smart-wi-fi-thermostats-Smart-devices-Smart-home-Smart-home-security-wi-fi",
+    "parent_id": null,
+    "children": []
+  },
+  "4294684460": {
+    "name": "Bathroom Vanities With Tops",
+    "path": "bathroom-vanities-vanity-tops/bathroom-vanities/bathroom-vanities-with-tops",
+    "parent_id": null,
+    "children": []
+  },
+  "37721669146465": {
+    "name": "Smart Doorbells & Locks",
+    "path": "Smart-doorbells-locks-Smart-home-security-Smart-home-Smart-home-security-wi-fi",
+    "parent_id": null,
+    "children": []
+  },
+  "37721669146462": {
+    "name": "",
+    "path": "Smart-sprinkler-controllers-Smart-plumbing-Smart-home-Smart-home-security-wi-fi",
+    "parent_id": null,
+    "children": []
+  },
+  "4294546223": {
+    "name": "",
+    "path": "Door-window-sensors-Home-alarms-sensors-Home-security-Smart-home-security-wi-fi",
+    "parent_id": null,
+    "children": []
+  },
+  "4294546211": {
+    "name": "Nest Security Camera",
+    "path": "Google--Security-cameras-Security-surveillance-cameras-Home-security-Electrical",
+    "parent_id": null,
+    "children": []
+  },
+  "4294761682": {
+    "name": "cold-brew coffee makers",
+    "path": "small-appliances/espresso-tea-coffee-machines/coffee-makers/cold-brew-coffee-maker",
+    "parent_id": null,
+    "children": []
+  },
+  "4294702509": {
+    "name": "paper towel holder",
+    "path": "Paper-towel-holders-Countertop-organizers-Kitchen-organization-Storage-organization",
+    "parent_id": null,
+    "children": []
+  },
+  "4294546224": {
+    "name": "",
+    "path": "Motion-sensors-detectors-Home-alarms-sensors-Home-security-Smart-home-security-wi-fi",
+    "parent_id": null,
+    "children": []
+  },
+  "2006395739": {
+    "name": "",
+    "path": "Water-leak-detectors-Energy-water-monitoring-Home-security-Smart-home-security-wi-fi",
+    "parent_id": null,
+    "children": []
+  },
+  "4294857717": {
+    "name": "decorative shelving unit",
+    "path": "Decorative-shelving-unit--Freestanding-shelving-units-Shelves-shelving-Storage-organization",
+    "parent_id": null,
+    "children": []
+  },
+  "37721669146464": {
+    "name": "",
+    "path": "Smart-smoke-carbon-monoxide-detectors-Smart-home-security-Smart-home-Smart-home-security-wi-fi",
+    "parent_id": null,
+    "children": []
+  },
+  "4911770552234": {
+    "name": "mug stand",
+    "path": "Mug-stand--Coffee-beverage-organization-Countertop-organizers-Kitchen-organization-Storage-organization",
+    "parent_id": null,
+    "children": []
+  }
+}

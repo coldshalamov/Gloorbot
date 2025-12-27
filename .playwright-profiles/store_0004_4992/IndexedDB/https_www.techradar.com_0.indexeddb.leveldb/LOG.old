@@ -1,6 +1,0 @@
-2025/07/17-19:59:16.234 1ec0 Creating DB C:\Users\User\AppData\Local\Google\Chrome\User Data\Default\IndexedDB\https_www.techradar.com_0.indexeddb.leveldb since it was missing.
-2025/07/17-19:59:16.239 1ec0 Reusing MANIFEST C:\Users\User\AppData\Local\Google\Chrome\User Data\Default\IndexedDB\https_www.techradar.com_0.indexeddb.leveldb/MANIFEST-000001
-2025/07/17-19:59:19.091 1a1c Level-0 table #5: started
-2025/07/17-19:59:19.094 1a1c Level-0 table #5: 99654 bytes OK
-2025/07/17-19:59:19.097 1a1c Delete type=0 #3
-2025/07/17-19:59:19.097 1a1c Manual compaction at level-0 from '\x00\x03\x00\x00\x00' @ 72057594037927935 : 1 .. '\x00\x04\x00\x00\x00' @ 0 : 0; will stop at (end)

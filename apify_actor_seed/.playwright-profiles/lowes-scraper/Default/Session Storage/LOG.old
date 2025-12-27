@@ -1,3 +1,6 @@
-2025/12/25-10:38:28.556 5489c Reusing MANIFEST C:\Users\User\Documents\GitHub\Telomere\Gloorbot\apify_actor_seed\.playwright-profiles\lowes-scraper\Default\Session Storage/MANIFEST-000001
-2025/12/25-10:38:28.559 5489c Recovering log #3
-2025/12/25-10:38:28.573 5489c Reusing old log C:\Users\User\Documents\GitHub\Telomere\Gloorbot\apify_actor_seed\.playwright-profiles\lowes-scraper\Default\Session Storage/000003.log 
+2025/12/26-00:43:05.109 42c38 Reusing MANIFEST C:\Users\User\Documents\GitHub\Telomere\Gloorbot\apify_actor_seed\.playwright-profiles\lowes-scraper\Default\Session Storage/MANIFEST-000001
+2025/12/26-00:43:05.110 42c38 Recovering log #4
+2025/12/26-00:43:05.113 42c38 Reusing old log C:\Users\User\Documents\GitHub\Telomere\Gloorbot\apify_actor_seed\.playwright-profiles\lowes-scraper\Default\Session Storage/000004.log 
+2025/12/26-00:43:31.837 42c38 Level-0 table #7: started
+2025/12/26-00:43:31.846 42c38 Level-0 table #7: 26422 bytes OK
+2025/12/26-00:43:31.849 42c38 Delete type=0 #4

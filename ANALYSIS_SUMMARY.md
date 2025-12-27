@@ -1,0 +1,13 @@
+## Phase 1 – URL pattern and duplicate analysis
+- `LowesMap.txt` was parsed to extract the `/pl/` paths, top-level slugs, and department IDs. A quick script (`analyze_lowes_map_dedupe.py`) found only three exact-ID duplicates, so we documented those groups in `DUPLICATE_GROUPS.md` and keep the broader parent URL in each case.
+- Top-level slug counts show that about 302 unique "first words" (e.g., `bathroom`, `kitchen`, `light`, `outdoor`, `appliance`, etc.) cover the entire 515-URL pool. To trim the list, I picked the shortest slug per first word (fewer filters) so each idea is represented once, yielding 302 curated URLs in `MINIMAL_URLS.txt`.
+- This heuristic favors broader buckets (e.g., `/bathroom-vanities...` instead of narrow brand or filter variants) while still touching every initial concept from the map.
+
+## Phase 3 – Sitemap gap analysis
+- `sitemap_comparison.json` shows 497 k `/pl/` entries that Lowe's will offer, so we compared the sitemap's top-level slugs to the 302 we currently track. There are 275 entirely new first-word slugs in the sitemap; the most frequent missing categories (by occurrence count in the sitemap) include `furniture`, `plants-bulbs-seeds`, `patio-furniture`, `outdoor-tools-equipment`, `grills-outdoor-cooking`, `lighting-ceiling-fans`, `outdoor-lighting`, `hand-tools`, `bathroom`, `christmas-decorations`, and `ceiling-lights`.
+- Several of the missing slugs (e.g., `bathroom-accessories-hardware`, `windows`, `power-tools`) already appear in `LowesMap.txt` but with far fewer derivative filters than the sitemap suggests, so we may need to add the high-frequency filters that the sitemap exposes. The ones listed above are entirely absent and should be prioritized for addition.
+
+## Next steps (Phase 2 & finalization)
+- Start dev-browser sessions per the supplied warmup rules for 2–3 representative URLs per group. For each, capture the page product count, breadcrumb path, and the first 10 SKUs/IDs (Playwright+Chrome to obey the real-browser requirement). Compare the SKU lists between hypothesized duplicates to confirm they really share a product set and keep the version that delivers the most comprehensive listing.
+- After sampling, re-evaluate the minimal list: remove URLs whose SKU set is fully covered by another tracked URL, add the missing sitemap-first-word URLs from above if they reveal new product groups, and log any new duplicates found in `DUPLICATE_GROUPS.md`.
+- Bundle the final curated list with a short note about how the samples verify each deduction, so the next person can confidently run the monitoring actor with the new 250–300 URLs.
