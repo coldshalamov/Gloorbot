@@ -187,10 +187,61 @@ async def main(max_c_pages: int = 600, max_depth: int = 5) -> None:
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     PROFILE_DIR.mkdir(parents=True, exist_ok=True)
 
-    async with async_playwright() as p:
-        context = None
-        page = None
+    # Resume support (best-effort): if outputs exist, continue from previous visited set.
+    records: list[dict[str, Any]] = []
+    if OUT_RAW.exists():
+        try:
+            loaded = json.loads(OUT_RAW.read_text(encoding="utf-8"))
+            if isinstance(loaded, list):
+                records = [r for r in loaded if isinstance(r, dict)]
+        except Exception:
+            records = []
+    visited_c: set[str] = set()
+    if OUT_C.exists():
+        try:
+            visited_c = {
+                _norm(line)
+                for line in OUT_C.read_text(encoding="utf-8", errors="ignore").splitlines()
+                if line.strip()
+            }
+        except Exception:
+            visited_c = set()
 
+    def _build_pl_candidates(seed_pl: list[str], recs: list[dict[str, Any]]) -> list[str]:
+        pl_candidates: list[str] = []
+        pl_candidates.extend(seed_pl)
+
+        for rec in recs:
+            if rec.get("type") != "c_page":
+                continue
+            shop_all_pl = rec.get("shop_all_pl") or []
+            if shop_all_pl:
+                for u in shop_all_pl:
+                    if u not in pl_candidates:
+                        pl_candidates.append(u)
+                continue
+
+            # No shop all: pick first Shop By module that yields /pl/ links
+            modules = rec.get("modules") or []
+            chosen = None
+            for m in modules:
+                pls = m.get("pl_links") or []
+                if pls:
+                    chosen = pls
+                    break
+            if chosen:
+                for u in chosen:
+                    if u not in pl_candidates:
+                        pl_candidates.append(u)
+        return pl_candidates
+
+    def _checkpoint(seed_pl: list[str]) -> None:
+        pl_candidates = _build_pl_candidates(seed_pl, records)
+        OUT_RAW.write_text(json.dumps(records, indent=2), encoding="utf-8")
+        OUT_PL.write_text("\n".join(pl_candidates) + ("\n" if pl_candidates else ""), encoding="utf-8")
+        OUT_C.write_text("\n".join(sorted(visited_c)) + ("\n" if visited_c else ""), encoding="utf-8")
+
+    async with async_playwright() as p:
         async def _launch() -> Any:
             return await p.chromium.launch_persistent_context(
                 str(PROFILE_DIR),
@@ -207,27 +258,30 @@ async def main(max_c_pages: int = 600, max_depth: int = 5) -> None:
                 ],
             )
 
-        for attempt in range(3):
-            try:
-                context = await _launch()
-                page = context.pages[0] if context.pages else await context.new_page()
-                # Sanity check that the browser stays up.
-                await page.goto(BASE, wait_until="domcontentloaded", timeout=60000)
-                break
-            except Exception:
-                try:
-                    if context is not None:
-                        await context.close()
-                except Exception:
-                    pass
+        async def _launch_stable_page() -> tuple[Any, Any]:
+            last_err: Exception | None = None
+            for attempt in range(5):
                 context = None
-                page = None
-                await asyncio.sleep(2 + attempt * 2)
+                try:
+                    context = await _launch()
+                    page = context.pages[0] if context.pages else await context.new_page()
+                    # Give Chrome a moment to settle; this avoids occasional immediate TargetClosedError.
+                    await asyncio.sleep(1.2 + random.random() * 1.2)
+                    await _warmup(page)
+                    return context, page
+                except Exception as e:
+                    last_err = e
+                    try:
+                        if context is not None:
+                            await context.close()
+                    except Exception:
+                        pass
+                    await asyncio.sleep(2 + attempt * 2)
+            raise RuntimeError(
+                f"Failed to launch a stable Chrome persistent context for discovery (last error: {last_err})."
+            )
 
-        if context is None or page is None:
-            raise RuntimeError("Failed to launch a stable Chrome persistent context for discovery.")
-
-        await _warmup(page)
+        context, page = await _launch_stable_page()
 
         # Start from Departments
         for attempt in range(3):
@@ -235,7 +289,15 @@ async def main(max_c_pages: int = 600, max_depth: int = 5) -> None:
                 await page.goto(START, wait_until="domcontentloaded", timeout=60000)
                 break
             except Exception:
-                await _warmup(page)
+                # If the page/context died, relaunch.
+                try:
+                    await _warmup(page)
+                except Exception:
+                    try:
+                        await context.close()
+                    except Exception:
+                        pass
+                    context, page = await _launch_stable_page()
                 await _human_pause(1200, 2200)
         await _human_pause(1200, 2200)
 
@@ -244,19 +306,20 @@ async def main(max_c_pages: int = 600, max_depth: int = 5) -> None:
         seed_c = [h for h in dept_hrefs if _is_c(h)]
 
         queue: deque[tuple[str, int]] = deque([(u, 1) for u in seed_c])
-        visited_c: set[str] = set()
 
-        records: list[dict[str, Any]] = []
-
-        # Add a pseudo-record for the Departments page itself
-        records.append(
+        # Add a pseudo-record for the Departments page itself (only once)
+        if not any(r.get("type") == "departments_root" and r.get("url") == START for r in records):
+            records.append(
             {
                 "type": "departments_root",
                 "url": START,
                 "direct_pl": seed_pl,
                 "direct_c": seed_c,
             }
-        )
+            )
+        _checkpoint(seed_pl)
+
+        processed_since_checkpoint = 0
 
         while queue and len(visited_c) < max_c_pages:
             url, depth = queue.popleft()
@@ -271,7 +334,14 @@ async def main(max_c_pages: int = 600, max_depth: int = 5) -> None:
                 try:
                     # Regularly warm up to keep Akamai happy.
                     if attempt > 0 or (len(visited_c) % 25 == 0):
-                        await _warmup(page)
+                        try:
+                            await _warmup(page)
+                        except Exception:
+                            try:
+                                await context.close()
+                            except Exception:
+                                pass
+                            context, page = await _launch_stable_page()
                         await _human_pause(900, 1600)
                     await page.goto(url, wait_until="domcontentloaded", timeout=60000)
                     nav_error = None
@@ -288,6 +358,10 @@ async def main(max_c_pages: int = 600, max_depth: int = 5) -> None:
                         "error": nav_error,
                     }
                 )
+                processed_since_checkpoint += 1
+                if processed_since_checkpoint >= 15:
+                    _checkpoint(seed_pl)
+                    processed_since_checkpoint = 0
                 continue
             await _human_pause(900, 1700)
             try:
@@ -314,6 +388,10 @@ async def main(max_c_pages: int = 600, max_depth: int = 5) -> None:
                         "title": title,
                     }
                 )
+                processed_since_checkpoint += 1
+                if processed_since_checkpoint >= 15:
+                    _checkpoint(seed_pl)
+                    processed_since_checkpoint = 0
                 continue
 
             hrefs = [_norm(h) for h in await _get_all_hrefs(page)]
@@ -345,39 +423,12 @@ async def main(max_c_pages: int = 600, max_depth: int = 5) -> None:
                 if cu not in visited_c:
                     queue.append((cu, depth + 1))
 
-        # Build PL candidate list:
-        # - all /pl/ from departments page
-        # - all "shop_all_pl" from /c/ pages
-        # - for /c/ pages with NO shop_all_pl: take the first module with pl_links (DOM order)
-        pl_candidates: list[str] = []
-        pl_candidates.extend(seed_pl)
+            processed_since_checkpoint += 1
+            if processed_since_checkpoint >= 15:
+                _checkpoint(seed_pl)
+                processed_since_checkpoint = 0
 
-        for rec in records:
-            if rec.get("type") != "c_page":
-                continue
-            shop_all_pl = rec.get("shop_all_pl") or []
-            if shop_all_pl:
-                for u in shop_all_pl:
-                    if u not in pl_candidates:
-                        pl_candidates.append(u)
-                continue
-
-            # No shop all: pick first Shop By module that yields /pl/ links
-            modules = rec.get("modules") or []
-            chosen = None
-            for m in modules:
-                pls = m.get("pl_links") or []
-                if pls:
-                    chosen = pls
-                    break
-            if chosen:
-                for u in chosen:
-                    if u not in pl_candidates:
-                        pl_candidates.append(u)
-
-        OUT_RAW.write_text(json.dumps(records, indent=2), encoding="utf-8")
-        OUT_PL.write_text("\n".join(pl_candidates) + ("\n" if pl_candidates else ""), encoding="utf-8")
-        OUT_C.write_text("\n".join(sorted(visited_c)) + ("\n" if visited_c else ""), encoding="utf-8")
+        _checkpoint(seed_pl)
 
         await context.close()
 

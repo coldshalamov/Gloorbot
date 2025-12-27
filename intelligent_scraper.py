@@ -1,18 +1,3 @@
-"""
-Intelligent Self-Scaling Lowe's Scraper Orchestrator
-
-This orchestrator:
-1. Starts with 1-2 worker processes scraping stores
-2. Monitors for blocking, crashes, and success rates
-3. Gradually increases parallelization until hitting limits
-4. Maintains optimal throughput without triggering Akamai
-5. Can optionally use OpenAI GPT-4o-mini for scaling decisions
-
-Usage:
-    python intelligent_scraper.py --state WA --max-workers 10
-    python intelligent_scraper.py --state OR --max-workers 5 --use-ai
-"""
-
 import asyncio
 import json
 import subprocess
@@ -22,6 +7,17 @@ from datetime import datetime
 from collections import defaultdict
 import argparse
 import sys
+import signal
+import atexit
+import logging
+
+# Ensure psutil is available for safe killing
+try:
+    import psutil
+    HAS_PSUTIL = True
+except ImportError:
+    HAS_PSUTIL = False
+    print("⚠️  Use 'pip install psutil' for safer process management")
 
 # Optional: OpenAI for intelligent decisions
 try:
@@ -30,8 +26,47 @@ try:
 except ImportError:
     HAS_OPENAI = False
     print("⚠️  OpenAI not installed. Run: pip install openai")
-    print("    (AI-assisted scaling will be disabled)")
 
+# Setup logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(message)s',
+    handlers=[
+        logging.FileHandler("scraper_orchestrator.log"),
+        logging.StreamHandler(sys.stdout)
+    ]
+)
+log = logging.getLogger("Orchestrator")
+
+def kill_proc_tree(pid, including_parent=True):
+    """Recursively kill a process tree"""
+    if not HAS_PSUTIL:
+        try:
+            if sys.platform == 'win32':
+                subprocess.run(["taskkill", "/F", "/T", "/PID", str(pid)], 
+                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            else:
+                import os
+                os.kill(pid, signal.SIGTERM)
+        except:
+            pass
+        return
+
+    try:
+        parent = psutil.Process(pid)
+        children = parent.children(recursive=True)
+        for child in children:
+            try:
+                child.kill()
+            except psutil.NoSuchProcess:
+                pass
+        if including_parent:
+            try:
+                parent.kill()
+            except psutil.NoSuchProcess:
+                pass
+    except psutil.NoSuchProcess:
+        pass
 
 class WorkerProcess:
     """Manages a single scraper worker process"""
@@ -48,6 +83,7 @@ class WorkerProcess:
         self.is_alive = False
         self.is_blocked = False
         self.error_count = 0
+        self.last_category_idx = 0
 
     async def start(self):
         """Launch the worker process"""
@@ -57,45 +93,69 @@ class WorkerProcess:
         # Create worker-specific output file
         worker_output = self.output_dir / f"worker_{self.worker_id}_store_{store_id}.jsonl"
 
+        # Check for checkpoint
+        check_file = Path("scrape_logs") / f"checkpoint_{store_id}.txt"
+        start_idx = 0
+        if check_file.exists():
+            try:
+                start_idx = int(check_file.read_text().strip())
+                log.info(f"Resuming worker {self.worker_id} for {store_id} from index {start_idx}")
+            except:
+                pass
+
         # Launch scraper process for this specific store
+        # We use run_single_store.py which imports main.py
         cmd = [
             sys.executable,
             "run_single_store.py",
             "--store-id", store_id,
             "--state", state,
             "--output", str(worker_output),
-            "--categories", "515"
+            "--start-idx", str(start_idx),
+            "--check-file", str(check_file)
         ]
+
+        # Redirect output to log file to avoid deadlock
+        log_dir = Path("scrape_logs")
+        log_dir.mkdir(exist_ok=True)
+        self.log_file = open(log_dir / f"worker_{self.worker_id}_{store_id}.log", "w", encoding='utf-8')
 
         self.process = await asyncio.create_subprocess_exec(
             *cmd,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE
+            stdout=self.log_file,
+            stderr=asyncio.subprocess.STDOUT
         )
 
         self.started_at = time.time()
         self.is_alive = True
         self.last_check_time = time.time()
 
-        print(f"✅ Worker {self.worker_id} started for {self.store_info['name']}")
+        log.info(f"Worker {self.worker_id} started for {store_id} (PID: {self.process.pid})")
 
     def check_progress(self):
         """Check if worker is making progress"""
+        if self.process and self.process.returncode is not None:
+            self.is_alive = False
+            return 0
+
+        # Check line counts in output
         worker_output = self.output_dir / f"worker_{self.worker_id}_store_{self.store_info['store_id']}.jsonl"
 
         if not worker_output.exists():
             return 0
 
-        # Count lines (products) in output
-        with open(worker_output) as f:
-            current_count = sum(1 for _ in f)
+        try:
+            with open(worker_output, 'rb') as f:
+                current_count = sum(1 for _ in f)
+        except:
+            return 0
 
         # Detect stalling
         if current_count == self.last_product_count:
             # No progress since last check
             time_stalled = time.time() - self.last_check_time
             if time_stalled > 600:  # 10 minutes without progress
-                print(f"⚠️  Worker {self.worker_id} appears stalled (no progress for 10min)")
+                log.warning(f"Worker {self.worker_id} appears stalled (no progress for 10min)")
                 return -1  # Signal stall
         else:
             # Progress detected
@@ -106,13 +166,12 @@ class WorkerProcess:
         return current_count
 
     async def stop(self):
-        """Gracefully stop the worker"""
+        """Gracefully stop the worker and kill children"""
         if self.process:
-            self.process.terminate()
-            try:
-                await asyncio.wait_for(self.process.wait(), timeout=10)
-            except asyncio.TimeoutError:
-                self.process.kill()
+            pid = self.process.pid
+            log.info(f"Stopping worker {self.worker_id} (PID: {pid})")
+            kill_proc_tree(pid)
+            
         self.is_alive = False
 
 
@@ -124,9 +183,15 @@ class IntelligentOrchestrator:
         self.max_workers = max_workers
         self.use_ai = use_ai and HAS_OPENAI
         self.openai_api_key = openai_api_key
+        # Only enable AI if requested, library present, AND key provided
+        self.use_ai = use_ai and HAS_OPENAI and (openai_api_key is not None)
+        self.running = True
 
-        if self.use_ai and openai_api_key:
+        if self.use_ai:
             openai.api_key = openai_api_key
+            log.info("create_orchestrator: AI Scaling ENABLED 🤖")
+        else:
+            log.info("create_orchestrator: AI Scaling DISABLED (Missing key or library)")
 
         self.workers = []
         self.stores = []
@@ -146,12 +211,46 @@ class IntelligentOrchestrator:
         self.target_workers = 1  # Start conservatively
         self.scale_up_interval = 300  # Try scaling every 5 minutes
         self.last_scale_time = time.time()
+        
+        # Register cleanup
+        atexit.register(self.force_cleanup)
+        signal.signal(signal.SIGINT, self.signal_handler)
+        signal.signal(signal.SIGTERM, self.signal_handler)
+
+    def signal_handler(self, signum, frame):
+        log.info(f"Received signal {signum}, shutting down...")
+        self.running = False
+        self.force_cleanup()
+        sys.exit(0)
+
+    def force_cleanup(self):
+        """Kill all workers immediately"""
+        if not self.workers:
+            return
+            
+        log.info("🧹 Performing cleanup of child processes...")
+        for w in self.workers:
+            if w.process:
+                kill_proc_tree(w.process.pid)
+        self.workers = []
+        log.info("Cleanup complete.")
 
     def load_stores(self):
-        """Load stores from LowesMap.txt"""
-        lowes_map = Path("LowesMap.txt")
-        if not lowes_map.exists():
-            print("❌ LowesMap.txt not found!")
+        """Load stores from LowesMap_Final_Pruned.txt (or LowesMap.txt as fallback)"""
+        # Try finding the map in various locations
+        possible_paths = [
+            Path("LowesMap_Final_Pruned.txt"),
+            Path("LowesMap.txt")
+        ]
+        
+        lowes_map = None
+        for p in possible_paths:
+            if p.exists():
+                lowes_map = p
+                break
+        
+        if not lowes_map:
+            log.error("LowesMap not found!")
             return
 
         stores = []
@@ -159,7 +258,6 @@ class IntelligentOrchestrator:
             for line in f:
                 line = line.strip()
                 if f'/store/{self.state}-' in line:
-                    # Parse store URL
                     import re
                     match = re.search(r'/store/([A-Z]{2})-([^/]+)/(\d+)', line)
                     if match:
@@ -173,7 +271,7 @@ class IntelligentOrchestrator:
                         })
 
         self.stores = stores
-        print(f"📋 Loaded {len(self.stores)} {self.state} stores")
+        log.info(f"Loaded {len(self.stores)} {self.state} stores from {lowes_map}")
 
     async def analyze_performance(self):
         """Analyze current performance and decide on scaling"""
@@ -264,15 +362,9 @@ Worker Stats: {json.dumps(worker_stats, indent=2)}
 Automated Analysis: {json.dumps(analysis, indent=2)}
 
 Should we:
-1. Scale up (add another worker)
-2. Scale down (remove a worker)
+1. Scale up (add another worker) - ONLY if no blocks and stable run
+2. Scale down (remove a worker) - IF blocked or errors high
 3. Maintain current level
-
-Consider:
-- We want to maximize throughput without triggering anti-bot detection
-- Blocking = bad, we need to back off
-- Stalling might indicate resource limits
-- Gradual scaling is safer than aggressive scaling
 
 Respond with JSON only:
 {{"decision": "scale_up|scale_down|maintain", "reason": "brief explanation", "target_workers": number}}"""
@@ -284,16 +376,16 @@ Respond with JSON only:
             )
 
             ai_decision = json.loads(response.choices[0].message.content)
-            print(f"🤖 AI Decision: {ai_decision['decision']} - {ai_decision['reason']}")
+            log.info(f"AI Decision: {ai_decision['decision']} - {ai_decision['reason']}")
 
             return {
                 'recommendation': ai_decision['decision'],
                 'reason': f"AI: {ai_decision['reason']}",
-                'target_workers': ai_decision['target_workers']
+                'target_workers': int(ai_decision.get('target_workers', self.current_workers))
             }
 
         except Exception as e:
-            print(f"⚠️  AI decision failed: {e}")
+            log.warning(f"AI decision failed: {e}")
             return analysis
 
     async def scale_workers(self, decision):
@@ -303,11 +395,11 @@ Respond with JSON only:
         if target > self.current_workers:
             # Scale up
             to_add = target - self.current_workers
-            print(f"📈 Scaling UP: Adding {to_add} worker(s)")
+            log.info(f"Scaling UP: Adding {to_add} worker(s)")
 
             for i in range(to_add):
                 if len(self.workers) >= len(self.stores):
-                    print("⚠️  No more stores available")
+                    log.warning("No more stores available")
                     break
 
                 # Get next unassigned store
@@ -321,16 +413,13 @@ Respond with JSON only:
                     self.workers.append(worker)
                     self.current_workers += 1
                     self.stats['workers_launched'] += 1
-
-                    # Wait a bit between launches to avoid resource spike
                     await asyncio.sleep(5)
 
         elif target < self.current_workers:
             # Scale down
             to_remove = self.current_workers - target
-            print(f"📉 Scaling DOWN: Removing {to_remove} worker(s)")
+            log.info(f"Scaling DOWN: Removing {to_remove} worker(s)")
 
-            # Stop the most recently added workers
             for i in range(to_remove):
                 if self.workers:
                     worker = self.workers.pop()
@@ -341,15 +430,12 @@ Respond with JSON only:
 
     async def monitoring_loop(self):
         """Main monitoring loop"""
-        print("\n" + "="*70)
-        print("🚀 INTELLIGENT SCRAPER ORCHESTRATOR")
-        print("="*70)
-        print(f"State: {self.state}")
-        print(f"Max Workers: {self.max_workers}")
-        print(f"AI-Assisted: {'Yes' if self.use_ai else 'No'}")
-        print(f"Stores to Scrape: {len(self.stores)}")
-        print("="*70 + "\n")
-
+        log.info("="*70)
+        log.info("INTELLIGENT SCRAPER ORCHESTRATOR")
+        log.info("="*70)
+        log.info(f"State: {self.state}")
+        log.info(f"Stores to Scrape: {len(self.stores)}")
+        
         # Start first worker
         if self.stores:
             first_worker = WorkerProcess(0, self.stores[0], self.output_dir)
@@ -359,40 +445,44 @@ Respond with JSON only:
             self.stats['workers_launched'] = 1
 
         # Main loop
-        while self.current_workers > 0 or len(self.workers) < len(self.stores):
-            await asyncio.sleep(60)  # Check every minute
+        while self.running and (self.current_workers > 0 or len(self.workers) < len(self.stores)):
+            try:
+                await asyncio.sleep(60)  # Check every minute
 
-            # Analyze performance
-            analysis = await self.analyze_performance()
+                # Analyze performance
+                analysis = await self.analyze_performance()
 
-            # Optionally ask AI
-            if self.use_ai:
-                analysis = await self.ask_ai_for_decision(analysis)
+                # Optionally ask AI
+                if self.use_ai:
+                    analysis = await self.ask_ai_for_decision(analysis)
 
-            print(f"\n📊 Status: {analysis['recommendation']} - {analysis['reason']}")
-            print(f"   Active Workers: {self.current_workers}/{self.max_workers}")
-            print(f"   Total Products: {self.stats['total_products']}")
+                log.info(f"Status: {analysis['recommendation']} - {analysis['reason']}")
+                log.info(f"   Active Workers: {self.current_workers}/{self.max_workers}")
+                log.info(f"   Total Products: {self.stats['total_products']}")
 
-            # Execute scaling decision
-            if analysis['recommendation'] in ['scale_up', 'scale_down']:
-                await self.scale_workers(analysis)
+                # Execute scaling decision
+                if analysis['recommendation'] in ['scale_up', 'scale_down']:
+                    await self.scale_workers(analysis)
 
-            # Aggregate stats
-            self.stats['total_products'] = sum(w.products_scraped for w in self.workers if w.is_alive)
+                # Aggregate stats
+                self.stats['total_products'] = sum(w.products_scraped for w in self.workers if w.is_alive)
 
-            # Check if all stores are done
-            completed = sum(1 for w in self.workers if not w.is_alive and w.products_scraped > 0)
-            if completed >= len(self.stores):
-                print("\n✅ ALL STORES COMPLETED!")
-                break
+                # Check if all stores are done
+                completed = sum(1 for w in self.workers if not w.is_alive and w.products_scraped > 0)
+                if completed >= len(self.stores):
+                    log.info("ALL STORES COMPLETED!")
+                    break
+            except Exception as e:
+                log.error(f"Error in monitoring loop: {e}")
+                # Don't crash the orchestrator, just wait and retry
+                await asyncio.sleep(30)
 
-        print("\n" + "="*70)
-        print("📊 FINAL STATISTICS")
-        print("="*70)
-        print(f"Total Products: {self.stats['total_products']}")
-        print(f"Workers Launched: {self.stats['workers_launched']}")
-        print(f"Runtime: {(time.time() - self.stats['start_time'])/3600:.1f} hours")
-        print("="*70)
+        log.info("="*70)
+        log.info("FINAL STATISTICS")
+        log.info(f"Total Products: {self.stats['total_products']}")
+        log.info(f"Runtime: {(time.time() - self.stats['start_time'])/3600:.1f} hours")
+        log.info("="*70)
+        self.force_cleanup()
 
     async def run(self):
         """Main entry point"""

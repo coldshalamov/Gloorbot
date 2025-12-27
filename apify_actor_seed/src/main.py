@@ -29,7 +29,7 @@ from playwright.async_api import async_playwright, Page
 # CONFIG
 # ============================================================================
 
-LOWES_MAP_PATH = Path(__file__).parent.parent / "LowesMap.txt"
+LOWES_MAP_PATH = Path(__file__).parent.parent.parent / "LowesMap_Final_Pruned.txt"
 
 
 # ============================================================================
@@ -367,7 +367,7 @@ async def main():
                 profile_dir.mkdir(parents=True, exist_ok=True)
 
                 launch_kwargs = {
-                    "headless": False,  # CRITICAL: Must be False
+                    "headless": False,  # Must be False - Lowe's blocks headless
                     "channel": "chrome",
                     "viewport": {"width": 1440, "height": 900},
                     "locale": "en-US",

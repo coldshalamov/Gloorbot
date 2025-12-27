@@ -11,3 +11,5 @@ scrape_output*/
 *.log
 *.db
 .env
+nul
+apify_actor_seed/nul

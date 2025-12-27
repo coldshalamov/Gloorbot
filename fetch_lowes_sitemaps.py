@@ -120,12 +120,27 @@ def main():
         print("   No sub-sitemaps found, parsing as regular sitemap...")
         sub_sitemaps = [sitemap_index_url]
     
-    # Fetch and parse all sub-sitemaps
+    # Filter sub-sitemaps
+    print(f"✅ Found {len(sub_sitemaps)} total sub-sitemaps")
+    
+    # Prioritize category/pl sitemaps
+    target_sitemaps = [sm for sm in sub_sitemaps if 'category' in sm.lower() or 'pl' in sm.lower()]
+    
+    # If no obvious category sitemaps, excluding 'detail' and 'product' might help
+    if not target_sitemaps:
+        print("   No explicit 'category' or 'pl' sitemaps found. Using heuristic filter...")
+        target_sitemaps = [sm for sm in sub_sitemaps if 'detail' not in sm.lower() and 'product' not in sm.lower()]
+
+    print(f"✅ Filtered down to {len(target_sitemaps)} relevant sitemaps")
+    for sm in target_sitemaps:
+        print(f"   - {sm}")
+
+    # Fetch and parse filtered sitemaps
     print("\n[4/4] Extracting product category URLs...")
     all_category_urls = set()
     
-    for i, sitemap_url in enumerate(sub_sitemaps, 1):
-        print(f"   Processing sitemap {i}/{len(sub_sitemaps)}: {sitemap_url.split('/')[-1]}")
+    for i, sitemap_url in enumerate(target_sitemaps, 1):
+        print(f"   Processing sitemap {i}/{len(target_sitemaps)}: {sitemap_url.split('/')[-1]}")
         content = fetch_sitemap(sitemap_url)
         if content:
             urls = parse_sitemap_urls(content)
@@ -140,8 +155,8 @@ def main():
     print("="*60)
     print(f"Total category URLs in sitemap: {len(all_category_urls)}")
     
-    # Load LowesMap.txt for comparison
-    map_path = Path("LowesMap.txt")
+    # Load LowesMap_Final_Pruned.txt for comparison
+    map_path = Path("LowesMap_Final_Pruned.txt")
     if map_path.exists():
         lowes_map_urls = set()
         with open(map_path, 'r', encoding='utf-8') as f:

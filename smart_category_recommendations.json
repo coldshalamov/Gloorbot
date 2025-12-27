@@ -1,0 +1,31 @@
+{
+  "analysis_type": "smart_filtering",
+  "current_categories": 515,
+  "pruned_categories": 716,
+  "union_categories": 815,
+  "suspicious_promotional": 7,
+  "brand_specific": 5,
+  "leaf_categories": 700,
+  "parent_categories": 103,
+  "recommended_set_size": 808,
+  "aggressive_set_size": 803,
+  "cost_increase_optimized": "+57%",
+  "cost_increase_aggressive": "+56%",
+  "cost_increase_union": "+58%",
+  "promotional_categories_to_exclude": [
+    "Deals",
+    "December-deal-drops",
+    "New-and-Trending-Lighting",
+    "SHOP-BATHROOM-DEALS",
+    "Shop-appliance-special-values",
+    "Shop-vacuums-accessories-Tools",
+    "shop-vacuums-accessories"
+  ],
+  "brand_categories_to_review": [
+    "Ecobee--Thermostats-Heating-cooling",
+    "Google--Fire-safety-Electrical",
+    "Google--Security-cameras-Security-surveillance-cameras-Home-security-Electrical",
+    "Google--Wi-fi-routers-Wi-fi-networking-devices-Smart-home-security-wi-fi",
+    "Klein-tools"
+  ]
+}

@@ -1,25 +1,43 @@
-# Duplicate URL groups
+# Duplicate URL Groups (What We Can Prove)
 
-1. **ID 4294737158 – Bathroom safety accessories**
-   - `https://www.lowes.com/pl/bathroom-safety/bathroom-safety-accessories/4294737158`
-   - `https://www.lowes.com/pl/bathroom-safety/bathroom-safety-accessories/toilet-seat-riser/4294737158-910305200700`
-   - Why it matters: the latter link is just a filter for toilet seat risers but resolves to the same category ID as the broader bathroom safety accessories bucket. Keeping only the parent URL avoids needless duplication.
+This project has **three different “duplicate” concepts**:
 
-2. **ID 4294737274 – Bathtubs (alcove, clawfoot, corner, drop-in, freestanding, walk-in)**
-   - `https://www.lowes.com/pl/bathtubs-whirlpool-tubs/bathtubs/alcove/4294737274`
-   - `https://www.lowes.com/pl/bathtubs-whirlpool-tubs/bathtubs/clawfoot/4294737274`
-   - `https://www.lowes.com/pl/bathtubs-whirlpool-tubs/bathtubs/corner/4294737274`
-   - `https://www.lowes.com/pl/bathtubs-whirlpool-tubs/bathtubs/drop-in/4294737274`
-   - `https://www.lowes.com/pl/bathtubs-whirlpool-tubs/bathtubs/freestanding/4294737274`
-   - `https://www.lowes.com/pl/bathtubs-whirlpool-tubs/bathtubs/walk-in/4294737274`
-   - Why it matters: all six URLs share the same internal category ID, meaning the same product pool is reachable via multiple style filters. Keep just the general `/bathtubs` parent entry when deduplicating.
+1) **Exact duplicates within the 515 URLs** (same base category ID → same pool)
+2) **Structural duplicates within the sitemap** (same base category ID → refinements/filters)
+3) **Potential product-level duplicates across different base IDs** (hard; requires enumerating product IDs across pages)
 
-3. **ID 4294713162 – Exterior stains (clear, semi-solid, semi-transparent, solid, transparent)**
-   - `https://www.lowes.com/pl/exterior-wood-coatings/exterior-stains/clear/4294713162`
-   - `https://www.lowes.com/pl/exterior-wood-coatings/exterior-stains/semi-solid/4294713162`
-   - `https://www.lowes.com/pl/exterior-wood-coatings/exterior-stains/semi-transparent/4294713162`
-   - `https://www.lowes.com/pl/exterior-wood-coatings/exterior-stains/solid/4294713162`
-   - `https://www.lowes.com/pl/exterior-wood-coatings/exterior-stains/transparent/4294713162`
-   - Why it matters: the filters are just opacity/finish variants of the same category ID. One canonical `/exterior-wood-coatings/exterior-stains` URL covers the shared product set.
+This file only claims what we can prove with the current data.
 
-These groups are the only exact ID duplicates found in `url_dedupe_analysis.json`. During sampling we will confirm whether other filters redirect centrally or need separate tracking.
+## A) Exact duplicates in the original 515-url list (proved)
+
+From the full browser audit (`url_audit_results.json`), these base IDs appeared multiple times in `LowesMap.txt`:
+
+- Base ID `4294713162` (5 URLs)
+- Base ID `4294737158` (2 URLs)
+- Base ID `4294737274` (6 URLs)
+
+These are summarized in `DUPLICATE_GROUPS_FROM_AUDIT.md`. The deduped list that keeps one canonical URL per base ID is `MINIMAL_URLS_FROM_AUDIT.txt` (505 URLs).
+
+## B) Structural duplicates in the sitemap (proved)
+
+The sitemap-derived universe contains **497,492** `/pl/` URLs that collapse to **3,597** base category IDs.
+
+- Structural “duplicate groups” (base IDs with >1 URL) are enumerated in `sitemap_duplicate_groups_structural.md`.
+- The structurally minimal canonical list (one URL per base ID) is `MINIMAL_URLS.txt` (copied from `sitemap_minimal_structural_urls.txt`).
+
+## C) Department discovery duplicates (partially proved)
+
+The Departments UI crawl (`discover_department_urls.py`) produced:
+
+- `discovered/pl_candidates.txt`: all discovered candidates
+- `discovered/pl_groups_by_category_id.json`: grouping + canonical selections
+- `discovered/pl_minimal_structural.txt`: conservative structural minimization (1068 URLs; 798 base IDs)
+
+Some base IDs had no unrefined `/.../<id>` URL, so we conservatively kept all variants for those IDs. We started a targeted audit of those “no-unrefined” variants in:
+
+- `discovered/no_unrefined_audit.json` (partial)
+- `discovered/no_unrefined_reduction.json` / `discovered/no_unrefined_recommended_keep.txt` (conservative; incomplete audits keep all)
+
+## What is NOT proved here
+
+“Vanities by size” vs “Vanities by brand” style duplication across **different base IDs** is a true product-level set-cover problem; proving minimality requires much deeper, per-product enumeration than first-page samples.

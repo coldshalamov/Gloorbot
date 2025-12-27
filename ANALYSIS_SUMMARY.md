@@ -1,13 +1,73 @@
-## Phase 1 – URL pattern and duplicate analysis
-- `LowesMap.txt` was parsed to extract the `/pl/` paths, top-level slugs, and department IDs. A quick script (`analyze_lowes_map_dedupe.py`) found only three exact-ID duplicates, so we documented those groups in `DUPLICATE_GROUPS.md` and keep the broader parent URL in each case.
-- Top-level slug counts show that about 302 unique "first words" (e.g., `bathroom`, `kitchen`, `light`, `outdoor`, `appliance`, etc.) cover the entire 515-URL pool. To trim the list, I picked the shortest slug per first word (fewer filters) so each idea is represented once, yielding 302 curated URLs in `MINIMAL_URLS.txt`.
-- This heuristic favors broader buckets (e.g., `/bathroom-vanities...` instead of narrow brand or filter variants) while still touching every initial concept from the map.
+# Lowe’s URL Minimization — Methodology & Findings
 
-## Phase 3 – Sitemap gap analysis
-- `sitemap_comparison.json` shows 497 k `/pl/` entries that Lowe's will offer, so we compared the sitemap's top-level slugs to the 302 we currently track. There are 275 entirely new first-word slugs in the sitemap; the most frequent missing categories (by occurrence count in the sitemap) include `furniture`, `plants-bulbs-seeds`, `patio-furniture`, `outdoor-tools-equipment`, `grills-outdoor-cooking`, `lighting-ceiling-fans`, `outdoor-lighting`, `hand-tools`, `bathroom`, `christmas-decorations`, and `ceiling-lights`.
-- Several of the missing slugs (e.g., `bathroom-accessories-hardware`, `windows`, `power-tools`) already appear in `LowesMap.txt` but with far fewer derivative filters than the sitemap suggests, so we may need to add the high-frequency filters that the sitemap exposes. The ones listed above are entirely absent and should be prioritized for addition.
+You asked for **100% confidence** that a URL list is both:
 
-## Next steps (Phase 2 & finalization)
-- Start dev-browser sessions per the supplied warmup rules for 2–3 representative URLs per group. For each, capture the page product count, breadcrumb path, and the first 10 SKUs/IDs (Playwright+Chrome to obey the real-browser requirement). Compare the SKU lists between hypothesized duplicates to confirm they really share a product set and keep the version that delivers the most comprehensive listing.
-- After sampling, re-evaluate the minimal list: remove URLs whose SKU set is fully covered by another tracked URL, add the missing sitemap-first-word URLs from above if they reveal new product groups, and log any new duplicates found in `DUPLICATE_GROUPS.md`.
-- Bundle the final curated list with a short note about how the samples verify each deduction, so the next person can confidently run the monitoring actor with the new 250–300 URLs.
+1) **Complete** (exposes the whole catalog), and
+2) **Minimal** (no redundant URLs).
+
+On Lowe’s, those goals conflict unless we’re explicit about what “complete” means, because:
+- the sitemap contains hundreds of thousands of `/pl/` URLs (many are refinements/filters),
+- the Departments UI only links to a subset of those,
+- and “minimal over products” is a set-cover problem that requires deep product enumeration to prove.
+
+This repo now contains reproducible outputs for **structural minimality** and **measured redundancy**.
+
+## Phase 1 — Full audit of your original list (browser, proved)
+
+We ran a real-Chrome Playwright audit of the URLs in `LowesMap.txt`:
+- Script: `audit_all_urls.py`
+- Output: `url_audit_results.json` (+ `url_audit_results.jsonl`, `url_audit_run.log`)
+
+Result:
+- The 515 URLs collapse to **505 unique base category IDs** (exact duplicates exist).
+- Canonical deduped list: `MINIMAL_URLS_FROM_AUDIT.txt`
+- Exact duplicate groups are documented in `DUPLICATE_GROUPS_FROM_AUDIT.md`.
+
+This proves: you can reduce **515 → 505** without losing any base-ID coverage present in the original list.
+
+## Phase 2 — Departments UI discovery (browser, incomplete for catalog coverage)
+
+We crawled from `https://www.lowes.com/c/Departments` and recursively visited `/c/` hubs:
+- Script: `discover_department_urls.py`
+- Outputs: `discovered/departments_raw.json`, `discovered/pl_candidates.txt`, `discovered/c_visited.txt`
+
+Then we structurally minimized those candidates:
+- Script: `minimize_department_urls.py`
+- Outputs: `discovered/pl_minimal_structural.txt`, `discovered/pl_groups_by_category_id.json`
+
+Result:
+- Departments discovery produced **798** base category IDs.
+- Sitemap base category universe is **3,597** base IDs, so Departments discovery alone cannot be used to claim “full catalog” coverage.
+
+See `gap_analysis.json` and `GAP_ANALYSIS.md`.
+
+## Phase 3 — Sitemap structural minimal set (proved)
+
+Using the existing `sitemap_comparison.json` (from `fetch_lowes_sitemaps.py`), we reconstructed the full sitemap `/pl/` universe and collapsed it by base category ID:
+- Script: `build_sitemap_minimal_urls.py`
+- Outputs:
+  - `master_sitemap_pl_list.txt` (497,492 `/pl/` URLs)
+  - `sitemap_pl_groups_by_base_id.json`
+  - `sitemap_minimal_structural_urls.txt` (3,597 canonical URLs)
+  - `sitemap_duplicate_groups_structural.md`
+
+We then set:
+- `MINIMAL_URLS.txt` = **the 3,597-url sitemap structural minimal list**
+
+This proves: for the sitemap’s category universe, **one URL per base category ID** is structurally minimal (everything else is a refinement/variant of an already-covered base ID).
+
+## Phase 4 — Targeted “no unrefined /<id> URL” checks (partial)
+
+Some discovered base IDs had no clean unrefined URL. We started auditing those variants:
+- Inputs: `discovered/no_unrefined_urls.txt`, `discovered/no_unrefined_groups.json`
+- Partial audit output: `discovered/no_unrefined_audit.json`
+- Conservative reduction: `discovered/no_unrefined_recommended_keep.txt` and `discovered/no_unrefined_reduction_report.md`
+
+Because the audit is partial, the reduction remains conservative (keeps most variants).
+
+## Key conclusion (honest)
+
+- We can be **100% confident** about *structural* deduplication by base category ID.
+- We **cannot** honestly claim “absolute minimal over products” without enumerating product membership across categories (set-cover), which is far beyond first-page sampling and would require substantial scraping.
+
+If your operational definition of “complete” is “covers every category base ID Lowe’s publishes in their sitemaps”, then `MINIMAL_URLS.txt` is the correct complete + structurally minimal list.

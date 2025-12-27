@@ -1,0 +1,197 @@
+[
+  {
+    "parent_id": "4294925630",
+    "parent_name": "Grip-Rite",
+    "children_count": 5,
+    "children_ids": [
+      "4294690615",
+      "4294710855",
+      "4294710832",
+      "4294710912",
+      "4294710931"
+    ],
+    "example_url": "https://www.lowes.com/pl/Grip-Rite/4294925630"
+  },
+  {
+    "parent_id": "4294607842",
+    "parent_name": "Power Tools",
+    "children_count": 4,
+    "children_ids": [
+      "4294607831",
+      "4294607800",
+      "4294607725",
+      "4294607824"
+    ],
+    "example_url": "https://www.lowes.com/pl/Power-Tools/4294607842"
+  },
+  {
+    "parent_id": "4294607864",
+    "parent_name": "Levels & Measuring Tools",
+    "children_count": 2,
+    "children_ids": [
+      "4294607857",
+      "3352150828"
+    ],
+    "example_url": "https://www.lowes.com/pl/Levels-&-Measuring-Tools/4294607864"
+  },
+  {
+    "parent_id": "4294857980",
+    "parent_name": "Dryers",
+    "children_count": 2,
+    "children_ids": [
+      "4294857979",
+      "4294791297"
+    ],
+    "example_url": "https://www.lowes.com/pl/Dryers/4294857980"
+  },
+  {
+    "parent_id": "4294526429",
+    "parent_name": "Shop All Power Tool Accessories",
+    "children_count": 4,
+    "children_ids": [
+      "2365331415",
+      "4294607757",
+      "4294607832",
+      "4294607793"
+    ],
+    "example_url": "https://www.lowes.com/pl/Shop-All-Power-Tool-Accessories/4294526429"
+  },
+  {
+    "parent_id": "4294857035",
+    "parent_name": "Outdoor Lighting",
+    "children_count": 5,
+    "children_ids": [
+      "1761741921",
+      "871465582",
+      "4294798225",
+      "4294418680",
+      "4294606015"
+    ],
+    "example_url": "https://www.lowes.com/pl/Outdoor-Lighting/4294857035"
+  },
+  {
+    "parent_id": "4294766248",
+    "parent_name": "Lock Sets",
+    "children_count": 3,
+    "children_ids": [
+      "1974090709",
+      "4294710983",
+      "275844998"
+    ],
+    "example_url": "https://www.lowes.com/pl/Lock-Sets/4294766248"
+  },
+  {
+    "parent_id": "4294857647",
+    "parent_name": "Shop All Hand Tools",
+    "children_count": 9,
+    "children_ids": [
+      "4294857573",
+      "4294607674",
+      "4294857613",
+      "2419313453",
+      "4294607651",
+      "4294607611",
+      "4294857564",
+      "4294607610",
+      "4294425055"
+    ],
+    "example_url": "https://www.lowes.com/pl/Shop-All-Hand-Tools/4294857647"
+  },
+  {
+    "parent_id": "4294857973",
+    "parent_name": "Shop All",
+    "children_count": 5,
+    "children_ids": [
+      "4294857963",
+      "4294789499",
+      "4294789497",
+      "4294857970",
+      "290928573"
+    ],
+    "example_url": "https://www.lowes.com/pl/Shop-All/4294857973"
+  },
+  {
+    "parent_id": "4294925668",
+    "parent_name": "Table & Floor Lamps",
+    "children_count": 2,
+    "children_ids": [
+      "4294565995",
+      "4294798237"
+    ],
+    "example_url": "https://www.lowes.com/pl/Table-&-Floor-Lamps/4294925668"
+  },
+  {
+    "parent_id": "4294798247",
+    "parent_name": "Bathroom Lighting",
+    "children_count": 2,
+    "children_ids": [
+      "4294798246",
+      "4294798245"
+    ],
+    "example_url": "https://www.lowes.com/pl/Bathroom-Lighting/4294798247"
+  },
+  {
+    "parent_id": "4294857981",
+    "parent_name": "Shop All",
+    "children_count": 3,
+    "children_ids": [
+      "4294653877",
+      "2711977280210",
+      "4294791544"
+    ],
+    "example_url": "https://www.lowes.com/pl/Shop-All/4294857981"
+  },
+  {
+    "parent_id": "4294857977",
+    "parent_name": "Washers",
+    "children_count": 2,
+    "children_ids": [
+      "4294857975",
+      "4294857976"
+    ],
+    "example_url": "https://www.lowes.com/pl/Washers/4294857977"
+  },
+  {
+    "parent_id": "1457212135",
+    "parent_name": "Tool storage",
+    "children_count": 3,
+    "children_ids": [
+      "4294607608",
+      "346867792",
+      "4294607609"
+    ],
+    "example_url": "https://www.lowes.com/pl/Tool-storage/1457212135"
+  },
+  {
+    "parent_id": "1514558678",
+    "parent_name": "Lighting",
+    "children_count": 4,
+    "children_ids": [
+      "4294687722",
+      "4294929669",
+      "4294687723",
+      "4294566040"
+    ],
+    "example_url": "https://www.lowes.com/pl/Lighting/1514558678"
+  },
+  {
+    "parent_id": "37721669146453",
+    "parent_name": "Smart Lighting",
+    "children_count": 2,
+    "children_ids": [
+      "37721669146458",
+      "37721669146457"
+    ],
+    "example_url": "https://www.lowes.com/pl/Smart-Lighting/37721669146453"
+  },
+  {
+    "parent_id": "4294713161",
+    "parent_name": "Glass & Acrylic",
+    "children_count": 2,
+    "children_ids": [
+      "2821608155459",
+      "186605902"
+    ],
+    "example_url": "https://www.lowes.com/pl/Glass-&-Acrylic/4294713161"
+  }
+]
