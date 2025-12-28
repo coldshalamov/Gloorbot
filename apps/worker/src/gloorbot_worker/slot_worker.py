@@ -236,6 +236,79 @@ async def _run_slot(client_id: str, slot_id: int) -> None:
             """)
             print(f"[slot-{slot_id}] Stealth scripts injected", flush=True)
 
+            # Check if this is a FRESH profile (no cookies/history yet)
+            # Fresh profiles are HEAVILY flagged by anti-bot systems
+            cookies_file = profile_dir / "Default" / "Cookies"
+            is_fresh_profile = not cookies_file.exists()
+            
+            if is_fresh_profile:
+                print(f"[slot-{slot_id}] FRESH PROFILE DETECTED - doing extended pre-warmup...", flush=True)
+                # Extended pre-warmup: visit harmless sites first to establish credibility
+                import random
+                
+                # Step 1: Visit Google first (totally normal behavior)
+                try:
+                    await page.goto("https://www.google.com/", wait_until='domcontentloaded', timeout=30000)
+                    await asyncio.sleep(3 + random.random() * 2)
+                    
+                    # Do some mouse movement
+                    await page.mouse.move(300 + random.random() * 200, 200 + random.random() * 100)
+                    await asyncio.sleep(1 + random.random())
+                    
+                    # Type a search (normal user behavior)
+                    search_terms = ["lowes store hours", "home improvement near me", "hardware store", "lowes deals"]
+                    search_box = page.locator('textarea[name="q"], input[name="q"]').first
+                    if await search_box.count() > 0:
+                        await search_box.click()
+                        await asyncio.sleep(0.5 + random.random() * 0.5)
+                        search_term = random.choice(search_terms)
+                        for char in search_term:
+                            await search_box.type(char, delay=50 + random.random() * 100)
+                        await asyncio.sleep(1 + random.random())
+                        await page.keyboard.press("Enter")
+                        await asyncio.sleep(3 + random.random() * 2)
+                        
+                        # Scroll down results
+                        await page.mouse.wheel(0, 200 + random.random() * 100)
+                        await asyncio.sleep(1 + random.random())
+                    
+                    print(f"[slot-{slot_id}] Google warmup complete", flush=True)
+                except Exception as e:
+                    print(f"[slot-{slot_id}] Google warmup failed (non-fatal): {e}", flush=True)
+                
+                # Step 2: Visit Lowe's homepage but just browse (don't scrape yet)
+                try:
+                    await page.goto("https://www.lowes.com/", wait_until='domcontentloaded', timeout=60000)
+                    await asyncio.sleep(5 + random.random() * 3)  # Longer wait for fresh profile
+                    
+                    # Extensive human behavior
+                    for _ in range(3):  # Multiple rounds
+                        await page.mouse.move(
+                            200 + random.random() * 800,
+                            150 + random.random() * 400
+                        )
+                        await asyncio.sleep(0.5 + random.random() * 0.5)
+                    
+                    await page.mouse.wheel(0, 300 + random.random() * 200)
+                    await asyncio.sleep(2 + random.random())
+                    await page.mouse.wheel(0, -100 - random.random() * 100)  # Scroll back up
+                    await asyncio.sleep(1 + random.random())
+                    
+                    # Click on a department to build history
+                    dept_links = await page.locator('a[href*="/c/"]').all()
+                    if len(dept_links) > 3:
+                        random_dept = random.choice(dept_links[1:min(6, len(dept_links))])
+                        if await random_dept.is_visible():
+                            await random_dept.click()
+                            await asyncio.sleep(4 + random.random() * 2)
+                            await page.mouse.move(400 + random.random() * 300, 300 + random.random() * 200)
+                            await asyncio.sleep(1 + random.random())
+                    
+                    print(f"[slot-{slot_id}] Extended Lowe's warmup complete", flush=True)
+                except Exception as e:
+                    print(f"[slot-{slot_id}] Extended warmup failed: {e}", flush=True)
+            
+            # Now do the normal warmup (will be faster if we already visited)
             await parallel.warmup_session(page)
             await parallel.set_store_context(page, lease.store_url, lease.store_name)
 
