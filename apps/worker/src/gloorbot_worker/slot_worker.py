@@ -173,21 +173,50 @@ async def _run_slot(client_id: str, slot_id: int) -> None:
                 ],
             }
             
-            # Launch Chromium browser (Cheapskater approach)
-            print(f"[slot-{slot_id}] Launching browser...", flush=True)
+            # Modern Chrome User-Agents (Cheapskater's proven list)
+            user_agents = [
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.6261.94 Safari/537.36",
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.6312.86 Safari/537.36",
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.6367.78 Safari/537.36",
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.6422.23 Safari/537.36",
+            ]
+            import random
+            user_agent = random.choice(user_agents)
+            
+            # Launch Chromium browser
+            print(f"[slot-{slot_id}] Launching browser with modern UA...", flush=True)
             try:
                 browser = await p.chromium.launch(**launch_kwargs)
-                print(f"[slot-{slot_id}] Browser launched, creating context...", flush=True)
                 
-                # Create fresh context (Cheapskater style - this is the key!)
+                # Create context with User-Agent (CRITICAL for avoiding Akamai detection)
                 context = await browser.new_context(
                     viewport={"width": 1440, "height": 900},
                     locale="en-US",
+                    user_agent=user_agent,
                 )
                 
-                print(f"[slot-{slot_id}] Context created successfully", flush=True)
+                # Add client hint headers (mimics real Chrome)
+                await context.set_extra_http_headers({
+                    "Accept-Language": "en-US,en;q=0.9",
+                    "Sec-CH-UA": '"Not A(Brand)";v="99", "Chromium";v="124"',
+                    "Sec-CH-UA-Mobile": "?0",
+                    "Sec-CH-UA-Platform": '"Windows"',
+                })
+                
+                # Init script to mask automation markers
+                await context.add_init_script("""
+                    (() => {
+                      Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+                      Object.defineProperty(navigator, 'vendor', { get: () => 'Google Inc.' });
+                      Object.defineProperty(navigator, 'platform', { get: () => 'Win32' });
+                      Object.defineProperty(navigator, 'languages', { get: () => ['en-US', 'en'] });
+                      window.chrome = window.chrome || { runtime: {} };
+                    })();
+                """)
+                
+                print(f"[slot-{slot_id}] Context created with anti-fingerprint hardening", flush=True)
             except Exception as e:
-                print(f"[slot-{slot_id}] Browser launch failed: {e}", flush=True)
+                print(f"[slot-{slot_id}] Browser setup failed: {e}", flush=True)
                 raise
             page = await context.new_page()
 
