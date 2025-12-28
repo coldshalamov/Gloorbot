@@ -315,6 +315,13 @@ async def apply_pickup_filter(page: Page, category_name: str) -> bool:
                     await page.wait_for_load_state("networkidle", timeout=10000)
                 except:
                     pass
+                # CRITICAL FIX: Verify via URL change - Lowe's uses inStock=1 parameter
+                current_url = page.url.lower()
+                if "instock=1" in current_url or "pickup" in current_url or "refinement" in current_url:
+                    Actor.log.info(f"[{category_name}] Pickup filter verified via URL (inStock param)")
+                    return True
+                # Even if URL doesn't show it, the click happened - trust it
+                Actor.log.info(f"[{category_name}] Pickup filter applied (JS click succeeded)")
                 return True
 
         except Exception as e:
@@ -323,15 +330,7 @@ async def apply_pickup_filter(page: Page, category_name: str) -> bool:
 
     # Try JS approach first (most reliable)
     if await try_js_checkbox_click():
-        # Verify via URL change
-        await asyncio.sleep(1)
-        current_url = page.url.lower()
-        if "pickup" in current_url or "refinement" in current_url or "availability" in current_url:
-            Actor.log.info(f"[{category_name}] Pickup filter verified via URL")
-            return True
-        # Even if URL doesn't change, JS click likely worked
-        Actor.log.info(f"[{category_name}] Pickup filter applied (JS click succeeded)")
-        return True
+        return True  # Already verified inside the function
 
     # APPROACH 2: Fallback to selector-based clicking
     for attempt in range(3):
@@ -458,7 +457,14 @@ async def scrape_category_page(page: Page, url: str, store_info: dict, page_num:
         raise  # Re-raise - this indicates a serious problem
 
     # Find product cards with timeout
+    # CRITICAL: Lowe's uses div.tile_group for the actual product container with content
+    # The data-selector="splp-prd-crd" elements are empty wrappers
     selectors = [
+        'div.tile_group',  # Lowe's actual product tile with content
+        '[class*="tile_group"]',  # Alternative class selector
+        '[data-selector="splp-prd-crd"]',  # Wrapper (may be empty)
+        '[class*="product-card"]',
+        '[class*="ProductCard"]',
         "[data-test='product-pod']",
         "[data-test='productPod']",
         "div[data-itemid]",
@@ -466,8 +472,6 @@ async def scrape_category_page(page: Page, url: str, store_info: dict, page_num:
         "[data-itemid]",
         "li:has(a[href*='/pd/'])",
         "article:has(a[href*='/pd/'])",
-        '[class*="ProductCard"]',
-        '[class*="product-card"]',
         "article",
     ]
     product_cards = []
@@ -518,9 +522,9 @@ async def scrape_category_page(page: Page, url: str, store_info: dict, page_num:
                 if not href:
                     return None
 
-                # Title
+                # Title - Lowe's uses data-selector="splp-prd-ttl" for product titles
                 title_el = card.locator(
-                    ":scope [data-testid='item-description'], :scope a[data-testid='item-description-link'], :scope [data-test*='product-title'], :scope h3, :scope h2"
+                    ":scope [data-selector='splp-prd-ttl'], :scope [data-testid='item-description'], :scope a[data-testid='item-description-link'], :scope [data-test*='product-title'], :scope h3, :scope h2"
                 ).first
                 title_text = ""
                 if await title_el.count() > 0:
@@ -528,9 +532,13 @@ async def scrape_category_page(page: Page, url: str, store_info: dict, page_num:
                 if not title_text:
                     title_text = (await link_el.inner_text()).strip()
 
-                # Price
+                # Price - Lowe's uses data-selector="splp-prd-act-$" for current price
+                # and "splp-prd-promo-was-$" for was price
                 price_text = ""
                 for sel in [
+                    ":scope [data-selector='splp-prd-act-$']",     # Current/actual price
+                    ":scope [data-selector='splp-prd-$']",          # Price element
+                    ":scope [data-selector='prd-price-holder']",    # Price container
                     ":scope [data-testid='current-price']",
                     ":scope [data-testid*='price']",
                     ":scope div[class*='ProductCard_price']",
@@ -540,22 +548,25 @@ async def scrape_category_page(page: Page, url: str, store_info: dict, page_num:
                     price_el = card.locator(sel).first
                     if await price_el.count() > 0:
                         price_text = (await price_el.inner_text()).strip()
-                        if price_text:
+                        if price_text and '$' in price_text:
                             break
 
-                # Was price (markdown indicator)
+                # Was price (markdown indicator) - Lowe's uses data-selector="splp-prd-promo-was-$"
                 was_price = ""
                 for sel in [
+                    ":scope [data-selector='splp-prd-promo-was-$']",  # Lowe's was price
                     ":scope [data-testid='was-price']",
                     ":scope [data-testid*='was']",
                     ":scope [class*='was-price']",
                     ":scope [data-test*='was']",
                     ":scope [data-test*='savings']",
+                    ":scope s",  # Strikethrough text often used for was-price
+                    ":scope del",  # Deleted text
                 ]:
                     was_el = card.locator(sel).first
                     if await was_el.count() > 0:
                         was_price = (await was_el.inner_text()).strip()
-                        if was_price:
+                        if was_price and '$' in was_price:
                             break
 
                 # Fallback: parse money from text blobs (covers "$\\n42\\n.29" style)
