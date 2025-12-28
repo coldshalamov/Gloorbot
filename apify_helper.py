@@ -22,7 +22,9 @@ import time
 import requests
 
 # API credentials
-API_TOKEN = os.getenv('APIFY_TOKEN', 'apify_api_3IKAywfQMTkpNC0xtNpQo0IwjYc6e312N9dM')
+API_TOKEN = os.getenv("APIFY_TOKEN")
+if not API_TOKEN:
+    raise RuntimeError("Missing APIFY_TOKEN environment variable")
 BASE_URL = 'https://api.apify.com/v2'
 HEADERS = {'Authorization': f'Bearer {API_TOKEN}'}
 

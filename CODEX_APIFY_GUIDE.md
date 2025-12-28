@@ -5,7 +5,7 @@ The Apify MCP is already configured in your Antigravity IDE with your API token.
 
 **Location**: `C:\Users\User\AppData\Roaming\Antigravity\User\globalStorage\saoudrizwan.claude-dev\settings\cline_mcp_settings.json`
 
-**Your Apify Token**: `apify_api_3IKAywfQMTkpNC0xtNpQo0IwjYc6e312N9dM`
+**Your Apify Token**: `apify_api_your_token_here`
 
 ## Available Actors
 You have 4 actors available:
@@ -67,7 +67,7 @@ If the MCP still doesn't work, you can ask Codex to use the Apify API directly:
 
 ```
 Use curl to call the Apify API:
-curl -H "Authorization: Bearer apify_api_3IKAywfQMTkpNC0xtNpQo0IwjYc6e312N9dM" \
+curl -H "Authorization: Bearer apify_api_your_token_here" \
      https://api.apify.com/v2/acts/one-api~lowes-cheapskate/runs
 ```
 
@@ -80,7 +80,7 @@ curl -H "Authorization: Bearer apify_api_3IKAywfQMTkpNC0xtNpQo0IwjYc6e312N9dM" \
 You can also set the token as an environment variable in Antigravity's terminal:
 
 ```bash
-export APIFY_TOKEN=apify_api_3IKAywfQMTkpNC0xtNpQo0IwjYc6e312N9dM
+export APIFY_TOKEN=apify_api_your_token_here
 ```
 
 Then use the Apify CLI:

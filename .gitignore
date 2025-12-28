@@ -5,6 +5,15 @@ __pycache__/
 .venv/
 **/.venv/
 
+# Coordinator local sqlite
+apps/coordinator/.data/
+
+# Worker build outputs
+apps/worker/build/
+apps/worker/dist/
+apps/worker/dist-installer/
+apps/worker/ms-playwright/
+
 # Local/Runtime files
 **/.playwright-profiles/
 **/.playwright-profile/

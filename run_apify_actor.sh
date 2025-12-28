@@ -2,7 +2,11 @@
 # Apify Actor Runner Script
 # Usage: ./run_apify_actor.sh <actor_name> <input_json_file>
 
-APIFY_TOKEN="apify_api_3IKAywfQMTkpNC0xtNpQo0IwjYc6e312N9dM"
+if [ -z "$APIFY_TOKEN" ]; then
+  echo "ERROR: APIFY_TOKEN is not set."
+  echo "Set it like: export APIFY_TOKEN=apify_api_your_token_here"
+  exit 1
+fi
 ACTOR_NAME="${1:-lowes-cheapskate}"
 INPUT_FILE="${2:-input.json}"
 

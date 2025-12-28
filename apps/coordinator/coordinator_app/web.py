@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import threading
 import os
 import secrets
 from datetime import datetime, timedelta
@@ -8,10 +9,10 @@ from pathlib import Path
 from typing import AsyncIterator
 
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse, PlainTextResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse, PlainTextResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from sqlalchemy import select, func, and_, or_
+from sqlalchemy import select, func, and_, or_, update
 
 from .db import db_session
 from .models import Client, Task, Deal
@@ -39,18 +40,40 @@ templates = Jinja2Templates(directory=str(base_dir / "templates"))
 
 class EventBus:
     def __init__(self) -> None:
-        self._queue: asyncio.Queue[str] = asyncio.Queue(maxsize=5000)
+        self._loop: asyncio.AbstractEventLoop | None = None
+        self._lock = threading.Lock()
+        self._subs: set[asyncio.Queue[str]] = set()
+
+    def set_loop(self, loop: asyncio.AbstractEventLoop) -> None:
+        self._loop = loop
 
     def publish(self, event: str) -> None:
-        try:
-            self._queue.put_nowait(event)
-        except asyncio.QueueFull:
-            pass
+        # Endpoints may run in a threadpool; marshal publishing onto the main loop.
+        if not self._loop:
+            return
+        self._loop.call_soon_threadsafe(self._publish_in_loop, event)
+
+    def _publish_in_loop(self, event: str) -> None:
+        with self._lock:
+            targets = list(self._subs)
+        for q in targets:
+            try:
+                q.put_nowait(event)
+            except asyncio.QueueFull:
+                # Drop for slow subscribers; dashboard can refresh via polling.
+                pass
 
     async def subscribe(self) -> AsyncIterator[str]:
-        while True:
-            event = await self._queue.get()
-            yield event
+        q: asyncio.Queue[str] = asyncio.Queue(maxsize=200)
+        with self._lock:
+            self._subs.add(q)
+        try:
+            while True:
+                event = await q.get()
+                yield event
+        finally:
+            with self._lock:
+                self._subs.discard(q)
 
 
 bus = EventBus()
@@ -66,7 +89,8 @@ def create_app() -> FastAPI:
     app.mount("/static", StaticFiles(directory=str(base_dir / "static")), name="static")
 
     @app.on_event("startup")
-    def _startup() -> None:
+    async def _startup() -> None:
+        bus.set_loop(asyncio.get_running_loop())
         create_tables()
         try:
             inserted = seed_tasks_from_parallel_urls(repo_root)
@@ -90,8 +114,8 @@ def create_app() -> FastAPI:
             },
         )
 
-    @app.get("/download")
-    def download() -> RedirectResponse | PlainTextResponse:
+    @app.get("/download", response_model=None)
+    def download() -> Response:
         url = _download_url()
         if not url:
             return PlainTextResponse("WORKER_DOWNLOAD_URL not configured on server.", status_code=404)
@@ -103,7 +127,10 @@ def create_app() -> FastAPI:
         active_cutoff = now - timedelta(seconds=ACTIVE_WINDOW_SECONDS)
         with db_session() as db:
             total_tasks = db.scalar(select(func.count(Task.id))) or 0
-            leased = db.scalar(select(func.count(Task.id)).where(Task.lease_expires_at != None)) or 0  # noqa: E711
+            leased = (
+                db.scalar(select(func.count(Task.id)).where(Task.lease_expires_at != None, Task.lease_expires_at >= now))  # noqa: E711
+                or 0
+            )
             done = db.scalar(select(func.count(Task.id)).where(Task.last_completed_at != None)) or 0  # noqa: E711
 
             active_clients = db.scalar(select(func.count(Client.id)).where(Client.last_seen_at >= active_cutoff)) or 0
@@ -190,23 +217,41 @@ def create_app() -> FastAPI:
                 query = query.order_by((Task.store_id != req.preferred_store_id).asc())
             query = query.order_by(Task.last_completed_at.asc().nullsfirst(), Task.id.asc()).limit(1)
 
-            task = db.execute(query).scalars().first()
-            if not task:
-                return None
+            # Lease atomically to avoid two workers getting the same task under concurrency.
+            for _ in range(5):
+                task = db.execute(query).scalars().first()
+                if not task:
+                    return None
 
-            task.lease_client_id = req.client_id
-            task.lease_expires_at = lease_until
-            task.last_started_at = now
-            db.commit()
+                result = db.execute(
+                    update(Task)
+                    .where(
+                        Task.id == task.id,
+                        or_(Task.lease_expires_at == None, Task.lease_expires_at < now),  # noqa: E711
+                    )
+                    .values(
+                        lease_client_id=req.client_id,
+                        lease_expires_at=lease_until,
+                        last_started_at=now,
+                    )
+                )
+                if result.rowcount == 1:
+                    db.commit()
+                    leased_task = db.get(Task, task.id)
+                    if not leased_task:
+                        return None
+                    return LeaseResponse(
+                        task_id=leased_task.id,
+                        lease_seconds=LEASE_SECONDS,
+                        store_id=leased_task.store_id,
+                        store_name=leased_task.store_name,
+                        store_url=leased_task.store_url,
+                        category_url=leased_task.category_url,
+                    )
 
-            return LeaseResponse(
-                task_id=task.id,
-                lease_seconds=LEASE_SECONDS,
-                store_id=task.store_id,
-                store_name=task.store_name,
-                store_url=task.store_url,
-                category_url=task.category_url,
-            )
+                db.rollback()
+
+            return None
 
     @app.post("/api/v1/lease/complete")
     def lease_complete(req: LeaseCompleteRequest) -> dict:
@@ -297,9 +342,8 @@ def create_app() -> FastAPI:
         async for event in bus.subscribe():
             yield event.encode("utf-8")
 
-    @app.get("/api/v1/events")
+    @app.get("/api/v1/events", response_model=None)
     async def events() -> StreamingResponse:
         return StreamingResponse(_sse_stream(), media_type="text/event-stream")
 
     return app
-

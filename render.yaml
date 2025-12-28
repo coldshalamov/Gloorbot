@@ -4,7 +4,8 @@ services:
     env: docker
     rootDir: apps/coordinator
     dockerfilePath: Dockerfile
-    plan: free
+    plan: starter
+    healthCheckPath: /healthz
     envVars:
       - key: DATA_DIR
         value: /var/data
@@ -15,5 +16,5 @@ services:
     disk:
       name: gloorbot-data
       mountPath: /var/data
-      sizeGB: 1
+      sizeGB: 5
 

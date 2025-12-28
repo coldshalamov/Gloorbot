@@ -1,7 +1,7 @@
 # Run Apify Actor with Your API Key
 
 ## Your Apify Credentials
-- **API Key**: `apify_api_3IKAywfQMTkpNC0xtNpQo0IwjYc6e312N9dM`
+- **API Key**: `apify_api_your_token_here`
 - **Username**: `one-api`
 - **API Base URL**: `https://api.apify.com/v2`
 
@@ -15,14 +15,14 @@
 
 ### 1. List All Your Actors
 ```bash
-curl -H "Authorization: Bearer apify_api_3IKAywfQMTkpNC0xtNpQo0IwjYc6e312N9dM" \
+curl -H "Authorization: Bearer apify_api_your_token_here" \
      https://api.apify.com/v2/acts
 ```
 
 ### 2. Run the lowes-cheapskate Actor
 ```bash
 curl -X POST \
-  -H "Authorization: Bearer apify_api_3IKAywfQMTkpNC0xtNpQo0IwjYc6e312N9dM" \
+  -H "Authorization: Bearer apify_api_your_token_here" \
   -H "Content-Type: application/json" \
   -d '{
     "stores": [{"store_id": "0004", "name": "Test Store", "zip": "98144"}],
@@ -35,14 +35,14 @@ curl -X POST \
 ### 3. Get Actor Run Status
 ```bash
 # Replace RUN_ID with the actual run ID from step 2
-curl -H "Authorization: Bearer apify_api_3IKAywfQMTkpNC0xtNpQo0IwjYc6e312N9dM" \
+curl -H "Authorization: Bearer apify_api_your_token_here" \
      https://api.apify.com/v2/actor-runs/RUN_ID
 ```
 
 ### 4. Get Dataset from Run
 ```bash
 # Replace DATASET_ID with the dataset ID from the run status
-curl -H "Authorization: Bearer apify_api_3IKAywfQMTkpNC0xtNpQo0IwjYc6e312N9dM" \
+curl -H "Authorization: Bearer apify_api_your_token_here" \
      https://api.apify.com/v2/datasets/DATASET_ID/items
 ```
 
@@ -51,7 +51,7 @@ curl -H "Authorization: Bearer apify_api_3IKAywfQMTkpNC0xtNpQo0IwjYc6e312N9dM" \
 ```python
 import requests
 
-API_TOKEN = "apify_api_3IKAywfQMTkpNC0xtNpQo0IwjYc6e312N9dM"
+API_TOKEN = "apify_api_your_token_here"
 headers = {"Authorization": f"Bearer {API_TOKEN}"}
 
 # Run actor
@@ -86,7 +86,7 @@ npm install -g apify-cli
 
 ### Login with Token
 ```bash
-apify login --token apify_api_3IKAywfQMTkpNC0xtNpQo0IwjYc6e312N9dM
+apify login --token apify_api_your_token_here
 ```
 
 ### Run Actor
@@ -103,7 +103,7 @@ apify call one-api/lowes-cheapskate \
 
 Set the token once:
 ```bash
-export APIFY_TOKEN=apify_api_3IKAywfQMTkpNC0xtNpQo0IwjYc6e312N9dM
+export APIFY_TOKEN=apify_api_your_token_here
 ```
 
 Then use without specifying token:
@@ -116,7 +116,7 @@ apify call one-api/lowes-cheapskate --input input.json
 ```bash
 # 1. Run the actor
 RUN_ID=$(curl -X POST \
-  -H "Authorization: Bearer apify_api_3IKAywfQMTkpNC0xtNpQo0IwjYc6e312N9dM" \
+  -H "Authorization: Bearer apify_api_your_token_here" \
   -H "Content-Type: application/json" \
   -d '{"stores":[{"store_id":"0004"}],"categories":[{"name":"Clearance","url":"https://www.lowes.com/pl/The-back-aisle/2021454685607"}],"max_pages_per_category":2}' \
   https://api.apify.com/v2/acts/one-api~lowes-cheapskate/runs | jq -r '.data.id')
@@ -125,7 +125,7 @@ echo "Run ID: $RUN_ID"
 
 # 2. Wait for completion (check every 10 seconds)
 while true; do
-  STATUS=$(curl -s -H "Authorization: Bearer apify_api_3IKAywfQMTkpNC0xtNpQo0IwjYc6e312N9dM" \
+  STATUS=$(curl -s -H "Authorization: Bearer apify_api_your_token_here" \
     https://api.apify.com/v2/actor-runs/$RUN_ID | jq -r '.data.status')
 
   echo "Status: $STATUS"
@@ -138,11 +138,11 @@ while true; do
 done
 
 # 3. Get the dataset
-DATASET_ID=$(curl -s -H "Authorization: Bearer apify_api_3IKAywfQMTkpNC0xtNpQo0IwjYc6e312N9dM" \
+DATASET_ID=$(curl -s -H "Authorization: Bearer apify_api_your_token_here" \
   https://api.apify.com/v2/actor-runs/$RUN_ID | jq -r '.data.defaultDatasetId')
 
 # 4. Download results
-curl -H "Authorization: Bearer apify_api_3IKAywfQMTkpNC0xtNpQo0IwjYc6e312N9dM" \
+curl -H "Authorization: Bearer apify_api_your_token_here" \
   "https://api.apify.com/v2/datasets/$DATASET_ID/items?format=json" > results.json
 
 echo "Results saved to results.json"
@@ -152,7 +152,7 @@ echo "Results saved to results.json"
 
 Paste this entire block to test your API key:
 ```bash
-curl -H "Authorization: Bearer apify_api_3IKAywfQMTkpNC0xtNpQo0IwjYc6e312N9dM" \
+curl -H "Authorization: Bearer apify_api_your_token_here" \
      https://api.apify.com/v2/acts | jq '.data.items[] | {name: .name, id: .id}'
 ```
 

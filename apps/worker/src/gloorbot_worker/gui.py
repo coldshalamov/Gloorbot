@@ -45,10 +45,14 @@ class App:
         self._running = True
         self.join_btn.configure(state="disabled")
         self.kill_btn.configure(state="normal")
-        self.status.set("Joined. Starting slots…")
+        self.status.set("Joined. Connecting to coordinator…")
 
         def run() -> None:
             def on_tick(st: dict) -> None:
+                if not st.get("connected"):
+                    self.status.set("Joined. Waiting for coordinator…")
+                else:
+                    self.status.set("Joined. Running.")
                 self.stats.set(
                     f"Local:\n"
                     f"  Slots: {st.get('slots')}\n"
@@ -97,4 +101,3 @@ def run_gui() -> None:
         pass
     App(root)
     root.mainloop()
-

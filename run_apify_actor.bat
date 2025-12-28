@@ -4,7 +4,12 @@ REM Usage: run_apify_actor.bat [actor_name] [input_file]
 
 setlocal enabledelayedexpansion
 
-set APIFY_TOKEN=apify_api_3IKAywfQMTkpNC0xtNpQo0IwjYc6e312N9dM
+REM Set your token before running:
+REM   set APIFY_TOKEN=apify_api_your_token_here
+if "%APIFY_TOKEN%"=="" (
+  echo ERROR: APIFY_TOKEN is not set.
+  exit /b 1
+)
 set ACTOR_NAME=%1
 if "%ACTOR_NAME%"=="" set ACTOR_NAME=lowes-cheapskate
 set INPUT_FILE=%2
