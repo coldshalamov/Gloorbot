@@ -189,124 +189,14 @@ async def _run_slot(client_id: str, slot_id: int) -> None:
                     raise
             page = context.pages[0] if context.pages else await context.new_page()
 
-            # CRITICAL: Inject anti-detection scripts BEFORE navigating
-            # This hides the webdriver property that Akamai/PerimeterX checks
-            # This is the key difference between "works locally" and "instant block"
-            await page.add_init_script("""
-                // Hide webdriver property - #1 detection vector
-                Object.defineProperty(navigator, 'webdriver', {
-                    get: () => undefined
-                });
+            # PROVEN APPROACH: NO fingerprint injection! (Makes detection WORSE!)
+            # The documented scraper header says:
+            # "✅ NO playwright-stealth (red flag!)"
+            # "✅ NO fingerprint injection (makes it worse!)"
+            # Just do simple human warmup and trust Chrome's natural fingerprint.
+            print(f"[slot-{slot_id}] Browser ready, starting warmup...", flush=True)
 
-                // Hide automation-related properties
-                delete navigator.__proto__.webdriver;
-
-                // Make plugins array look normal (Chromium has empty plugins)
-                Object.defineProperty(navigator, 'plugins', {
-                    get: () => [
-                        { name: 'Chrome PDF Plugin', filename: 'internal-pdf-viewer' },
-                        { name: 'Chrome PDF Viewer', filename: 'mhjfbmdgcfjbbpaeojofohoefgiehjai' },
-                        { name: 'Native Client', filename: 'internal-nacl-plugin' }
-                    ]
-                });
-
-                // Make languages look normal
-                Object.defineProperty(navigator, 'languages', {
-                    get: () => ['en-US', 'en']
-                });
-
-                // Hide automation in chrome object
-                window.chrome = {
-                    runtime: {},
-                    loadTimes: function() {},
-                    csi: function() {},
-                    app: {}
-                };
-
-                // Permissions - make it look like a real browser
-                const originalQuery = window.navigator.permissions.query;
-                window.navigator.permissions.query = (parameters) => (
-                    parameters.name === 'notifications' ?
-                        Promise.resolve({ state: Notification.permission }) :
-                        originalQuery(parameters)
-                );
-            """)
-            print(f"[slot-{slot_id}] Stealth scripts injected", flush=True)
-
-            # Check if this is a FRESH profile (no cookies/history yet)
-            # Fresh profiles are HEAVILY flagged by anti-bot systems
-            cookies_file = profile_dir / "Default" / "Cookies"
-            is_fresh_profile = not cookies_file.exists()
-            
-            if is_fresh_profile:
-                print(f"[slot-{slot_id}] FRESH PROFILE DETECTED - doing extended pre-warmup...", flush=True)
-                # Extended pre-warmup: visit harmless sites first to establish credibility
-                import random
-                
-                # Step 1: Visit Google first (totally normal behavior)
-                try:
-                    await page.goto("https://www.google.com/", wait_until='domcontentloaded', timeout=30000)
-                    await asyncio.sleep(3 + random.random() * 2)
-                    
-                    # Do some mouse movement
-                    await page.mouse.move(300 + random.random() * 200, 200 + random.random() * 100)
-                    await asyncio.sleep(1 + random.random())
-                    
-                    # Type a search (normal user behavior)
-                    search_terms = ["lowes store hours", "home improvement near me", "hardware store", "lowes deals"]
-                    search_box = page.locator('textarea[name="q"], input[name="q"]').first
-                    if await search_box.count() > 0:
-                        await search_box.click()
-                        await asyncio.sleep(0.5 + random.random() * 0.5)
-                        search_term = random.choice(search_terms)
-                        for char in search_term:
-                            await search_box.type(char, delay=50 + random.random() * 100)
-                        await asyncio.sleep(1 + random.random())
-                        await page.keyboard.press("Enter")
-                        await asyncio.sleep(3 + random.random() * 2)
-                        
-                        # Scroll down results
-                        await page.mouse.wheel(0, 200 + random.random() * 100)
-                        await asyncio.sleep(1 + random.random())
-                    
-                    print(f"[slot-{slot_id}] Google warmup complete", flush=True)
-                except Exception as e:
-                    print(f"[slot-{slot_id}] Google warmup failed (non-fatal): {e}", flush=True)
-                
-                # Step 2: Visit Lowe's homepage but just browse (don't scrape yet)
-                try:
-                    await page.goto("https://www.lowes.com/", wait_until='domcontentloaded', timeout=60000)
-                    await asyncio.sleep(5 + random.random() * 3)  # Longer wait for fresh profile
-                    
-                    # Extensive human behavior
-                    for _ in range(3):  # Multiple rounds
-                        await page.mouse.move(
-                            200 + random.random() * 800,
-                            150 + random.random() * 400
-                        )
-                        await asyncio.sleep(0.5 + random.random() * 0.5)
-                    
-                    await page.mouse.wheel(0, 300 + random.random() * 200)
-                    await asyncio.sleep(2 + random.random())
-                    await page.mouse.wheel(0, -100 - random.random() * 100)  # Scroll back up
-                    await asyncio.sleep(1 + random.random())
-                    
-                    # Click on a department to build history
-                    dept_links = await page.locator('a[href*="/c/"]').all()
-                    if len(dept_links) > 3:
-                        random_dept = random.choice(dept_links[1:min(6, len(dept_links))])
-                        if await random_dept.is_visible():
-                            await random_dept.click()
-                            await asyncio.sleep(4 + random.random() * 2)
-                            await page.mouse.move(400 + random.random() * 300, 300 + random.random() * 200)
-                            await asyncio.sleep(1 + random.random())
-                    
-                    print(f"[slot-{slot_id}] Extended Lowe's warmup complete", flush=True)
-                except Exception as e:
-                    print(f"[slot-{slot_id}] Extended warmup failed: {e}", flush=True)
-            
-            # Now do the normal warmup (will be faster if we already visited)
-            # Now do the normal warmup (will be faster if we already visited)
+            # Do the simple proven warmup (homepage visit + human behavior)
             await parallel.warmup_session(page)
             if not await parallel.set_store_context(page, lease.store_url, lease.store_name):
                 print(f"[slot-{slot_id}] Failed to set store {lease.store_name} - aborting lease", flush=True)
