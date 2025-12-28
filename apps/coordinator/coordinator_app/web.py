@@ -2,13 +2,14 @@ from __future__ import annotations
 
 import asyncio
 import threading
+import statistics
 import os
 import secrets
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import AsyncIterator
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse, PlainTextResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -31,9 +32,16 @@ from .seed import seed_tasks_from_parallel_urls, create_tables
 LEASE_SECONDS = int(os.getenv("LEASE_SECONDS", "900"))  # 15 minutes default
 ACTIVE_WINDOW_SECONDS = int(os.getenv("ACTIVE_WINDOW_SECONDS", "180"))  # 3 minutes
 DEAL_THRESHOLD = float(os.getenv("DEAL_THRESHOLD", "0.50"))
+MAX_DEALS_PER_BATCH = int(os.getenv("MAX_DEALS_PER_BATCH", "500"))
 
 base_dir = Path(__file__).resolve().parents[1]  # apps/coordinator
-repo_root = base_dir.parents[1]
+
+# In Docker, the path may be shallow (/app), so handle IndexError gracefully.
+# seed.py checks data/urls.txt locally first anyway.
+try:
+    repo_root = base_dir.parents[1]
+except IndexError:
+    repo_root = base_dir
 
 templates = Jinja2Templates(directory=str(base_dir / "templates"))
 
@@ -132,6 +140,15 @@ def create_app() -> FastAPI:
                 or 0
             )
             done = db.scalar(select(func.count(Task.id)).where(Task.last_completed_at != None)) or 0  # noqa: E711
+            completed_last_hour = (
+                db.scalar(select(func.count(Task.id)).where(Task.last_completed_at >= now - timedelta(hours=1)))
+                or 0
+            )
+
+            durations = db.execute(
+                select(Task.last_duration_sec).where(Task.last_duration_sec != None)  # noqa: E711
+            ).scalars().all()
+            median_duration = statistics.median(durations) if durations else None
 
             active_clients = db.scalar(select(func.count(Client.id)).where(Client.last_seen_at >= active_cutoff)) or 0
 
@@ -144,7 +161,13 @@ def create_app() -> FastAPI:
 
         return {
             "utc": now.isoformat(),
-            "tasks": {"total": total_tasks, "leased": leased, "completed": done},
+            "tasks": {
+                "total": total_tasks,
+                "leased": leased,
+                "completed": done,
+                "completed_last_hour": completed_last_hour,
+                "median_duration_sec": median_duration,
+            },
             "clients": {"active": active_clients},
             "recent_deals": [
                 {
@@ -294,6 +317,8 @@ def create_app() -> FastAPI:
 
     @app.post("/api/v1/deals/bulk")
     def deals_bulk(req: DealsBulkRequest) -> dict:
+        if len(req.deals) > MAX_DEALS_PER_BATCH:
+            raise HTTPException(status_code=413, detail="Too many deals in one request")
         now = datetime.utcnow()
         upserts = 0
         with db_session() as db:
