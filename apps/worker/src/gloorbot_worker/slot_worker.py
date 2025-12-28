@@ -177,22 +177,7 @@ async def _run_slot(client_id: str, slot_id: int) -> None:
                 "timezone_id": "America/Los_Angeles",
             }
             
-            # Try to apply playwright_stealth if available
-            try:
-                from playwright_stealth import Stealth
-                stealth = Stealth(
-                    navigator_languages_override=("en-US", "en"),
-                    navigator_platform_override="Win32",
-                    navigator_vendor_override="Google Inc.",
-                )
-                stealth.hook_playwright_context(p)
-                print(f"[slot-{slot_id}] Stealth mode enabled", flush=True)
-            except ImportError:
-                print(f"[slot-{slot_id}] playwright_stealth not installed, using basic mode", flush=True)
-            except Exception as e:
-                print(f"[slot-{slot_id}] Stealth hook failed (non-fatal): {e}", flush=True)
-            
-            # Use Chromium (like Cheapskater) - no Chrome installation required
+            # Use Chromium - no Chrome installation required
             try:
                 context = await p.chromium.launch_persistent_context(str(profile_dir), **launch_kwargs)
                 print(f"[slot-{slot_id}] Using Chromium browser", flush=True)
@@ -201,11 +186,18 @@ async def _run_slot(client_id: str, slot_id: int) -> None:
                 raise
             page = context.pages[0] if context.pages else await context.new_page()
 
-            # PROVEN APPROACH: NO fingerprint injection! (Makes detection WORSE!)
-            # The documented scraper header says:
-            # "✅ NO playwright-stealth (red flag!)"
-            # "✅ NO fingerprint injection (makes it worse!)"
-            # Just do simple human warmup and trust Chrome's natural fingerprint.
+            # CRITICAL FIX: Apply stealth PER-PAGE, BEFORE any navigation
+            # Research shows: stealth_async(page) must be called AFTER page creation
+            # but BEFORE the first page.goto() - this hides navigator.webdriver
+            try:
+                from playwright_stealth import stealth_async
+                await stealth_async(page)
+                print(f"[slot-{slot_id}] Stealth applied to page", flush=True)
+            except ImportError:
+                print(f"[slot-{slot_id}] playwright_stealth not installed, using basic mode", flush=True)
+            except Exception as e:
+                print(f"[slot-{slot_id}] Stealth failed (non-fatal): {e}", flush=True)
+
             print(f"[slot-{slot_id}] Browser ready, starting warmup...", flush=True)
 
             # Do the simple proven warmup (homepage visit + human behavior)
