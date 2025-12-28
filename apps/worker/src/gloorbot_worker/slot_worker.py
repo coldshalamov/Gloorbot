@@ -306,8 +306,17 @@ async def _run_slot(client_id: str, slot_id: int) -> None:
                     print(f"[slot-{slot_id}] Extended warmup failed: {e}", flush=True)
             
             # Now do the normal warmup (will be faster if we already visited)
+            # Now do the normal warmup (will be faster if we already visited)
             await parallel.warmup_session(page)
-            await parallel.set_store_context(page, lease.store_url, lease.store_name)
+            if not await parallel.set_store_context(page, lease.store_url, lease.store_name):
+                print(f"[slot-{slot_id}] Failed to set store {lease.store_name} - aborting lease", flush=True)
+                # Close context to force rebuild next time, ensuring fresh retry
+                if context: 
+                    await context.close()
+                context = None
+                page = None
+                current_store_id = None
+                raise RuntimeError(f"Could not set store context for {lease.store_id}")
 
         lease_failures = 0
         while True:

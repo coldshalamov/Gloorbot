@@ -212,20 +212,41 @@ async def set_store_context(page: Page, store_url: str, store_name: str):
     Actor.log.info(f"Setting store: {store_name}")
 
     await page.goto(store_url, wait_until='domcontentloaded', timeout=60000)
-    await asyncio.sleep(2)
+    await asyncio.sleep(2 + random.random())
+
+    # Check if already set (sometimes page says "My Store" immediately)
+    try:
+        if await page.locator("button:has-text('My Store')").is_visible():
+            Actor.log.info("Store already set as My Store")
+            return True
+        header_store = await page.locator("#store-search-link, [data-test='store-search-link']").first.inner_text()
+        if store_name.split(',')[0] in header_store:
+            Actor.log.info(f"Store verified in header: {header_store}")
+            return True
+    except:
+        pass
 
     for selector in ["button:has-text('Set Store')", "button:has-text('Set as My Store')"]:
         try:
             btn = page.locator(selector).first
             if await btn.is_visible():
                 await btn.click(timeout=8000)
-                await asyncio.sleep(1.5)
-                Actor.log.info(f"Store set successfully")
+                await asyncio.sleep(2.5)  # Wait for API update
+                Actor.log.info(f"Clicked 'Set Store'")
                 return True
         except:
             continue
 
-    Actor.log.warning("Could not set store")
+    # Final verification
+    try:
+        await page.reload(wait_until='domcontentloaded')
+        await asyncio.sleep(2)
+        if await page.locator("button:has-text('My Store')").is_visible():
+            return True
+    except:
+        pass
+
+    Actor.log.warning("Could not explicitly set store - hoping default cookies work")
     return False
 
 
@@ -252,6 +273,8 @@ async def apply_pickup_filter(page: Page, category_name: str) -> bool:
         'input[type="checkbox"] + label:has-text("Pickup")',
         'div:has-text("Pickup Today at") input[type="checkbox"]',
         'div:has-text("Pickup Today at")',
+        'div:has-text("Free Store Pickup") input[type="checkbox"]',
+        'label:has-text("Free Store Pickup")',
         # The checkbox itself near the Pickup text
         'input[type="checkbox"][id*="Pickup"]',
         'input[type="checkbox"][id*="pickup"]',
@@ -701,16 +724,15 @@ async def scrape_category_all_pages(page: Page, category_url: str, store_info: d
         filter_applied = await apply_pickup_filter(page, f"{store_info['name']}-{cat_name}")
 
         if not filter_applied:
-            Actor.log.warning(f"{store_info['name']} - {cat_name}: Pickup filter FAILED - SKIPPING category to avoid bad data")
-            return []  # Return empty - don't scrape without filter
+            raise RuntimeError(f"Pickup filter FAILED for {store_info['name']} - {cat_name}. Aborting to trigger retry.")
 
         # Update category_url to include the new query params (facets)
         category_url = page.url
         Actor.log.info(f"{store_info['name']} - {cat_name}: Pickup filter applied, URL now: {category_url[:100]}...")
 
     except Exception as e:
-        Actor.log.warning(f"{store_info['name']} - Failed setting Pickup filter: {e}")
-        return []  # Don't scrape without filter
+        Actor.log.warning(f"{store_info['name']} - Failed setup: {e}")
+        raise  # Re-raise to trigger worker retry
 
     page_num = 1
     while True:  # Scrape until we run out of products
