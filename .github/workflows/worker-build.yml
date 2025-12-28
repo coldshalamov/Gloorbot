@@ -39,8 +39,16 @@ jobs:
           cd apps/worker
           $env:PLAYWRIGHT_BROWSERS_PATH = "$pwd\ms-playwright"
           pyinstaller --noconfirm --clean --name GloorbotWorker --noconsole `
+            --paths "src" `
             --add-data "..\..\PARALLEL;PARALLEL" `
             --add-data "ms-playwright;ms-playwright" `
+            --hidden-import "gloorbot_worker" `
+            --hidden-import "gloorbot_worker.api" `
+            --hidden-import "gloorbot_worker.gui" `
+            --hidden-import "gloorbot_worker.paths" `
+            --hidden-import "gloorbot_worker.slot_worker" `
+            --hidden-import "gloorbot_worker.supervisor" `
+            --collect-submodules "gloorbot_worker" `
             src\gloorbot_worker\__main__.py
 
       - name: Build installer with Inno Setup
