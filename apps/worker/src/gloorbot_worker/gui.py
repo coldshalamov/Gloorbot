@@ -31,7 +31,7 @@ class App:
         self.join_btn.pack(pady=14)
         self.kill_btn.pack(pady=4)
 
-        self.status = tk.StringVar(value="Ready. Click Join.")
+        self.status = tk.StringVar(value="Checking for Chrome...")
         ttk.Label(root, textvariable=self.status).pack(pady=10)
 
         self.stats = tk.StringVar(value="")
@@ -42,7 +42,36 @@ class App:
 
         self.root.protocol("WM_DELETE_WINDOW", self.on_close)
 
+        # Check for Chrome on startup
+        self._check_chrome()
         self._poll()
+
+    def _check_chrome(self) -> None:
+        """Check if Google Chrome is installed. Disable Join if not."""
+        import shutil
+        import os
+        
+        chrome_found = False
+        # Check common Chrome locations on Windows
+        chrome_paths = [
+            shutil.which("chrome"),
+            shutil.which("google-chrome"),
+            os.path.expandvars(r"%ProgramFiles%\Google\Chrome\Application\chrome.exe"),
+            os.path.expandvars(r"%ProgramFiles(x86)%\Google\Chrome\Application\chrome.exe"),
+            os.path.expandvars(r"%LocalAppData%\Google\Chrome\Application\chrome.exe"),
+        ]
+        for path in chrome_paths:
+            if path and os.path.isfile(path):
+                chrome_found = True
+                break
+        
+        if chrome_found:
+            self.status.set("Ready. Click Join.")
+        else:
+            self.status.set("⚠️ Chrome NOT FOUND! Please install Google Chrome to use this app.")
+            self.join_btn.configure(state="disabled")
+            self.stats.set("Download Chrome: https://www.google.com/chrome/")
+
 
     def join(self) -> None:
         if self._running:

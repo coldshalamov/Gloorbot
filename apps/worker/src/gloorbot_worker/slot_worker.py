@@ -172,14 +172,24 @@ async def _run_slot(client_id: str, slot_id: int) -> None:
                 # User agent override to look more natural
                 "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
             }
-            using_chrome = False
+            # Chrome is a HARD REQUIREMENT - Chromium gets blocked by Lowe's anti-bot
+            # No fallback - if Chrome isn't installed, we fail with a clear message
             try:
                 context = await p.chromium.launch_persistent_context(str(profile_dir), channel="chrome", **launch_kwargs)
-                using_chrome = True
                 print(f"[slot-{slot_id}] Using system Chrome", flush=True)
             except Exception as e:
-                print(f"[slot-{slot_id}] Chrome not available ({e}), using Chromium (higher block risk)", flush=True)
-                context = await p.chromium.launch_persistent_context(str(profile_dir), **launch_kwargs)
+                error_msg = str(e)
+                if "channel" in error_msg.lower() or "chrome" in error_msg.lower() or "executable" in error_msg.lower():
+                    print(f"[slot-{slot_id}] ERROR: Google Chrome is not installed!", flush=True)
+                    print(f"[slot-{slot_id}] This scraper REQUIRES Chrome (not Chromium) to avoid detection.", flush=True)
+                    print(f"[slot-{slot_id}] Please install Chrome from: https://www.google.com/chrome/", flush=True)
+                    raise RuntimeError(
+                        "Google Chrome is required but not installed. "
+                        "Please install Chrome from https://www.google.com/chrome/ and try again."
+                    )
+                else:
+                    print(f"[slot-{slot_id}] Browser launch failed: {e}", flush=True)
+                    raise
             page = context.pages[0] if context.pages else await context.new_page()
 
             # CRITICAL: Inject anti-detection scripts BEFORE navigating
