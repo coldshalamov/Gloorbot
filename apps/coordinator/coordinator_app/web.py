@@ -113,14 +113,17 @@ def create_app() -> FastAPI:
 
     @app.get("/", response_class=HTMLResponse)
     def index(request: Request) -> HTMLResponse:
-        return templates.TemplateResponse(
-            "index.html",
-            {
-                "request": request,
-                "download_url": _download_url(),
-                "deal_threshold_pct": int(DEAL_THRESHOLD * 100),
-            },
-        )
+        try:
+            return templates.TemplateResponse(
+                "index.html",
+                {
+                    "request": request,
+                    "download_url": _download_url(),
+                    "deal_threshold_pct": int(DEAL_THRESHOLD * 100),
+                },
+            )
+        except Exception as e:
+            return HTMLResponse(f"<pre>Template error: {e}\nbase_dir={base_dir}\ntemplates_dir={base_dir / 'templates'}</pre>", status_code=500)
 
     @app.get("/download", response_model=None)
     def download() -> Response:
