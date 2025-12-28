@@ -60,8 +60,11 @@ def seed_tasks_from_parallel_urls(repo_root: Path) -> int:
     inserted = 0
     with db_session() as db:
         existing = set(db.execute(select(Task.store_id, Task.category_url)).all())
-        for store in stores:
-            for category_url in categories:
+        # CRITICAL: Insert category-major (not store-major) to prevent store clustering
+        # Old order (store → categories) caused all early tasks to be for store #1
+        # New order (categories → stores) interleaves tasks across stores
+        for category_url in categories:
+            for store in stores:
                 key = (store["store_id"], category_url)
                 if key in existing:
                     continue

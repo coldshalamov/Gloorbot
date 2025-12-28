@@ -127,6 +127,14 @@ async def _run_slot(client_id: str, slot_id: int) -> None:
     preferred_store_id: str | None = None
     slot_status_path = status_dir() / f"slot_{slot_id}.json"
 
+    # CRITICAL: Stagger slot startup to prevent concurrent fresh sessions
+    # PARALLEL staggers worker launches by 5 seconds (orchestrator.py:524)
+    # This prevents multiple slots from hitting the same store at once
+    if slot_id > 0:
+        stagger_delay = slot_id * 5
+        print(f"[slot-{slot_id}] Staggering startup by {stagger_delay}s...", flush=True)
+        await asyncio.sleep(stagger_delay)
+
     async with async_playwright() as p:
         context = None
         page = None
@@ -144,7 +152,9 @@ async def _run_slot(client_id: str, slot_id: int) -> None:
             current_store_id = lease.store_id
             preferred_store_id = lease.store_id
 
-            profile_dir = profiles_dir() / f"store-{lease.store_id}" / f"slot-{slot_id}"
+            # IMPORTANT: Profile is PER-STORE only (not per-slot)
+            # This matches PARALLEL and allows profile seasoning to benefit all slots
+            profile_dir = profiles_dir() / f"store-{lease.store_id}"
             profile_dir.mkdir(parents=True, exist_ok=True)
 
             # CRITICAL: Use EXACT same config as working PARALLEL scraper
@@ -289,6 +299,11 @@ async def _run_slot(client_id: str, slot_id: int) -> None:
                     ),
                     encoding="utf-8",
                 )
+                
+                # CRITICAL: Add inter-lease delay to match PARALLEL's pacing
+                # PARALLEL sleeps 2.0-4.55s between categories (scraper.py:802-803)
+                # Without this, Worker hammers the server too fast → detection
+                await asyncio.sleep(2.0 + random.random() * 2.55)
             except Exception as e:
                 api.lease_fail(client_id, lease.task_id, time.time() - start)
                 slot_status_path.write_text(
