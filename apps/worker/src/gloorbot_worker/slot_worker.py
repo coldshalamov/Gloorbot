@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import argparse
+import asyncio
 import json
 import os
+import random
 import re
 import sys
 import time
@@ -17,6 +19,7 @@ from .paths import profiles_dir, status_dir
 
 DEAL_THRESHOLD = float(os.getenv("DEAL_THRESHOLD", "0.50"))
 COOLDOWN_SECONDS = int(os.getenv("BLOCK_COOLDOWN_SECONDS", "300"))
+MAX_CATEGORY_SECONDS = int(os.getenv("MAX_CATEGORY_SECONDS", "1200"))
 
 
 def _find_parallel_dir() -> Path:
@@ -162,16 +165,19 @@ async def _run_slot(client_id: str, slot_id: int) -> None:
             await parallel.warmup_session(page)
             await parallel.set_store_context(page, lease.store_url, lease.store_name)
 
+        lease_failures = 0
         while True:
             lease = None
             try:
                 lease = api.lease_next(client_id, preferred_store_id)
+                lease_failures = 0
             except Exception:
-                await asyncio_sleep(10)
+                lease_failures += 1
+                await backoff_sleep(2, lease_failures, 30)
                 continue
 
             if not lease:
-                await asyncio_sleep(10)
+                await backoff_sleep(2, max(1, lease_failures), 20)
                 continue
 
             start = time.time()
@@ -201,7 +207,10 @@ async def _run_slot(client_id: str, slot_id: int) -> None:
                     "state": "",
                     "url": lease.store_url,
                 }
-                products = await parallel.scrape_category_all_pages(page, lease.category_url, store_info)
+                products = await asyncio.wait_for(
+                    parallel.scrape_category_all_pages(page, lease.category_url, store_info),
+                    timeout=MAX_CATEGORY_SECONDS,
+                )
                 products_seen = len(products)
 
                 deals: list[dict] = []
@@ -211,7 +220,16 @@ async def _run_slot(client_id: str, slot_id: int) -> None:
                         deals.append(d)
 
                 # Bulk submit in one call (deals are already filtered).
-                deals_sent = api.submit_deals(client_id, deals)
+                submit_attempts = 0
+                while True:
+                    try:
+                        deals_sent = api.submit_deals(client_id, deals)
+                        break
+                    except Exception:
+                        submit_attempts += 1
+                        if submit_attempts >= 3:
+                            raise
+                        await backoff_sleep(2, submit_attempts, 30)
                 api.lease_complete(client_id, lease.task_id, time.time() - start, products_seen, deals_sent)
 
                 slot_status_path.write_text(
@@ -257,13 +275,21 @@ async def _run_slot(client_id: str, slot_id: int) -> None:
                     page = None
                     await asyncio_sleep(COOLDOWN_SECONDS)
                 else:
-                    await asyncio_sleep(5)
+                    await backoff_sleep(2, 1, 10)
 
 
 async def asyncio_sleep(seconds: int) -> None:
     import asyncio
 
     await asyncio.sleep(seconds)
+
+
+async def backoff_sleep(base: int, attempt: int, max_seconds: int) -> None:
+    import asyncio
+
+    delay = min(max_seconds, base * (2 ** max(0, attempt - 1)))
+    jitter = random.uniform(0, delay * 0.2)
+    await asyncio.sleep(delay + jitter)
 
 
 def main(argv: list[str] | None = None) -> None:
