@@ -1,0 +1,10 @@
+2025/12/28-12:57:58.923 145ec Creating DB C:\Users\User\Documents\GitHub\Telomere\Gloorbot\test_profiles\C_chromium_stealth_async\Default\IndexedDB\https_www.lowes.com_0.indexeddb.leveldb since it was missing.
+2025/12/28-12:57:58.940 145ec Reusing MANIFEST C:\Users\User\Documents\GitHub\Telomere\Gloorbot\test_profiles\C_chromium_stealth_async\Default\IndexedDB\https_www.lowes.com_0.indexeddb.leveldb/MANIFEST-000001
+2025/12/28-12:58:00.542 15354 Level-0 table #5: started
+2025/12/28-12:58:00.557 15354 Level-0 table #5: 2463 bytes OK
+2025/12/28-12:58:00.560 15354 Delete type=0 #3
+2025/12/28-12:58:00.560 145ec Manual compaction at level-0 from '\x00\x02\x00\x00\x00' @ 72057594037927935 : 1 .. '\x00\x03\x00\x00\x00' @ 0 : 0; will stop at (end)
+2025/12/28-12:58:02.599 10ef4 Level-0 table #7: started
+2025/12/28-12:58:02.621 10ef4 Level-0 table #7: 2242 bytes OK
+2025/12/28-12:58:02.624 10ef4 Delete type=0 #4
+2025/12/28-12:58:02.624 145ec Manual compaction at level-0 from '\x00\x04\x00\x00\x00' @ 72057594037927935 : 1 .. '\x00\x05\x00\x00\x00' @ 0 : 0; will stop at (end)

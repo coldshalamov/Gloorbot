@@ -1,0 +1,38 @@
+[
+  {
+    "test": "A_chrome_no_stealth",
+    "config": "Chrome channel, NO stealth (like PARALLEL)",
+    "webdriver_before": false,
+    "webdriver_after": false,
+    "page_title": "Lowe\u2019s Home Improvement",
+    "blocked": false,
+    "error": null
+  },
+  {
+    "test": "B_chromium_no_stealth",
+    "config": "Chromium, NO stealth",
+    "webdriver_before": false,
+    "webdriver_after": false,
+    "page_title": "Lowe\u2019s Home Improvement",
+    "blocked": false,
+    "error": null
+  },
+  {
+    "test": "C_chromium_stealth_async",
+    "config": "Chromium + stealth_async (v0.5.0 pattern)",
+    "webdriver_before": false,
+    "webdriver_after": false,
+    "page_title": "Lowe\u2019s Home Improvement",
+    "blocked": false,
+    "error": null
+  },
+  {
+    "test": "D_chromium_stealth_hook",
+    "config": "Chromium + hook_playwright_context (OLD broken pattern)",
+    "webdriver_before": false,
+    "webdriver_after": false,
+    "page_title": "Lowe\u2019s Home Improvement",
+    "blocked": false,
+    "error": null
+  }
+]
