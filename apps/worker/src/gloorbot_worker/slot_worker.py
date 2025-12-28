@@ -147,10 +147,10 @@ async def _run_slot(client_id: str, slot_id: int) -> None:
             profile_dir = profiles_dir() / f"store-{lease.store_id}" / f"slot-{slot_id}"
             profile_dir.mkdir(parents=True, exist_ok=True)
 
-            # Try system Chrome channel first (best if installed), else Playwright Chromium.
-            # Chrome is preferred because it has a more natural fingerprint.
+            # CRITICAL: Use EXACT same config as working PARALLEL scraper
+            # DO NOT add extra args or custom user_agent - they cause detection!
             launch_kwargs = {
-                "headless": False,
+                "headless": False,  # Must be False - Lowe's blocks headless
                 "viewport": {"width": 1440, "height": 900},
                 "locale": "en-US",
                 "timezone_id": "America/Los_Angeles",
@@ -158,19 +158,16 @@ async def _run_slot(client_id: str, slot_id: int) -> None:
                     "--disable-blink-features=AutomationControlled",
                     "--disable-dev-shm-usage",
                     "--disable-infobars",
-                    "--disable-gpu",
-                    "--no-sandbox",
-                    # Additional anti-detection flags
-                    "--disable-extensions",
-                    "--disable-plugins-discovery",
-                    "--disable-background-networking",
-                    "--disable-default-apps",
-                    "--disable-sync",
-                    "--metrics-recording-only",
-                    "--no-first-run",
+                    "--disable-gpu",  # Reduce GPU process overhead
+                    "--no-sandbox",  # Reduce process spawning
+                    "--disable-background-networking",  # Prevent background resource usage
+                    "--disable-background-timer-throttling",
+                    "--disable-backgrounding-occluded-windows",
+                    "--disable-renderer-backgrounding",
+                    "--memory-pressure-off",  # Prevent memory-based crashes
                 ],
-                # User agent override to look more natural
-                "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                # DO NOT set user_agent! Let Chrome use its native one.
+                # Setting a fake user_agent causes version mismatch detection.
             }
             # Chrome is a HARD REQUIREMENT - Chromium gets blocked by Lowe's anti-bot
             # No fallback - if Chrome isn't installed, we fail with a clear message
