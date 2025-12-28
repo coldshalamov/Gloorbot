@@ -10,8 +10,13 @@ from pathlib import Path
 
 import psutil
 
-from . import api
-from .paths import config_path, logs_dir
+# Handle PyInstaller frozen executable - need absolute imports
+if getattr(sys, 'frozen', False):
+    from gloorbot_worker import api
+    from gloorbot_worker.paths import config_path, logs_dir
+else:
+    from . import api
+    from .paths import config_path, logs_dir
 
 
 TARGET_LOW = 70.0

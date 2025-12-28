@@ -1,9 +1,17 @@
 from __future__ import annotations
 
 import sys
+import os
 
-from .gui import run_gui
-from .slot_worker import main as slot_worker_main
+# Handle PyInstaller frozen executable - need absolute imports
+if getattr(sys, 'frozen', False):
+    # Running as compiled/frozen executable
+    from gloorbot_worker.gui import run_gui
+    from gloorbot_worker.slot_worker import main as slot_worker_main
+else:
+    # Running as normal Python script
+    from .gui import run_gui
+    from .slot_worker import main as slot_worker_main
 
 
 def main() -> None:
@@ -15,4 +23,8 @@ def main() -> None:
     run_gui()
 
 
-main()
+if __name__ == "__main__":
+    main()
+else:
+    # Also run when imported as __main__ by PyInstaller
+    main()

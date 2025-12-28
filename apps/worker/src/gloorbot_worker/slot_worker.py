@@ -13,8 +13,13 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from . import api
-from .paths import profiles_dir, status_dir
+# Handle PyInstaller frozen executable - need absolute imports
+if getattr(sys, 'frozen', False):
+    from gloorbot_worker import api
+    from gloorbot_worker.paths import profiles_dir, status_dir
+else:
+    from . import api
+    from .paths import profiles_dir, status_dir
 
 
 DEAL_THRESHOLD = float(os.getenv("DEAL_THRESHOLD", "0.50"))

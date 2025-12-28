@@ -1,12 +1,38 @@
 from __future__ import annotations
 
+import os
+import shutil
+import sys
 import threading
 import time
 import tkinter as tk
-from tkinter import ttk
+from tkinter import ttk, messagebox
+import webbrowser
 
-from . import api
-from .supervisor import Supervisor
+# Handle PyInstaller frozen executable - need absolute imports
+if getattr(sys, 'frozen', False):
+    from gloorbot_worker import api
+    from gloorbot_worker.supervisor import Supervisor
+else:
+    from . import api
+    from .supervisor import Supervisor
+
+
+def _find_chrome() -> str | None:
+    """Check if Google Chrome is installed and return its path."""
+    # Check common Windows Chrome locations
+    possible_paths = [
+        os.path.expandvars(r"%ProgramFiles%\Google\Chrome\Application\chrome.exe"),
+        os.path.expandvars(r"%ProgramFiles(x86)%\Google\Chrome\Application\chrome.exe"),
+        os.path.expandvars(r"%LocalAppData%\Google\Chrome\Application\chrome.exe"),
+    ]
+    for path in possible_paths:
+        if os.path.exists(path):
+            return path
+    # Also check if 'chrome' is in PATH (unlikely on Windows but worth checking)
+    if shutil.which("chrome"):
+        return shutil.which("chrome")
+    return None
 
 
 class App:
@@ -99,5 +125,27 @@ def run_gui() -> None:
         ttk.Style().theme_use("clam")
     except Exception:
         pass
+
+    # Check for Chrome before starting
+    if not _find_chrome():
+        root.withdraw()  # Hide main window temporarily
+        result = messagebox.askyesno(
+            "Chrome Required",
+            "Google Chrome is required for reliable scraping but was not found.\n\n"
+            "The worker can still run with the bundled Chromium browser, but you may "
+            "experience more blocking from Lowe's website.\n\n"
+            "Would you like to download Google Chrome now?\n\n"
+            "(Click 'No' to continue anyway with Chromium)",
+        )
+        if result:
+            webbrowser.open("https://www.google.com/chrome/")
+            messagebox.showinfo(
+                "Install Chrome",
+                "Please install Chrome, then restart Gloorbot Worker."
+            )
+            root.destroy()
+            return
+        root.deiconify()  # Show main window again
+
     App(root)
     root.mainloop()
