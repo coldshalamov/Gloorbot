@@ -122,18 +122,87 @@ async def human_scroll(page: Page):
 
 
 async def warmup_session(page: Page):
-    """CRITICAL: Visit homepage with human behavior to establish trust"""
-    Actor.log.info("Warming up session...")
+    """
+    CRITICAL: Extended warmup for fresh browser profiles.
 
+    On a fresh computer/profile, Akamai is more suspicious. We need to:
+    1. Spend more time on the homepage
+    2. Perform multiple human-like interactions
+    3. Maybe visit a second page before scraping
+    """
+    Actor.log.info("Warming up session (extended for fresh profile)...")
+
+    # CRITICAL: Inject anti-detection scripts BEFORE navigating
+    # This hides the webdriver property that Akamai checks
+    await page.add_init_script("""
+        // Hide webdriver property
+        Object.defineProperty(navigator, 'webdriver', {
+            get: () => undefined
+        });
+
+        // Hide automation-related properties
+        delete navigator.__proto__.webdriver;
+
+        // Make plugins array look normal
+        Object.defineProperty(navigator, 'plugins', {
+            get: () => [
+                { name: 'Chrome PDF Plugin', filename: 'internal-pdf-viewer' },
+                { name: 'Chrome PDF Viewer', filename: 'mhjfbmdgcfjbbpaeojofohoefgiehjai' },
+                { name: 'Native Client', filename: 'internal-nacl-plugin' }
+            ]
+        });
+
+        // Make languages look normal
+        Object.defineProperty(navigator, 'languages', {
+            get: () => ['en-US', 'en']
+        });
+    """)
+
+    # Step 1: Visit homepage and wait longer
     await page.goto("https://www.lowes.com/", wait_until='domcontentloaded', timeout=60000)
-    await asyncio.sleep(3.5 + random.random() * 2)  # Slightly longer warmup
+    await asyncio.sleep(4 + random.random() * 3)  # 4-7 seconds initial wait
 
+    # Step 2: First round of human behavior
+    await human_mouse_move(page)
+    await asyncio.sleep(1.5 + random.random())
+    await human_scroll(page)
+    await asyncio.sleep(2 + random.random() * 2)
+
+    # Step 3: More mouse movement and scrolling (builds trust)
     await human_mouse_move(page)
     await asyncio.sleep(1 + random.random())
     await human_scroll(page)
-    await asyncio.sleep(1.5 + random.random() * 1.5)
+    await asyncio.sleep(1.5 + random.random())
+
+    # Step 4: Scroll back up slightly (natural behavior)
+    try:
+        await page.mouse.wheel(0, -100 - random.random() * 100)
+        await asyncio.sleep(0.5 + random.random() * 0.5)
+    except Exception:
+        pass
+
+    # Step 5: One more mouse movement
     await human_mouse_move(page)
-    await asyncio.sleep(0.5 + random.random() * 0.5)
+    await asyncio.sleep(1 + random.random())
+
+    # Step 6: Optional - click on a department link to build more history
+    # This helps establish the profile as a "real" user
+    try:
+        dept_links = page.locator('a[href*="/c/"]').all()
+        dept_links_list = await dept_links
+        if dept_links_list and len(dept_links_list) > 3:
+            # Pick a random department link
+            random_dept = random.choice(dept_links_list[1:6])
+            if await random_dept.is_visible():
+                await random_dept.click()
+                await asyncio.sleep(3 + random.random() * 2)
+                await human_mouse_move(page)
+                await asyncio.sleep(1 + random.random())
+                # Go back to homepage
+                await page.goto("https://www.lowes.com/", wait_until='domcontentloaded', timeout=60000)
+                await asyncio.sleep(2 + random.random())
+    except Exception:
+        pass  # If this fails, continue anyway
 
     Actor.log.info("Warmup complete")
 

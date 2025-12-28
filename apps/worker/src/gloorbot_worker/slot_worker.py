@@ -148,6 +148,7 @@ async def _run_slot(client_id: str, slot_id: int) -> None:
             profile_dir.mkdir(parents=True, exist_ok=True)
 
             # Try system Chrome channel first (best if installed), else Playwright Chromium.
+            # Chrome is preferred because it has a more natural fingerprint.
             launch_kwargs = {
                 "headless": False,
                 "viewport": {"width": 1440, "height": 900},
@@ -159,11 +160,25 @@ async def _run_slot(client_id: str, slot_id: int) -> None:
                     "--disable-infobars",
                     "--disable-gpu",
                     "--no-sandbox",
+                    # Additional anti-detection flags
+                    "--disable-extensions",
+                    "--disable-plugins-discovery",
+                    "--disable-background-networking",
+                    "--disable-default-apps",
+                    "--disable-sync",
+                    "--metrics-recording-only",
+                    "--no-first-run",
                 ],
+                # User agent override to look more natural
+                "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
             }
+            using_chrome = False
             try:
                 context = await p.chromium.launch_persistent_context(str(profile_dir), channel="chrome", **launch_kwargs)
-            except Exception:
+                using_chrome = True
+                print(f"[slot-{slot_id}] Using system Chrome", flush=True)
+            except Exception as e:
+                print(f"[slot-{slot_id}] Chrome not available ({e}), using Chromium (higher block risk)", flush=True)
                 context = await p.chromium.launch_persistent_context(str(profile_dir), **launch_kwargs)
             page = context.pages[0] if context.pages else await context.new_page()
 
