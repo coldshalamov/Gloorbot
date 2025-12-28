@@ -182,6 +182,50 @@ async def _run_slot(client_id: str, slot_id: int) -> None:
                 context = await p.chromium.launch_persistent_context(str(profile_dir), **launch_kwargs)
             page = context.pages[0] if context.pages else await context.new_page()
 
+            # CRITICAL: Inject anti-detection scripts BEFORE navigating
+            # This hides the webdriver property that Akamai/PerimeterX checks
+            # This is the key difference between "works locally" and "instant block"
+            await page.add_init_script("""
+                // Hide webdriver property - #1 detection vector
+                Object.defineProperty(navigator, 'webdriver', {
+                    get: () => undefined
+                });
+
+                // Hide automation-related properties
+                delete navigator.__proto__.webdriver;
+
+                // Make plugins array look normal (Chromium has empty plugins)
+                Object.defineProperty(navigator, 'plugins', {
+                    get: () => [
+                        { name: 'Chrome PDF Plugin', filename: 'internal-pdf-viewer' },
+                        { name: 'Chrome PDF Viewer', filename: 'mhjfbmdgcfjbbpaeojofohoefgiehjai' },
+                        { name: 'Native Client', filename: 'internal-nacl-plugin' }
+                    ]
+                });
+
+                // Make languages look normal
+                Object.defineProperty(navigator, 'languages', {
+                    get: () => ['en-US', 'en']
+                });
+
+                // Hide automation in chrome object
+                window.chrome = {
+                    runtime: {},
+                    loadTimes: function() {},
+                    csi: function() {},
+                    app: {}
+                };
+
+                // Permissions - make it look like a real browser
+                const originalQuery = window.navigator.permissions.query;
+                window.navigator.permissions.query = (parameters) => (
+                    parameters.name === 'notifications' ?
+                        Promise.resolve({ state: Notification.permission }) :
+                        originalQuery(parameters)
+                );
+            """)
+            print(f"[slot-{slot_id}] Stealth scripts injected", flush=True)
+
             await parallel.warmup_session(page)
             await parallel.set_store_context(page, lease.store_url, lease.store_name)
 
