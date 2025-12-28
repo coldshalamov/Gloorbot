@@ -31,6 +31,7 @@ class MockActor:
         parser.add_argument('--categories', type=int, default=2000, help='Max categories')
         parser.add_argument('--start-idx', type=int, default=0, help='Category index to start from')
         parser.add_argument('--check-file', help='File to save current progress index')
+        parser.add_argument('--status-file', help='Status file path')
         args = parser.parse_args()
 
         self.output_file = args.output
@@ -73,12 +74,24 @@ parser.add_argument('--output', required=True)
 parser.add_argument('--categories', type=int, default=2000)
 parser.add_argument('--start-idx', type=int, default=0)
 parser.add_argument('--check-file')
+parser.add_argument('--status-file', help='File to write blocking status')
 args, _ = parser.parse_known_args()
 
 # Create mock with output file
 mock_actor = MockActor(args.output)
 mock_actor.start_idx = args.start_idx
 mock_actor.check_file = args.check_file
+mock_actor.status_file = args.status_file
+
+def write_status(status):
+    """Write worker status to file for orchestrator to read"""
+    if mock_actor.status_file:
+        try:
+            Path(mock_actor.status_file).parent.mkdir(parents=True, exist_ok=True)
+            with open(mock_actor.status_file, 'w') as f:
+                f.write(status)
+        except:
+            pass
 
 # Replace Actor with mock - import from local scraper.py
 import scraper
@@ -111,27 +124,47 @@ async def tracked_main():
     # We need to wrap the internal category loop in scraper.py
     # Since scraper.py loop is inside async main(), we patch the scrape_category_all_pages
     original_scrape = scraper.scrape_category_all_pages
-    
+
     # We track our global offset
     current_offset = args.start_idx
 
     async def wrapped_scrape(page, category_url, store_info):
         nonlocal current_offset
-        res = await original_scrape(page, category_url, store_info)
-        
-        # After each category, update checkpoint
-        current_offset += 1
-        if mock_actor.check_file:
-            try:
-                with open(mock_actor.check_file, 'w') as f:
-                    f.write(str(current_offset))
-                print(f"[PROGRESS] Updated checkpoint to {current_offset}", flush=True)
-            except:
-                pass
-        return res
+        try:
+            res = await original_scrape(page, category_url, store_info)
+            write_status("running")  # Update status on success
+
+            # After each category, update checkpoint
+            current_offset += 1
+            if mock_actor.check_file:
+                try:
+                    with open(mock_actor.check_file, 'w') as f:
+                        f.write(str(current_offset))
+                    print(f"[PROGRESS] Updated checkpoint to {current_offset}", flush=True)
+                except:
+                    pass
+            return res
+        except Exception as e:
+            error_str = str(e).lower()
+            if "blocked" in error_str or "access denied" in error_str or "robot" in error_str:
+                print(f"[BLOCKED] Detected blocking: {e}", flush=True)
+                write_status("blocked")
+            raise
 
     scraper.scrape_category_all_pages = wrapped_scrape
-    return await original_main()
+
+    write_status("starting")
+    try:
+        result = await original_main()
+        write_status("completed")
+        return result
+    except Exception as e:
+        error_str = str(e).lower()
+        if "blocked" in error_str or "access denied" in error_str:
+            write_status("blocked")
+        else:
+            write_status(f"error:{e}")
+        raise
 
 # Run
 asyncio.run(tracked_main())

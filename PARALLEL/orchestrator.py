@@ -68,6 +68,20 @@ def kill_proc_tree(pid, including_parent=True):
     except psutil.NoSuchProcess:
         pass
 
+def get_file_tail(filepath, n_lines=20):
+    """Get the last n lines of a file efficiently"""
+    try:
+        if not Path(filepath).exists():
+            return []
+        
+        with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
+            # Simple approach for small-ish logs (read all and slice)
+            # For massive logs, we'd want seek-from-end logic, but this is fine for daily rotation
+            lines = f.readlines()
+            return [l.strip() for l in lines[-n_lines:]]
+    except Exception:
+        return []
+
 class WorkerProcess:
     """Manages a single scraper worker process"""
 
@@ -84,6 +98,9 @@ class WorkerProcess:
         self.is_blocked = False
         self.error_count = 0
         self.last_category_idx = 0
+        self.blocked_at = None  # Track when blocking was detected
+        self.status_file = None
+        self.is_stalled = False
 
     async def start(self):
         """Launch the worker process"""
@@ -103,6 +120,11 @@ class WorkerProcess:
             except:
                 pass
 
+        # Status file for blocking detection
+        status_dir = Path("status")
+        status_dir.mkdir(exist_ok=True)
+        self.status_file = status_dir / f"worker_{store_id}.status"
+
         # Launch scraper process for this specific store
         # We use worker.py which imports scraper.py
         cmd = [
@@ -112,7 +134,8 @@ class WorkerProcess:
             "--state", state,
             "--output", str(worker_output),
             "--start-idx", str(start_idx),
-            "--check-file", str(check_file)
+            "--check-file", str(check_file),
+            "--status-file", str(self.status_file)
         ]
 
         # Redirect output to log file to avoid deadlock
@@ -128,9 +151,34 @@ class WorkerProcess:
 
         self.started_at = time.time()
         self.is_alive = True
+        self.is_blocked = False
+        self.is_stalled = False
+        self.blocked_at = None
         self.last_check_time = time.time()
 
         log.info(f"Worker {self.worker_id} started for {store_id} (PID: {self.process.pid})")
+
+    def check_status(self):
+        """Check worker status file for blocking"""
+        if self.status_file and self.status_file.exists():
+            try:
+                status = self.status_file.read_text().strip()
+                if status == "blocked":
+                    if not self.is_blocked:
+                        self.is_blocked = True
+                        self.blocked_at = time.time()
+                        log.warning(f"Worker {self.worker_id} detected as BLOCKED")
+                    return "blocked"
+                elif status == "running":
+                    self.is_blocked = False
+                    return "running"
+                elif status == "completed":
+                    return "completed"
+                else:
+                    return status
+            except:
+                pass
+        return "unknown"
 
     def check_progress(self):
         """Check if worker is making progress"""
@@ -156,9 +204,11 @@ class WorkerProcess:
             time_stalled = time.time() - self.last_check_time
             if time_stalled > 600:  # 10 minutes without progress
                 log.warning(f"Worker {self.worker_id} appears stalled (no progress for 10min)")
+                self.is_stalled = True
                 return -1  # Signal stall
         else:
             # Progress detected
+            self.is_stalled = False
             self.products_scraped = current_count
             self.last_product_count = current_count
             self.last_check_time = time.time()
@@ -178,10 +228,11 @@ class WorkerProcess:
 class IntelligentOrchestrator:
     """Main orchestrator that manages all workers and scaling"""
 
-    def __init__(self, state, max_workers=10, use_ai=False, openai_api_key=None):
+    def __init__(self, state, max_workers=10, use_ai=False, openai_api_key=None, research_mode=False):
         self.state = state
         self.max_workers = max_workers
-        self.use_ai = use_ai and HAS_OPENAI
+        self.research_mode = research_mode
+        self.use_ai = (use_ai or research_mode) and HAS_OPENAI
         self.openai_api_key = openai_api_key
         # Only enable AI if requested, library present, AND key provided
         self.use_ai = use_ai and HAS_OPENAI and (openai_api_key is not None)
@@ -209,7 +260,7 @@ class IntelligentOrchestrator:
         # Scaling parameters
         self.current_workers = 0
         self.target_workers = 1  # Start conservatively
-        self.scale_up_interval = 300  # Try scaling every 5 minutes
+        self.scale_up_interval = 90 if self.research_mode else 300  # 90s for research mode, 5m for normal
         self.last_scale_time = time.time()
         
         # Register cleanup
@@ -269,8 +320,45 @@ class IntelligentOrchestrator:
         self.stores = stores
         log.info(f"Loaded {len(self.stores)} stores for states {states} from urls.txt")
 
+    def collect_system_metrics(self):
+        """Collect system Resource usage"""
+        if not HAS_PSUTIL:
+            return {"error": "psutil not installed"}
+        
+        try:
+            return {
+                "cpu_percent": psutil.cpu_percent(interval=1),
+                "memory_percent": psutil.virtual_memory().percent,
+                "memory_available_gb": round(psutil.virtual_memory().available / (1024**3), 2),
+                "active_python_processes": len([p for p in psutil.process_iter() if "python" in p.name().lower()])
+            }
+        except Exception as e:
+            return {"error": str(e)}
+
+    def collect_worker_logs(self, active_workers):
+        """Get recent logs for AI analysis"""
+        logs = {}
+        for w in active_workers:
+            log_path = Path("logs") / f"worker_{w.worker_id}_{w.store_info['store_id']}.log"
+            logs[f"worker_{w.worker_id}"] = get_file_tail(log_path, n_lines=15)
+        return logs
+
     async def analyze_performance(self):
         """Analyze current performance and decide on scaling"""
+        
+        # Resource Protection (Auto-Scale Down if Saturated)
+        if HAS_PSUTIL:
+            metrics = self.collect_system_metrics()
+            if isinstance(metrics, dict) and 'cpu_percent' in metrics:
+                cpu = metrics['cpu_percent']
+                mem = metrics['memory_percent']
+                if cpu > 88 or mem > 88:  # 88% Safety buffer
+                    return {
+                        'recommendation': 'scale_down',
+                        'reason': f"System Load High (CPU {cpu}%, MEM {mem}%) - Protection Activated",
+                        'target_workers': max(1, self.current_workers - 1)
+                    }
+
         active_workers = [w for w in self.workers if w.is_alive]
 
         if not active_workers:
@@ -279,12 +367,15 @@ class IntelligentOrchestrator:
                 'reason': 'No active workers'
             }
 
-        # Check each worker's progress
+        # Check each worker's progress and status
         total_products = 0
         stalled_workers = 0
         blocked_workers = 0
 
         for worker in active_workers:
+            # Check status file for blocking
+            worker.check_status()
+
             progress = worker.check_progress()
             if progress < 0:
                 stalled_workers += 1
@@ -293,6 +384,7 @@ class IntelligentOrchestrator:
 
             if worker.is_blocked:
                 blocked_workers += 1
+                self.stats['blocking_incidents'] += 1
 
         # Calculate metrics
         uptime = time.time() - self.stats['start_time']
@@ -337,42 +429,62 @@ class IntelligentOrchestrator:
         try:
             # Prepare context for AI
             active_workers = [w for w in self.workers if w.is_alive]
+            
+            # Collect richer data
+            system_metrics = self.collect_system_metrics()
+            worker_logs = self.collect_worker_logs(active_workers) if self.research_mode else {}
+            
             worker_stats = []
             for w in active_workers:
                 worker_stats.append({
                     'worker_id': w.worker_id,
                     'store': w.store_info['name'],
                     'products': w.products_scraped,
-                    'runtime_min': (time.time() - w.started_at) / 60,
-                    'is_blocked': w.is_blocked
+                    'runtime_min': round((time.time() - w.started_at) / 60, 1),
+                    'is_blocked': w.is_blocked,
+                    'is_stalled': w.is_stalled,
+                    'last_log_lines': worker_logs.get(f"worker_{w.worker_id}", [])
                 })
 
-            prompt = f"""You are managing a web scraping operation with the following status:
+            prompt = f"""You are the Autonomous Orchestrator for a high-performance web scraper.
+Current Mode: {'RESEARCH/CALIBRATION' if self.research_mode else 'Standard Operation'}
 
-Current Workers: {self.current_workers}
-Max Workers: {self.max_workers}
-Total Products Scraped: {self.stats['total_products']}
-Blocking Incidents: {self.stats['blocking_incidents']}
-Worker Stats: {json.dumps(worker_stats, indent=2)}
+OBJECTIVE:
+Max product throughput without crashing the system or getting blocked.
+Research Mode Goal: Probe the system limits by slowly adding workers and validating STABILITY.
 
-Automated Analysis: {json.dumps(analysis, indent=2)}
+SYSTEM STATUS:
+- Workers: {self.current_workers} / {self.max_workers}
+- Total Products: {self.stats['total_products']}
+- Blocking Events: {self.stats['blocking_incidents']}
+- System Metrics: {json.dumps(system_metrics)}
 
-Should we:
-1. Scale up (add another worker) - ONLY if no blocks and stable run
-2. Scale down (remove a worker) - IF blocked or errors high
-3. Maintain current level
+WORKER DETAILS:
+{json.dumps(worker_stats, indent=2)}
 
-Respond with JSON only:
-{{"decision": "scale_up|scale_down|maintain", "reason": "brief explanation", "target_workers": number}}"""
+AUTOMATED ANALYSIS RECOMMENDATION:
+{json.dumps(analysis, indent=2)}
+
+DECISION RULES:
+1. SCALE UP if: System metrics are healthy (CPU < 85%, RAM < 85%), NO recent blocking, and ALL workers are making progress.
+2. SCALE DOWN if: CPU/RAM is critical (>90%), or multiple workers are blocked/stalled.
+3. MAINTAIN if: Unsure, or recently scaled, or waiting for workers to stabilize.
+
+Provide your decision in JSON:
+{{
+    "decision": "scale_up|scale_down|maintain",
+    "reason": "Technical justification based on metrics and logs",
+    "target_workers": <number>
+}}"""
 
             response = await openai.ChatCompletion.acreate(
-                model="gpt-4o-mini",
+                model="gpt-4o",  # Use robust model for research
                 messages=[{"role": "user", "content": prompt}],
-                temperature=0.3
+                temperature=0.2
             )
 
             ai_decision = json.loads(response.choices[0].message.content)
-            log.info(f"AI Decision: {ai_decision['decision']} - {ai_decision['reason']}")
+            log.info(f"AI COMMAND: {ai_decision['decision'].upper()} - {ai_decision['reason']}")
 
             return {
                 'recommendation': ai_decision['decision'],
@@ -424,6 +536,43 @@ Respond with JSON only:
 
         self.last_scale_time = time.time()
 
+    async def handle_problematic_workers(self):
+        """Handle blocked and stalled workers automatically"""
+        COOLDOWN_SECONDS = 300  # 5 minute cooldown after blocking
+
+        for worker in self.workers:
+            if not worker.is_alive:
+                continue
+
+            # Handle STALLED workers
+            if worker.is_stalled:
+                log.warning(f"Worker {worker.worker_id} is STALLED - Restarting...")
+                await worker.stop()
+                await asyncio.sleep(5)
+                await worker.start()
+                continue
+
+            # Handle BLOCKED workers
+            if worker.is_blocked and worker.blocked_at:
+                cooldown_elapsed = time.time() - worker.blocked_at
+
+                if cooldown_elapsed < COOLDOWN_SECONDS:
+                    remaining = int(COOLDOWN_SECONDS - cooldown_elapsed)
+                    # Only log occasionally to avoid spam
+                    if remaining % 60 == 0:
+                        log.info(f"Worker {worker.worker_id} blocked - cooling down ({remaining}s remaining)")
+                else:
+                    # Cooldown complete - restart worker
+                    log.info(f"Worker {worker.worker_id} cooldown complete - restarting")
+                    await worker.stop()
+
+                    # Small delay before restart
+                    await asyncio.sleep(5)
+
+                    # Restart the worker (it will resume from checkpoint)
+                    await worker.start()
+                    log.info(f"Worker {worker.worker_id} restarted after blocking cooldown")
+
     async def monitoring_loop(self):
         """Main monitoring loop"""
         log.info("="*70)
@@ -441,9 +590,11 @@ Respond with JSON only:
             self.stats['workers_launched'] = 1
 
         # Main loop
+        check_interval = 30 if self.research_mode else 60
+        
         while self.running and (self.current_workers > 0 or len(self.workers) < len(self.stores)):
             try:
-                await asyncio.sleep(60)  # Check every minute
+                await asyncio.sleep(check_interval)
 
                 # Analyze performance
                 analysis = await self.analyze_performance()
@@ -455,6 +606,10 @@ Respond with JSON only:
                 log.info(f"Status: {analysis['recommendation']} - {analysis['reason']}")
                 log.info(f"   Active Workers: {self.current_workers}/{self.max_workers}")
                 log.info(f"   Total Products: {self.stats['total_products']}")
+                log.info(f"   Blocking Incidents: {self.stats['blocking_incidents']}")
+
+                # Handle blocked/stalled workers
+                await self.handle_problematic_workers()
 
                 # Execute scaling decision
                 if analysis['recommendation'] in ['scale_up', 'scale_down']:
@@ -488,9 +643,10 @@ Respond with JSON only:
 
 async def main():
     parser = argparse.ArgumentParser(description='Intelligent Self-Scaling Lowe\'s Scraper')
-    parser.add_argument('--state', default='WA', choices=['WA', 'OR'], help='State to scrape')
+    parser.add_argument('--state', default='WA', help='State(s) to scrape, comma-separated (e.g. WA,OR)')
     parser.add_argument('--max-workers', type=int, default=10, help='Maximum parallel workers')
     parser.add_argument('--use-ai', action='store_true', help='Use OpenAI for scaling decisions')
+    parser.add_argument('--research-mode', action='store_true', help='Enable AI research/calibration mode to find max stable workers')
     parser.add_argument('--openai-key', help='OpenAI API key (or set OPENAI_API_KEY env var)')
 
     args = parser.parse_args()
@@ -498,12 +654,16 @@ async def main():
     # Get OpenAI key from args or environment
     import os
     openai_key = args.openai_key or os.getenv('OPENAI_API_KEY')
+    
+    # Auto-enable AI for research mode
+    use_ai = args.use_ai or args.research_mode
 
     orchestrator = IntelligentOrchestrator(
         state=args.state,
         max_workers=args.max_workers,
-        use_ai=args.use_ai,
-        openai_api_key=openai_key
+        use_ai=use_ai,
+        openai_api_key=openai_key,
+        research_mode=args.research_mode
     )
 
     await orchestrator.run()

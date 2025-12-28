@@ -2,14 +2,20 @@ third_party_tmp/
 __pycache__/
 *.pyc
 
+.venv/
+**/.venv/
+
 # Local/Runtime files
-.playwright-profiles/
-.playwright-profile/
-.playwright-mcp/
+**/.playwright-profiles/
+**/.playwright-profile/
+**/.playwright-mcp/
 logs/
+PARALLEL/output/
+PARALLEL/status/
+PARALLEL/logs/
 scrape_output*/
 *.log
 *.db
 .env
 nul
-apify_actor_seed/nul
+apify_actor_seed/nul 

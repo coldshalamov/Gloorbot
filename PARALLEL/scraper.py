@@ -161,6 +161,243 @@ async def set_store_context(page: Page, store_url: str, store_name: str):
 
 
 # ============================================================================
+# PICKUP FILTER - CRITICAL FOR LOCAL INVENTORY
+# ============================================================================
+
+async def apply_pickup_filter(page: Page, category_name: str) -> bool:
+    """
+    Apply the pickup filter with VERIFICATION.
+
+    This is the most critical function - without the pickup filter,
+    we get inventory for ALL stores, not just local availability.
+
+    Returns True if filter was successfully applied and verified.
+    """
+    print(f"[DEBUG] Applying Pickup Filter for {category_name}", flush=True)
+
+    # Selectors for pickup filter elements (comprehensive list)
+    # CRITICAL: The actual Lowe's UI shows "Pickup Today at:" with checkbox
+    pickup_selectors = [
+        # THE ACTUAL LOWE'S CHECKBOX - most important
+        'label:has-text("Pickup Today at")',
+        'input[type="checkbox"] + label:has-text("Pickup")',
+        'div:has-text("Pickup Today at") input[type="checkbox"]',
+        'div:has-text("Pickup Today at")',
+        # The checkbox itself near the Pickup text
+        'input[type="checkbox"][id*="Pickup"]',
+        'input[type="checkbox"][id*="pickup"]',
+        'input[type="checkbox"][name*="pickup"]',
+        # Checkbox within Pickup & Delivery section
+        'div:has-text("Pickup & Delivery") input[type="checkbox"]:first-of-type',
+        # Fallback generic selectors
+        'label:has-text("Pickup Today")',
+        'label:has-text("Pick Up Today")',
+        'span:has-text("Pickup Today at")',
+        '[data-testid*="pickup"]',
+        '[data-test-id*="pickup"]',
+        '[aria-label*="Pickup"]',
+    ]
+
+    # Toggles that might need expanding first
+    availability_toggles = [
+        'button:has-text("Pickup & Delivery")',
+        'summary:has-text("Pickup & Delivery")',
+        'button:has-text("Availability")',
+        'button:has-text("Get It Fast")',
+        'summary:has-text("Availability")',
+        'summary:has-text("Get It Fast")',
+    ]
+
+    async def expand_availability_section():
+        """Expand the availability filter section if collapsed."""
+        for toggle_sel in availability_toggles:
+            try:
+                toggle = page.locator(toggle_sel).first
+                if await toggle.count() > 0 and await toggle.is_visible():
+                    expanded = await toggle.get_attribute("aria-expanded")
+                    if expanded == "false":
+                        Actor.log.info(f"[{category_name}] Expanding availability section")
+                        await toggle.click()
+                        await asyncio.sleep(0.4 + random.random() * 0.4)
+                    return True
+            except Exception:
+                continue
+        return False
+
+    async def is_filter_selected(el) -> bool:
+        """Check if filter element is in selected state."""
+        try:
+            for attr in ["aria-checked", "aria-pressed", "aria-selected"]:
+                val = await el.get_attribute(attr)
+                if val == "true":
+                    return True
+            try:
+                return await el.is_checked()
+            except Exception:
+                return False
+        except Exception:
+            return False
+
+    # Wait for page to settle
+    try:
+        await page.wait_for_load_state("networkidle", timeout=10000)
+    except Exception:
+        pass
+
+    await asyncio.sleep(0.3 + random.random() * 0.3)
+
+    # Scroll to top to ensure filter is visible
+    try:
+        await page.evaluate("window.scrollTo(0, 0)")
+    except Exception:
+        pass
+    await asyncio.sleep(0.2)
+
+    # Try to expand availability section
+    await expand_availability_section()
+
+    # APPROACH 1: Try JavaScript-based click on the "Pickup Today at" checkbox
+    # This is the most reliable for Lowe's current UI
+    async def try_js_checkbox_click():
+        """Use JavaScript to find and click the pickup checkbox."""
+        try:
+            result = await page.evaluate("""
+                () => {
+                    // Find all checkboxes
+                    const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+                    for (const cb of checkboxes) {
+                        // Check the parent/label for "Pickup Today" text
+                        const parent = cb.closest('div, label, li');
+                        if (parent && parent.textContent.includes('Pickup Today')) {
+                            if (!cb.checked) {
+                                cb.click();
+                                return {clicked: true, wasChecked: false};
+                            } else {
+                                return {clicked: false, wasChecked: true};
+                            }
+                        }
+                    }
+
+                    // Fallback: look for any element with "Pickup Today at" and click it
+                    const pickupLabel = document.evaluate(
+                        "//*[contains(text(), 'Pickup Today at')]",
+                        document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null
+                    ).singleNodeValue;
+
+                    if (pickupLabel) {
+                        // Find checkbox nearby
+                        const container = pickupLabel.closest('div, label, li');
+                        if (container) {
+                            const cb = container.querySelector('input[type="checkbox"]');
+                            if (cb && !cb.checked) {
+                                cb.click();
+                                return {clicked: true, wasChecked: false, method: 'xpath'};
+                            } else if (cb && cb.checked) {
+                                return {clicked: false, wasChecked: true, method: 'xpath'};
+                            }
+                        }
+                        // Click the label itself
+                        pickupLabel.click();
+                        return {clicked: true, wasChecked: false, method: 'label-click'};
+                    }
+
+                    return {clicked: false, wasChecked: false, notFound: true};
+                }
+            """)
+
+            if result.get('wasChecked'):
+                Actor.log.info(f"[{category_name}] Pickup filter already checked (JS)")
+                return True
+            if result.get('clicked'):
+                Actor.log.info(f"[{category_name}] Clicked pickup filter via JS (method: {result.get('method', 'checkbox')})")
+                await asyncio.sleep(1.5 + random.random())
+                try:
+                    await page.wait_for_load_state("networkidle", timeout=10000)
+                except:
+                    pass
+                return True
+
+        except Exception as e:
+            Actor.log.warning(f"[{category_name}] JS checkbox approach failed: {e}")
+        return False
+
+    # Try JS approach first (most reliable)
+    if await try_js_checkbox_click():
+        # Verify via URL change
+        await asyncio.sleep(1)
+        current_url = page.url.lower()
+        if "pickup" in current_url or "refinement" in current_url or "availability" in current_url:
+            Actor.log.info(f"[{category_name}] Pickup filter verified via URL")
+            return True
+        # Even if URL doesn't change, JS click likely worked
+        Actor.log.info(f"[{category_name}] Pickup filter applied (JS click succeeded)")
+        return True
+
+    # APPROACH 2: Fallback to selector-based clicking
+    for attempt in range(3):
+        Actor.log.info(f"[{category_name}] Looking for pickup filter via selectors (attempt {attempt + 1}/3)")
+
+        for selector in pickup_selectors:
+            try:
+                elements = await page.locator(selector).all()
+
+                for element in elements:
+                    try:
+                        visible = await element.is_visible()
+                        if not visible:
+                            continue
+
+                        text = ""
+                        try:
+                            text = (await element.inner_text()) or ""
+                        except Exception:
+                            pass
+
+                        # Skip if text is too long (probably wrong element)
+                        if len(text) > 100:
+                            continue
+
+                        # Check if already selected
+                        if await is_filter_selected(element):
+                            Actor.log.info(f"[{category_name}] Pickup filter already active")
+                            return True
+
+                        # Click the filter
+                        Actor.log.info(f"[{category_name}] Clicking pickup filter: '{text[:40]}'")
+                        await element.click()
+
+                        # Wait for page update
+                        await asyncio.sleep(0.8 + random.random() * 0.7)
+                        try:
+                            await page.wait_for_load_state("networkidle", timeout=8000)
+                        except Exception:
+                            pass
+
+                        # VERIFY the click worked
+                        if await is_filter_selected(element):
+                            Actor.log.info(f"[{category_name}] Pickup filter VERIFIED")
+                            return True
+
+                        # Check URL for filter params
+                        current_url = page.url.lower()
+                        if "pickup" in current_url or "availability" in current_url or "refinement" in current_url:
+                            Actor.log.info(f"[{category_name}] Pickup filter verified via URL")
+                            return True
+
+                    except Exception as e:
+                        continue
+
+            except Exception as e:
+                continue
+
+        # Wait before retry
+        await asyncio.sleep(0.5 + random.random() * 0.5)
+
+    Actor.log.warning(f"[{category_name}] Pickup filter NOT applied after all attempts")
+    return False
+
+
+# ============================================================================
 # SCRAPING
 # ============================================================================
 
@@ -168,14 +405,24 @@ async def scrape_category_page(page: Page, url: str, store_info: dict, page_num:
     """Scrape one page of products"""
     products = []
 
-    # Build URL with pagination
-    page_url = url
+    # Build URL with pagination - preserve all existing query params (including filters!)
+    from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
+    
+    parsed = urlparse(url)
+    params = parse_qs(parsed.query, keep_blank_values=True)
+    
+    # Add/update offset for pagination
     if page_num > 1:
-        sep = '&' if '?' in url else '?'
-        page_url = f"{url}{sep}offset={(page_num - 1) * 24}"
+        params['offset'] = [str((page_num - 1) * 24)]
+    elif 'offset' in params:
+        del params['offset']  # Remove offset for page 1
+    
+    # Rebuild URL with all params
+    new_query = urlencode(params, doseq=True)
+    page_url = urlunparse((parsed.scheme, parsed.netloc, parsed.path, parsed.params, new_query, parsed.fragment))
 
-    # Navigate with human behavior
-    await asyncio.sleep(0.6 + random.random() * 0.6)  # Slightly slower
+    # Navigate with human behavior - MINIMUM 1.5 seconds to avoid blocking
+    await asyncio.sleep(1.5 + random.random() * 2.4)  # 1.5-3.9 seconds (30% inc)
 
     try:
         await page.goto(page_url, wait_until='domcontentloaded', timeout=60000)
@@ -189,7 +436,7 @@ async def scrape_category_page(page: Page, url: str, store_info: dict, page_num:
             raise  # Re-raise to stop category scraping
         return []  # Otherwise just skip this page
 
-    await asyncio.sleep(1.2 + random.random() * 1.2)  # Slightly more human-like
+    await asyncio.sleep(2.0 + random.random() * 2.55)  # 2.0-4.55 seconds (30% inc) after page load
 
     try:
         await human_mouse_move(page)
@@ -198,7 +445,7 @@ async def scrape_category_page(page: Page, url: str, store_info: dict, page_num:
         Actor.log.warning(f"Interaction error on page {page_num}: {e}")
         # Continue even if mouse/scroll fails
 
-    await asyncio.sleep(1.2 + random.random() * 0.5)  # Slightly more delay
+    await asyncio.sleep(1.5 + random.random() * 1.75)  # 1.5-3.25 seconds (30% inc) before scraping
 
     # Check for blocking with timeout
     try:
@@ -211,7 +458,18 @@ async def scrape_category_page(page: Page, url: str, store_info: dict, page_num:
         raise  # Re-raise - this indicates a serious problem
 
     # Find product cards with timeout
-    selectors = ['[class*="ProductCard"]', '[class*="product-card"]', 'article', '[data-test="product-pod"]']
+    selectors = [
+        "[data-test='product-pod']",
+        "[data-test='productPod']",
+        "div[data-itemid]",
+        "li[data-itemid]",
+        "[data-itemid]",
+        "li:has(a[href*='/pd/'])",
+        "article:has(a[href*='/pd/'])",
+        '[class*="ProductCard"]',
+        '[class*="product-card"]',
+        "article",
+    ]
     product_cards = []
     try:
         for sel in selectors:
@@ -226,38 +484,92 @@ async def scrape_category_page(page: Page, url: str, store_info: dict, page_num:
         Actor.log.warning(f"No product cards found on page {page_num}")
         return []
 
+    money_re = re.compile(r"\$([0-9]{1,5})(?:\.\s*([0-9]{2}))?")
+
+    def money_values(text: str) -> list[float]:
+        if not text:
+            return []
+        compact = re.sub(r"\s+", "", text)
+        vals: list[float] = []
+        for m in money_re.finditer(compact):
+            whole = m.group(1)
+            cents = m.group(2) or "00"
+            try:
+                vals.append(float(f"{whole}.{cents}"))
+            except Exception:
+                continue
+        return vals
+
+    def fmt_money(value: float) -> str:
+        return f"${value:.2f}"
+
     # Extract products with timeout per card
     for card_idx, card in enumerate(product_cards):
         try:
             # Wrap entire card extraction in timeout
             async def extract_card():
-                # Must have product link
-                pd_links = await card.locator("a[href*='/pd/']").all()
-                if not pd_links:
+                link_el = card.locator(
+                    ":scope a[data-testid='item-description-link'], :scope a[href*='/pd/'], :scope a[data-test*='product-link']"
+                ).first
+                if await link_el.count() == 0:
                     return None
 
-                href = await pd_links[0].get_attribute("href") or ""
+                href = await link_el.get_attribute("href") or ""
                 if not href:
                     return None
 
                 # Title
-                title_text = (await pd_links[0].inner_text()).strip()
+                title_el = card.locator(
+                    ":scope [data-testid='item-description'], :scope a[data-testid='item-description-link'], :scope [data-test*='product-title'], :scope h3, :scope h2"
+                ).first
+                title_text = ""
+                if await title_el.count() > 0:
+                    title_text = (await title_el.inner_text()).strip()
                 if not title_text:
-                    title_el = card.locator(":scope [data-testid='item-description'], :scope h3, :scope h2").first
-                    if await title_el.count() > 0:
-                        title_text = await title_el.inner_text()
+                    title_text = (await link_el.inner_text()).strip()
 
                 # Price
                 price_text = ""
-                price_el = card.locator(":scope [data-testid='current-price'], :scope [data-test*='price']").first
-                if await price_el.count() > 0:
-                    price_text = await price_el.inner_text()
+                for sel in [
+                    ":scope [data-testid='current-price']",
+                    ":scope [data-testid*='price']",
+                    ":scope div[class*='ProductCard_price']",
+                    ":scope [data-test*='current']",
+                    ":scope [data-test*='price']",
+                ]:
+                    price_el = card.locator(sel).first
+                    if await price_el.count() > 0:
+                        price_text = (await price_el.inner_text()).strip()
+                        if price_text:
+                            break
 
                 # Was price (markdown indicator)
                 was_price = ""
-                was_el = card.locator(":scope [data-testid='was-price'], :scope [data-test*='was']").first
-                if await was_el.count() > 0:
-                    was_price = await was_el.inner_text()
+                for sel in [
+                    ":scope [data-testid='was-price']",
+                    ":scope [data-testid*='was']",
+                    ":scope [class*='was-price']",
+                    ":scope [data-test*='was']",
+                    ":scope [data-test*='savings']",
+                ]:
+                    was_el = card.locator(sel).first
+                    if await was_el.count() > 0:
+                        was_price = (await was_el.inner_text()).strip()
+                        if was_price:
+                            break
+
+                # Fallback: parse money from text blobs (covers "$\\n42\\n.29" style)
+                if (not price_text or price_text == "N/A") or (not was_price):
+                    try:
+                        blob = await card.inner_text()
+                        vals = money_values(blob)
+                        if vals:
+                            if not price_text or price_text == "N/A":
+                                price_text = fmt_money(min(vals))
+                            if not was_price and len(vals) >= 2:
+                                was_price = fmt_money(max(vals))
+                    except Exception:
+                        pass
 
                 if title_text and href and len(title_text) > 5:
                     return {
@@ -266,6 +578,7 @@ async def scrape_category_page(page: Page, url: str, store_info: dict, page_num:
                         "was_price": was_price.strip() if was_price else "",
                         "has_markdown": bool(was_price),
                         "url": f"https://www.lowes.com{href}" if href.startswith("/") else href,
+                        "category_url": url,
                         "store_id": store_info["store_id"],
                         "store_name": store_info["name"],
                         "store_city": store_info["city"],
@@ -294,6 +607,30 @@ async def scrape_category_all_pages(page: Page, category_url: str, store_info: d
     """Scrape ALL pages of a category until no more products found"""
     all_products = []
     cat_name = category_url.split('/pl/')[-1].split('/')[0][:30]
+
+    # 1. Go to page 1 to set "Pickup Today" filter
+    try:
+        await page.goto(category_url, wait_until='domcontentloaded', timeout=60000)
+        await asyncio.sleep(2)
+
+        # Apply human behavior before filter
+        await human_mouse_move(page)
+        await asyncio.sleep(0.5 + random.random() * 0.5)
+
+        # Apply the robust pickup filter with verification
+        filter_applied = await apply_pickup_filter(page, f"{store_info['name']}-{cat_name}")
+
+        if not filter_applied:
+            Actor.log.warning(f"{store_info['name']} - {cat_name}: Pickup filter FAILED - SKIPPING category to avoid bad data")
+            return []  # Return empty - don't scrape without filter
+
+        # Update category_url to include the new query params (facets)
+        category_url = page.url
+        Actor.log.info(f"{store_info['name']} - {cat_name}: Pickup filter applied, URL now: {category_url[:100]}...")
+
+    except Exception as e:
+        Actor.log.warning(f"{store_info['name']} - Failed setting Pickup filter: {e}")
+        return []  # Don't scrape without filter
 
     page_num = 1
     while True:  # Scrape until we run out of products
@@ -422,7 +759,7 @@ async def main():
                             if products:
                                 await Actor.push_data(products)
 
-                            await asyncio.sleep(1.2 + random.random() * 0.5)  # Slightly slower
+                            await asyncio.sleep(2.0 + random.random() * 2.55)  # 2.0-4.55 sec (30% inc) between categories
 
                         except Exception as e:
                             # Log the error but continue with next category

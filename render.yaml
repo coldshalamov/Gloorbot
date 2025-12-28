@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: gloorbot-coordinator
+    env: docker
+    rootDir: apps/coordinator
+    dockerfilePath: Dockerfile
+    plan: free
+    envVars:
+      - key: DATA_DIR
+        value: /var/data
+      - key: WORKER_DOWNLOAD_URL
+        sync: false
+      - key: DEAL_THRESHOLD
+        value: "0.50"
+    disk:
+      name: gloorbot-data
+      mountPath: /var/data
+      sizeGB: 1
+
