@@ -158,9 +158,9 @@ async def _run_slot(client_id: str, slot_id: int) -> None:
             profile_dir = profiles_dir() / f"store-{lease.store_id}"
             profile_dir.mkdir(parents=True, exist_ok=True)
 
-            # Browser launch config - designed to avoid bot detection
-            # TESTED: --disable-blink-features=AutomationControlled sets navigator.webdriver=False
-            # No stealth library needed - it was causing crashes in bundled exe
+            # Browser launch config - CRITICAL FIX FROM CHEAPSKATER
+            # KEY: Use chromium.launch() + new_context(), NOT launch_persistent_context()
+            # Cheapskater uses this and works, persistent_context triggers Akamai
             launch_kwargs = {
                 "headless": False,  # Must be False for anti-bot
                 "args": [
@@ -170,24 +170,26 @@ async def _run_slot(client_id: str, slot_id: int) -> None:
                     "--disable-infobars",
                     "--lang=en-US",
                     "--no-default-browser-check",
-                    "--start-maximized",
-                    "--window-size=1440,960",
                 ],
-                "slow_mo": 12,  # Slight slowdown to be more human-like
-                "viewport": {"width": 1440, "height": 900},
-                "locale": "en-US",
-                "timezone_id": "America/Los_Angeles",
             }
             
-            # Launch Chromium browser
+            # Launch Chromium browser (Cheapskater approach)
             print(f"[slot-{slot_id}] Launching browser...", flush=True)
             try:
-                context = await p.chromium.launch_persistent_context(str(profile_dir), **launch_kwargs)
-                print(f"[slot-{slot_id}] Browser launched successfully", flush=True)
+                browser = await p.chromium.launch(**launch_kwargs)
+                print(f"[slot-{slot_id}] Browser launched, creating context...", flush=True)
+                
+                # Create fresh context (Cheapskater style - this is the key!)
+                context = await browser.new_context(
+                    viewport={"width": 1440, "height": 900},
+                    locale="en-US",
+                )
+                
+                print(f"[slot-{slot_id}] Context created successfully", flush=True)
             except Exception as e:
                 print(f"[slot-{slot_id}] Browser launch failed: {e}", flush=True)
                 raise
-            page = context.pages[0] if context.pages else await context.new_page()
+            page = await context.new_page()
 
             print(f"[slot-{slot_id}] Browser ready, starting warmup...", flush=True)
 
