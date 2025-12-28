@@ -53,6 +53,7 @@ jobs:
             --hidden-import "gloorbot_worker.paths" `
             --hidden-import "gloorbot_worker.slot_worker" `
             --hidden-import "gloorbot_worker.supervisor" `
+            --collect-all "playwright_stealth" `
             --collect-submodules "gloorbot_worker" `
             src\gloorbot_worker\__main__.py
 
