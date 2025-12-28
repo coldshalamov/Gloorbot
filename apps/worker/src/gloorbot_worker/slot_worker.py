@@ -114,7 +114,8 @@ async def _run_slot(client_id: str, slot_id: int) -> None:
     if "PLAYWRIGHT_BROWSERS_PATH" not in os.environ:
         try:
             exe_dir = Path(sys.executable).resolve().parent
-            shipped = exe_dir / "ms-playwright"
+            # PyInstaller puts bundled data in _internal folder
+            shipped = exe_dir / "_internal" / "ms-playwright"
             if shipped.exists():
                 os.environ["PLAYWRIGHT_BROWSERS_PATH"] = str(shipped)
         except Exception:

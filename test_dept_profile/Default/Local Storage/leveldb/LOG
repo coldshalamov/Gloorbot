@@ -1,0 +1,4 @@
+2025/12/28-14:23:48.925 184a4 Creating DB C:\Users\User\Documents\GitHub\Telomere\Gloorbot\test_dept_profile\Default\Local Storage\leveldb since it was missing.
+2025/12/28-14:23:48.974 184a4 Reusing MANIFEST C:\Users\User\Documents\GitHub\Telomere\Gloorbot\test_dept_profile\Default\Local Storage\leveldb/MANIFEST-000001
+2025/12/28-14:24:05.943 110e4 Level-0 table #5: started
+2025/12/28-14:24:05.963 110e4 Level-0 table #5: 41546 bytes OK
