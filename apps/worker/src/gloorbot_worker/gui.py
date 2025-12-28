@@ -104,5 +104,26 @@ def run_gui() -> None:
         ttk.Style().theme_use("clam")
     except Exception:
         pass
+
+    # Try to load icon
+    try:
+        import os
+        from pathlib import Path
+        # When frozen, the icon is in the same dir as the EXE
+        # In dev, it might be in apps/worker or PARALLEL
+        exe_dir = Path(sys.executable).parent
+        spec_dir = Path(__file__).resolve().parents[2]
+        icon_candidates = [
+            exe_dir / "gloorbot.ico",
+            spec_dir / "gloorbot.ico",
+            spec_dir.parent.parent / "PARALLEL" / "gloorbot.ico", # for dev if converted
+        ]
+        for cand in icon_candidates:
+            if cand.exists():
+                root.iconbitmap(str(cand))
+                break
+    except Exception:
+        pass
+
     App(root)
     root.mainloop()

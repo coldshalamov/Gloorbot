@@ -18,6 +18,7 @@ apps/worker/ms-playwright/
 **/.playwright-profiles/
 **/.playwright-profile/
 **/.playwright-mcp/
+**/.test-parallel-profile/
 logs/
 PARALLEL/output/
 PARALLEL/status/

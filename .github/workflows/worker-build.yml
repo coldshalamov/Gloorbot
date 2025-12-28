@@ -24,7 +24,12 @@ jobs:
           cd apps/worker
           python -m pip install --upgrade pip
           pip install -e .
-          pip install pyinstaller==6.11.1
+          pip install pyinstaller==6.11.1 pillow
+
+      - name: Generate Icon for Worker
+        shell: pwsh
+        run: |
+          python -c "from PIL import Image; img = Image.open('PARALLEL/gloorbot.png'); img.save('apps/worker/gloorbot.ico', format='ICO', sizes=[(256, 256), (128, 128), (64, 64), (48, 48), (32, 32), (16, 16)])"
 
       - name: Install Playwright Chromium
         shell: pwsh
@@ -40,6 +45,7 @@ jobs:
           $env:PLAYWRIGHT_BROWSERS_PATH = "$pwd\ms-playwright"
           pyinstaller --noconfirm --clean --name GloorbotWorker --noconsole `
             --paths "src" `
+            --icon "gloorbot.ico" `
             --add-data "..\..\PARALLEL;PARALLEL" `
             --add-data "ms-playwright;ms-playwright" `
             --hidden-import "gloorbot_worker" `

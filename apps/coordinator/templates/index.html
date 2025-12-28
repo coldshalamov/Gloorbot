@@ -1,46 +1,51 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Gloorbot Coordinator</title>
-    <link rel="stylesheet" href="/static/styles.css" />
-  </head>
-  <body>
-    <header class="top">
-      <div class="brand">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Gloorbot Coordinator</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+
+<body>
+  <header class="top">
+    <div class="brand">
+      <img src="/static/logo.png" alt="Gloorbot Logo" class="logo-img" />
+      <div class="brand-text">
         <div class="title">Gloorbot</div>
         <div class="subtitle">WA/OR Lowe’s deal finder</div>
       </div>
-      <a class="btn primary" href="/download">Download Worker</a>
-    </header>
+    </div>
+    <a class="btn primary" href="/download">Download Worker</a>
+  </header>
 
-    <main class="grid">
-      <section class="card">
-        <h2>Status</h2>
-        <div id="status" class="kv"></div>
-        <div class="hint">Deals shown are ≥ {{ deal_threshold_pct }}% off.</div>
-      </section>
+  <main class="grid">
+    <section class="card">
+      <h2>Status</h2>
+      <div id="status" class="kv"></div>
+      <div class="hint">Deals shown are ≥ {{ deal_threshold_pct }}% off.</div>
+    </section>
 
-      <section class="card">
-        <h2>Live Deals</h2>
-        <table class="table">
-          <thead>
-            <tr>
-              <th>Store</th>
-              <th>Item</th>
-              <th>Now</th>
-              <th>Was</th>
-              <th>Off</th>
-              <th>Seen</th>
-            </tr>
-          </thead>
-          <tbody id="deals"></tbody>
-        </table>
-      </section>
-    </main>
+    <section class="card">
+      <h2>Live Deals</h2>
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Store</th>
+            <th>Item</th>
+            <th>Now</th>
+            <th>Was</th>
+            <th>Off</th>
+            <th>Seen</th>
+          </tr>
+        </thead>
+        <tbody id="deals"></tbody>
+      </table>
+    </section>
+  </main>
 
-    <script src="/static/app.js"></script>
-  </body>
+  <script src="/static/app.js"></script>
+</body>
+
 </html>
-

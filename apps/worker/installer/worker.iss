@@ -15,12 +15,14 @@ Compression=lzma2
 SolidCompression=yes
 PrivilegesRequired=lowest
 ArchitecturesInstallIn64BitMode=x64
+SetupIconFile=..\gloorbot.ico
 
 [Files]
 Source: "..\dist\GloorbotWorker\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs ignoreversion
+Source: "..\gloorbot.ico"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
-Name: "{userdesktop}\Gloorbot Worker"; Filename: "{app}\{#MyAppExeName}"
+Name: "{userdesktop}\Gloorbot Worker"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\gloorbot.ico"
 
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Flags: nowait postinstall skipifsilent
