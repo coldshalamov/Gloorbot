@@ -177,6 +177,23 @@ async def _run_slot(client_id: str, slot_id: int) -> None:
                 "timezone_id": "America/Los_Angeles",
             }
             
+            # Apply stealth BEFORE browser launch (correct v2.0.0 API)
+            # Note: Tests showed --disable-blink-features=AutomationControlled already
+            # sets navigator.webdriver=False, but stealth adds extra protections
+            try:
+                from playwright_stealth import Stealth
+                stealth = Stealth(
+                    navigator_languages_override=("en-US", "en"),
+                    navigator_platform_override="Win32",
+                    navigator_vendor_override="Google Inc.",
+                )
+                stealth.hook_playwright_context(p)
+                print(f"[slot-{slot_id}] Stealth mode enabled", flush=True)
+            except ImportError:
+                print(f"[slot-{slot_id}] playwright_stealth not installed, using basic mode", flush=True)
+            except Exception as e:
+                print(f"[slot-{slot_id}] Stealth hook failed (non-fatal): {e}", flush=True)
+            
             # Use Chromium - no Chrome installation required
             try:
                 context = await p.chromium.launch_persistent_context(str(profile_dir), **launch_kwargs)
@@ -185,18 +202,6 @@ async def _run_slot(client_id: str, slot_id: int) -> None:
                 print(f"[slot-{slot_id}] Browser launch failed: {e}", flush=True)
                 raise
             page = context.pages[0] if context.pages else await context.new_page()
-
-            # CRITICAL FIX: Apply stealth PER-PAGE, BEFORE any navigation
-            # Research shows: stealth_async(page) must be called AFTER page creation
-            # but BEFORE the first page.goto() - this hides navigator.webdriver
-            try:
-                from playwright_stealth import stealth_async
-                await stealth_async(page)
-                print(f"[slot-{slot_id}] Stealth applied to page", flush=True)
-            except ImportError:
-                print(f"[slot-{slot_id}] playwright_stealth not installed, using basic mode", flush=True)
-            except Exception as e:
-                print(f"[slot-{slot_id}] Stealth failed (non-fatal): {e}", flush=True)
 
             print(f"[slot-{slot_id}] Browser ready, starting warmup...", flush=True)
 
