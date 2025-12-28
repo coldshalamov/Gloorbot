@@ -31,8 +31,12 @@ jobs:
         run: |
           python -c "from PIL import Image; img = Image.open('PARALLEL/gloorbot.png'); img.save('apps/worker/gloorbot.ico', format='ICO', sizes=[(256, 256), (128, 128), (64, 64), (48, 48), (32, 32), (16, 16)])"
 
-      # NOTE: We do NOT bundle Chromium anymore - Chrome is a hard requirement
-      # This makes the installer much smaller (~50MB instead of ~200MB)
+      - name: Install Playwright Chromium
+        shell: pwsh
+        run: |
+          # Set environment for bundled browsers
+          $env:PLAYWRIGHT_BROWSERS_PATH = "$PWD/apps/worker/ms-playwright"
+          python -m playwright install chromium
 
       - name: Build EXE with PyInstaller
         shell: pwsh
@@ -42,6 +46,7 @@ jobs:
             --paths "src" `
             --icon "gloorbot.ico" `
             --add-data "..\..\PARALLEL;PARALLEL" `
+            --add-data "ms-playwright;ms-playwright" `
             --hidden-import "gloorbot_worker" `
             --hidden-import "gloorbot_worker.api" `
             --hidden-import "gloorbot_worker.gui" `

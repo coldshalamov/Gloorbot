@@ -8,6 +8,7 @@ version = "0.1.0"
 requires-python = ">=3.10"
 dependencies = [
   "playwright==1.49.1",
+  "playwright-stealth==1.0.6",
   "psutil==6.1.0",
   "requests==2.32.5",
 ]

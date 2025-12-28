@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import threading
 import statistics
 import os
@@ -9,6 +10,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import AsyncIterator
 
+import httpx
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse, PlainTextResponse, Response
 from fastapi.staticfiles import StaticFiles
@@ -33,6 +35,49 @@ LEASE_SECONDS = int(os.getenv("LEASE_SECONDS", "900"))  # 15 minutes default
 ACTIVE_WINDOW_SECONDS = int(os.getenv("ACTIVE_WINDOW_SECONDS", "180"))  # 3 minutes
 DEAL_THRESHOLD = float(os.getenv("DEAL_THRESHOLD", "0.50"))
 MAX_DEALS_PER_BATCH = int(os.getenv("MAX_DEALS_PER_BATCH", "500"))
+
+# Cheapskater integration - forward deals to the Cheapskater website
+CHEAPSKATER_INGEST_URL = os.getenv("CHEAPSKATER_INGEST_URL", "")
+CHEAPSKATER_INGEST_API_KEY = os.getenv("CHEAPSKATER_INGEST_API_KEY", "")
+
+logger = logging.getLogger(__name__)
+
+# HTTP client for forwarding to Cheapskater (reused for connection pooling)
+_http_client: httpx.Client | None = None
+
+
+def _get_http_client() -> httpx.Client:
+    global _http_client
+    if _http_client is None:
+        _http_client = httpx.Client(timeout=10.0)
+    return _http_client
+
+
+def _forward_deals_to_cheapskater(deals: list[dict]) -> None:
+    """Forward deals to Cheapskater website (best-effort, non-blocking)."""
+    if not CHEAPSKATER_INGEST_URL or not deals:
+        return
+
+    try:
+        client = _get_http_client()
+        headers = {}
+        if CHEAPSKATER_INGEST_API_KEY:
+            headers["X-API-Key"] = CHEAPSKATER_INGEST_API_KEY
+
+        payload = {
+            "source": "gloorbot",
+            "deals": deals,
+        }
+
+        resp = client.post(CHEAPSKATER_INGEST_URL, json=payload, headers=headers)
+        if resp.status_code == 200:
+            data = resp.json()
+            logger.info(f"Forwarded {len(deals)} deals to Cheapskater: accepted={data.get('accepted', 0)}")
+        else:
+            logger.warning(f"Cheapskater ingest failed: {resp.status_code} {resp.text[:200]}")
+    except Exception as e:
+        logger.warning(f"Failed to forward deals to Cheapskater: {e}")
+
 
 base_dir = Path(__file__).resolve().parents[1]  # apps/coordinator
 
@@ -324,6 +369,8 @@ def create_app() -> FastAPI:
             raise HTTPException(status_code=413, detail="Too many deals in one request")
         now = datetime.utcnow()
         upserts = 0
+        accepted_deals: list[dict] = []  # For forwarding to Cheapskater
+
         with db_session() as db:
             for d in req.deals:
                 if d.pct_off < DEAL_THRESHOLD:
@@ -359,10 +406,27 @@ def create_app() -> FastAPI:
                         )
                     )
                 upserts += 1
+                # Collect deal for Cheapskater forwarding
+                accepted_deals.append({
+                    "store_id": d.store_id,
+                    "store_name": d.store_name,
+                    "category_url": d.category_url,
+                    "product_url": d.product_url,
+                    "title": d.title,
+                    "price": d.price,
+                    "was_price": d.was_price,
+                    "pct_off": d.pct_off,
+                    "found_at": now.isoformat() + "Z",
+                })
             db.commit()
 
         if upserts:
             bus.publish(f"event:deals\ndata:{{\"type\":\"deals\",\"count\":{upserts}}}\n\n")
+
+        # Forward to Cheapskater (best-effort, non-blocking on failure)
+        if accepted_deals:
+            _forward_deals_to_cheapskater(accepted_deals)
+
         return {"ok": True, "accepted": upserts}
 
     async def _sse_stream() -> AsyncIterator[bytes]:

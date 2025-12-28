@@ -157,46 +157,48 @@ async def _run_slot(client_id: str, slot_id: int) -> None:
             profile_dir = profiles_dir() / f"store-{lease.store_id}"
             profile_dir.mkdir(parents=True, exist_ok=True)
 
-            # CRITICAL: Use EXACT same config as working PARALLEL scraper
-            # DO NOT add extra args or custom user_agent - they cause detection!
+            # CRITICAL: Match the WORKING Cheapskater scraper browser config
+            # Cheapskater uses Chromium with playwright_stealth and it WORKS
             launch_kwargs = {
-                "headless": False,  # Must be False - Lowe's blocks headless
-                "viewport": {"width": 1440, "height": 900},
-                "locale": "en-US",
-                "timezone_id": "America/Los_Angeles",
+                "headless": False,  # Must be False for anti-bot
                 "args": [
                     "--disable-blink-features=AutomationControlled",
                     "--disable-dev-shm-usage",
+                    "--disable-features=IsolateOrigins,site-per-process",
                     "--disable-infobars",
-                    "--disable-gpu",  # Reduce GPU process overhead
-                    "--no-sandbox",  # Reduce process spawning
-                    "--disable-background-networking",  # Prevent background resource usage
-                    "--disable-background-timer-throttling",
-                    "--disable-backgrounding-occluded-windows",
-                    "--disable-renderer-backgrounding",
-                    "--memory-pressure-off",  # Prevent memory-based crashes
+                    "--lang=en-US",
+                    "--no-default-browser-check",
+                    "--start-maximized",
+                    "--window-size=1440,960",
                 ],
-                # DO NOT set user_agent! Let Chrome use its native one.
-                # Setting a fake user_agent causes version mismatch detection.
+                "slow_mo": 12,  # Slight slowdown to be more human-like
+                "viewport": {"width": 1440, "height": 900},
+                "locale": "en-US",
+                "timezone_id": "America/Los_Angeles",
             }
-            # Chrome is a HARD REQUIREMENT - Chromium gets blocked by Lowe's anti-bot
-            # No fallback - if Chrome isn't installed, we fail with a clear message
+            
+            # Try to apply playwright_stealth if available
             try:
-                context = await p.chromium.launch_persistent_context(str(profile_dir), channel="chrome", **launch_kwargs)
-                print(f"[slot-{slot_id}] Using system Chrome", flush=True)
+                from playwright_stealth import Stealth
+                stealth = Stealth(
+                    navigator_languages_override=("en-US", "en"),
+                    navigator_platform_override="Win32",
+                    navigator_vendor_override="Google Inc.",
+                )
+                stealth.hook_playwright_context(p)
+                print(f"[slot-{slot_id}] Stealth mode enabled", flush=True)
+            except ImportError:
+                print(f"[slot-{slot_id}] playwright_stealth not installed, using basic mode", flush=True)
             except Exception as e:
-                error_msg = str(e)
-                if "channel" in error_msg.lower() or "chrome" in error_msg.lower() or "executable" in error_msg.lower():
-                    print(f"[slot-{slot_id}] ERROR: Google Chrome is not installed!", flush=True)
-                    print(f"[slot-{slot_id}] This scraper REQUIRES Chrome (not Chromium) to avoid detection.", flush=True)
-                    print(f"[slot-{slot_id}] Please install Chrome from: https://www.google.com/chrome/", flush=True)
-                    raise RuntimeError(
-                        "Google Chrome is required but not installed. "
-                        "Please install Chrome from https://www.google.com/chrome/ and try again."
-                    )
-                else:
-                    print(f"[slot-{slot_id}] Browser launch failed: {e}", flush=True)
-                    raise
+                print(f"[slot-{slot_id}] Stealth hook failed (non-fatal): {e}", flush=True)
+            
+            # Use Chromium (like Cheapskater) - no Chrome installation required
+            try:
+                context = await p.chromium.launch_persistent_context(str(profile_dir), **launch_kwargs)
+                print(f"[slot-{slot_id}] Using Chromium browser", flush=True)
+            except Exception as e:
+                print(f"[slot-{slot_id}] Browser launch failed: {e}", flush=True)
+                raise
             page = context.pages[0] if context.pages else await context.new_page()
 
             # PROVEN APPROACH: NO fingerprint injection! (Makes detection WORSE!)
