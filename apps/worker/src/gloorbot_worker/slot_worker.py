@@ -137,84 +137,75 @@ async def _run_slot(client_id: str, slot_id: int) -> None:
         await asyncio.sleep(stagger_delay)
 
     async with async_playwright() as p:
+        browser = None
         context = None
         page = None
         current_store_id: str | None = None
 
         async def ensure_store(lease: api.Lease):
-            nonlocal context, page, current_store_id, preferred_store_id
-            if current_store_id == lease.store_id and context and page:
+            nonlocal browser, context, page, current_store_id, preferred_store_id
+            if current_store_id == lease.store_id and context and page:   
                 return
             if context:
                 try:
+                    if current_store_id:
+                        prev_profile_dir = profiles_dir() / f"store-{current_store_id}"
+                        prev_profile_dir.mkdir(parents=True, exist_ok=True)
+                        await context.storage_state(path=str(prev_profile_dir / "storage_state.json"))
                     await context.close()
                 except Exception:
                     pass
+                context = None
+                page = None
+            if browser:
+                try:
+                    await browser.close()
+                except Exception:
+                    pass
+                browser = None
             current_store_id = lease.store_id
             preferred_store_id = lease.store_id
 
             # IMPORTANT: Profile is PER-STORE only (not per-slot)
             # This matches PARALLEL and allows profile seasoning to benefit all slots
-            profile_dir = profiles_dir() / f"store-{lease.store_id}"
+            profile_dir = profiles_dir() / f"store-{lease.store_id}"      
             profile_dir.mkdir(parents=True, exist_ok=True)
 
-            # Browser launch config - CRITICAL FIX FROM CHEAPSKATER
-            # KEY: Use chromium.launch() + new_context(), NOT launch_persistent_context()
-            # Cheapskater uses this and works, persistent_context triggers Akamai
+            storage_state_path = profile_dir / "storage_state.json"
+
+            # Browser launch config
+            # NOTE: UA / header / init-script spoofing caused Akamai blocks in testing.
             launch_kwargs = {
                 "headless": False,  # Must be False for anti-bot
                 "args": [
-                    "--disable-blink-features=AutomationControlled",  # Hides navigator.webdriver
+                    "--disable-blink-features=AutomationControlled",
                     "--disable-dev-shm-usage",
-                    "--disable-features=IsolateOrigins,site-per-process",
+                    "--disable-features=IsolateOrigins,site-per-process", 
                     "--disable-infobars",
                     "--lang=en-US",
                     "--no-default-browser-check",
                 ],
             }
-            
-            # Modern Chrome User-Agents (Cheapskater's proven list)
-            user_agents = [
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.6261.94 Safari/537.36",
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.6312.86 Safari/537.36",
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.6367.78 Safari/537.36",
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.6422.23 Safari/537.36",
-            ]
-            import random
-            user_agent = random.choice(user_agents)
-            
+
+            # Optional: allow using system Chrome if installed (matches PARALLEL).
+            channel = os.getenv("GLOORBOT_BROWSER_CHANNEL")
+            if channel:
+                launch_kwargs["channel"] = channel.strip()
+
             # Launch Chromium browser
-            print(f"[slot-{slot_id}] Launching browser with modern UA...", flush=True)
+            print(f"[slot-{slot_id}] Launching browser...", flush=True)
             try:
                 browser = await p.chromium.launch(**launch_kwargs)
-                
-                # Create context with User-Agent (CRITICAL for avoiding Akamai detection)
-                context = await browser.new_context(
-                    viewport={"width": 1440, "height": 900},
-                    locale="en-US",
-                    user_agent=user_agent,
-                )
-                
-                # Add client hint headers (mimics real Chrome)
-                await context.set_extra_http_headers({
-                    "Accept-Language": "en-US,en;q=0.9",
-                    "Sec-CH-UA": '"Not A(Brand)";v="99", "Chromium";v="124"',
-                    "Sec-CH-UA-Mobile": "?0",
-                    "Sec-CH-UA-Platform": '"Windows"',
-                })
-                
-                # Init script to mask automation markers
-                await context.add_init_script("""
-                    (() => {
-                      Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
-                      Object.defineProperty(navigator, 'vendor', { get: () => 'Google Inc.' });
-                      Object.defineProperty(navigator, 'platform', { get: () => 'Win32' });
-                      Object.defineProperty(navigator, 'languages', { get: () => ['en-US', 'en'] });
-                      window.chrome = window.chrome || { runtime: {} };
-                    })();
-                """)
-                
-                print(f"[slot-{slot_id}] Context created with anti-fingerprint hardening", flush=True)
+
+                context_kwargs: dict[str, Any] = {
+                    "viewport": {"width": 1440, "height": 900},
+                    "locale": "en-US",
+                }
+                if storage_state_path.exists():
+                    context_kwargs["storage_state"] = str(storage_state_path)
+                context = await browser.new_context(**context_kwargs)
+
+                print(f"[slot-{slot_id}] Context created", flush=True)
             except Exception as e:
                 print(f"[slot-{slot_id}] Browser setup failed: {e}", flush=True)
                 raise
@@ -227,12 +218,24 @@ async def _run_slot(client_id: str, slot_id: int) -> None:
             if not await parallel.set_store_context(page, lease.store_url, lease.store_name):
                 print(f"[slot-{slot_id}] Failed to set store {lease.store_name} - aborting lease", flush=True)
                 # Close context to force rebuild next time, ensuring fresh retry
-                if context: 
+                if context:
                     await context.close()
+                if browser:
+                    try:
+                        await browser.close()
+                    except Exception:
+                        pass
+                    browser = None
                 context = None
                 page = None
                 current_store_id = None
                 raise RuntimeError(f"Could not set store context for {lease.store_id}")
+
+            # Persist cookies/session data per-store to reduce repeated "fresh profile" signals.
+            try:
+                await context.storage_state(path=str(storage_state_path))
+            except Exception:
+                pass
 
         lease_failures = 0
         while True:
@@ -343,8 +346,11 @@ async def _run_slot(client_id: str, slot_id: int) -> None:
                     try:
                         if context:
                             await context.close()
+                        if browser:
+                            await browser.close()
                     except Exception:
                         pass
+                    browser = None
                     context = None
                     page = None
                     await asyncio_sleep(COOLDOWN_SECONDS)
