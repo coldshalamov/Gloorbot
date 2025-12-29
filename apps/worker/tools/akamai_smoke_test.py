@@ -45,6 +45,11 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
         help="If set, runs PARALLEL scrape_category_page for N pages (slow).",
     )
     parser.add_argument(
+        "--scrape-all",
+        action="store_true",
+        help="Run PARALLEL scrape_category_all_pages (includes pickup filter).",
+    )
+    parser.add_argument(
         "--no-storage-state",
         action="store_true",
         help="Disable loading/saving per-store storage_state.json.",
@@ -117,6 +122,17 @@ async def _run(args: argparse.Namespace) -> int:
                 for page_num in range(1, args.scrape_pages + 1):
                     products = await parallel.scrape_category_page(page, args.category_url, store_info, page_num)
                     print(f"SCRAPE_PAGE_{page_num}: {len(products)} products", flush=True)
+
+            if args.scrape_all:
+                store_info = {
+                    "store_id": args.store_id,
+                    "name": args.store_name,
+                    "city": "",
+                    "state": "",
+                    "url": args.store_url,
+                }
+                products = await parallel.scrape_category_all_pages(page, args.category_url, store_info)
+                print(f"SCRAPE_ALL: {len(products)} products", flush=True)
             return 0
         finally:
             if not args.no_storage_state:
