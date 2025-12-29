@@ -16,6 +16,10 @@ SolidCompression=yes
 PrivilegesRequired=lowest
 ArchitecturesInstallIn64BitMode=x64
 SetupIconFile=..\gloorbot.ico
+CloseApplications=yes
+RestartApplications=no
+DirExistsWarning=no
+UninstallDisplayIcon={app}\gloorbot.ico
 
 [Files]
 Source: "..\dist\GloorbotWorker\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs ignoreversion
