@@ -674,7 +674,7 @@ async def scrape_category_page(page: Page, url: str, store_info: dict, page_num:
 
 
 async def scrape_category_all_pages(page: Page, category_url: str, store_info: dict) -> list[dict]:
-    """Scrape ALL pages of a category until no more products found"""
+    """Scrape ALL pages of a category until no more products found"""     
     all_products = []
     cat_name = category_url.split('/pl/')[-1].split('/')[0][:30]
 
@@ -682,6 +682,25 @@ async def scrape_category_all_pages(page: Page, category_url: str, store_info: d
     try:
         await page.goto(category_url, wait_until='domcontentloaded', timeout=60000)
         await asyncio.sleep(2)
+
+        # Some categories legitimately have zero products (seasonal/legal/empty).
+        # In that case, the pickup filter UI will not exist, and we should NOT retry forever.
+        try:
+            if await page.locator("text=/could not find any products/i").first.is_visible(timeout=2000):
+                Actor.log.info(f"{store_info['name']} - {cat_name}: No products found; skipping category")
+                return []
+        except Exception:
+            pass
+
+        # If we're already blocked on the first navigation, abort quickly.
+        try:
+            title = await asyncio.wait_for(page.title(), timeout=10.0)
+            if "Access Denied" in title or "Robot" in title or "Blocked" in title:
+                Actor.log.error(f"BLOCKED during setup: {title}")
+                raise Exception(f"Blocked by anti-bot: {title}")
+        except asyncio.TimeoutError:
+            # If title can't be read, let the normal flow attempt filter/page parsing (may error).
+            pass
 
         # Apply human behavior before filter
         await human_mouse_move(page)
