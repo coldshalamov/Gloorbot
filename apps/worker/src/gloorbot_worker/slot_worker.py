@@ -30,6 +30,16 @@ MAX_CATEGORY_SECONDS = int(os.getenv("MAX_CATEGORY_SECONDS", "1200"))
 _FALSE_VALUES = {"0", "false", "no", "off"}
 
 
+def _signal_block() -> None:
+    """Signal to the supervisor that a block was detected."""
+    try:
+        block_signal = status_dir() / "block_signal.txt"
+        # Write timestamp so supervisor knows it's fresh
+        block_signal.write_text(str(time.time()), encoding="utf-8")
+    except Exception:
+        pass
+
+
 def _normalize_lowes_url(url: str) -> str:
     if not url:
         return url
@@ -429,6 +439,8 @@ async def _run_slot(client_id: str, slot_id: int) -> None:
                 # Block/cooldown behavior: if blocked, wait then rebuild browser.
                 msg = str(e).lower()
                 if "access denied" in msg or "robot" in msg or "blocked" in msg:
+                    # Signal to supervisor that we got blocked
+                    _signal_block()
                     try:
                         if page and lease:
                             await _dump_block_artifacts(slot_id=slot_id, lease=lease, page=page, error=e)

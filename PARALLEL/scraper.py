@@ -721,8 +721,25 @@ async def scrape_category_all_pages(page: Page, category_url: str, store_info: d
         raise  # Re-raise to trigger worker retry
 
     page_num = 1
+    consecutive_empty = 0  # Track empty pages to avoid infinite loop
+    last_url = None
+    same_url_count = 0
+    MAX_EMPTY_RETRIES = 3
+    MAX_SAME_URL = 3
+    
     while True:  # Scrape until we run out of products
         try:
+            # Check if we're stuck on the same URL (infinite reload bug)
+            current_url = page.url
+            if current_url == last_url:
+                same_url_count += 1
+                if same_url_count >= MAX_SAME_URL:
+                    Actor.log.warning(f"{store_info['name']} - {cat_name}: Stuck on same URL {same_url_count} times, moving on")
+                    break
+            else:
+                same_url_count = 0
+                last_url = current_url
+            
             # Add per-page timeout to prevent infinite hangs
             products = await asyncio.wait_for(
                 scrape_category_page(page, category_url, store_info, page_num),
@@ -730,8 +747,17 @@ async def scrape_category_all_pages(page: Page, category_url: str, store_info: d
             )
 
             if not products:
-                # No products found - we've reached the end
-                break
+                consecutive_empty += 1
+                if consecutive_empty >= MAX_EMPTY_RETRIES:
+                    Actor.log.info(f"{store_info['name']} - {cat_name}: {consecutive_empty} consecutive empty pages, category done")
+                    break
+                # Try once more in case of transient issue
+                Actor.log.info(f"{store_info['name']} - {cat_name} p{page_num}: Empty ({consecutive_empty}/{MAX_EMPTY_RETRIES}), retrying...")
+                await asyncio.sleep(1 + random.random())
+                continue
+            
+            # Reset empty counter on success
+            consecutive_empty = 0
 
             all_products.extend(products)
             Actor.log.info(f"{store_info['name']} - {cat_name} p{page_num}: {len(products)} products")
@@ -744,15 +770,13 @@ async def scrape_category_all_pages(page: Page, category_url: str, store_info: d
 
         except asyncio.TimeoutError:
             Actor.log.error(f"{store_info['name']} - {cat_name} p{page_num}: TIMEOUT after 120s")
-            # Stop scraping this category if a page times out
             break
         except Exception as e:
             Actor.log.error(f"{store_info['name']} - {cat_name} p{page_num}: Error - {e}")
-            # Stop scraping this category on error
             break
 
     if all_products:
-        Actor.log.info(f"{store_info['name']} - {cat_name}: {len(all_products)} total products from {page_num} pages")
+        Actor.log.info(f"{store_info['name']} - {cat_name}: {len(all_products)} total from {page_num} pages")
 
     return all_products
 

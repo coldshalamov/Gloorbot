@@ -13,10 +13,10 @@ import psutil
 # Handle PyInstaller frozen executable - need absolute imports
 if getattr(sys, 'frozen', False):
     from gloorbot_worker import api
-    from gloorbot_worker.paths import config_path, logs_dir
+    from gloorbot_worker.paths import config_path, logs_dir, cleanup_old_files, status_dir
 else:
     from . import api
-    from .paths import config_path, logs_dir
+    from .paths import config_path, logs_dir, cleanup_old_files, status_dir
 
 
 TARGET_LOW = 70.0
@@ -38,6 +38,17 @@ class Supervisor:
         self._tasks_completed = 0
         self._deals_sent = 0
         self._next_register_attempt_at = 0.0
+        self._block_count = 0  # Track consecutive blocks
+        self._last_block_time = 0.0
+        self._max_slots_override: int | None = None  # Reduced when detecting blocks
+        
+        # Run disk cleanup on startup
+        try:
+            deleted = cleanup_old_files(max_age_days=30)
+            if deleted > 0:
+                print(f"[supervisor] Cleaned up {deleted} old files")
+        except Exception:
+            pass
 
     def _load_client_id(self) -> str | None:
         cfg = config_path()
@@ -141,6 +152,18 @@ class Supervisor:
         if connected and self.client_id:
             api.heartbeat(self.client_id, cpu, mem, len(self.slots))
 
+        # Check for block signals from slot workers
+        try:
+            block_signal = status_dir() / "block_signal.txt"
+            if block_signal.exists():
+                signal_time = float(block_signal.read_text(encoding="utf-8").strip())
+                # Only process if signal is recent (within last 60 seconds)
+                if time.time() - signal_time < 60:
+                    self.report_block()
+                block_signal.unlink()  # Consume the signal
+        except Exception:
+            pass
+
         if self._stop:
             return {"running": False, "connected": connected, "slots": 0, "cpu": cpu, "mem": mem}
 
@@ -149,16 +172,50 @@ class Supervisor:
             return {"running": True, "connected": False, "slots": 0, "cpu": cpu, "mem": mem}
 
         # Scale decisions
+        max_slots = self._max_slots_override or 999  # 999 = no limit (CPU/mem based)
         if len(self.slots) == 0:
             self._spawn_slot()
-        elif cpu < TARGET_LOW and mem < TARGET_LOW:
+        elif len(self.slots) < max_slots and cpu < TARGET_LOW and mem < TARGET_LOW:
             self._spawn_slot()
         elif cpu > TARGET_HIGH or mem > TARGET_HIGH:
             if len(self.slots) > 1:
                 self._kill_slot(self.slots[-1])
                 self.slots = self.slots[:-1]
 
-        return {"running": True, "connected": True, "slots": len(self.slots), "cpu": cpu, "mem": mem}
+        return {"running": True, "connected": True, "slots": len(self.slots), "cpu": cpu, "mem": mem, "blocks": self._block_count}
+
+    def report_block(self) -> None:
+        """Called by slot workers when they detect a block. Triggers backoff."""
+        now = time.time()
+        # Reset block count if last block was more than 10 minutes ago
+        if now - self._last_block_time > 600:
+            self._block_count = 0
+        
+        self._block_count += 1
+        self._last_block_time = now
+        
+        # Exponential backoff: reduce max slots based on block count
+        if self._block_count >= 5:
+            self._max_slots_override = 1
+            print(f"[supervisor] High block rate ({self._block_count}), limiting to 1 slot")
+        elif self._block_count >= 3:
+            self._max_slots_override = max(1, len(self.slots) // 2)
+            print(f"[supervisor] Moderate blocks ({self._block_count}), limiting to {self._max_slots_override} slots")
+        elif self._block_count >= 1:
+            # Just log, don't reduce yet
+            print(f"[supervisor] Block detected ({self._block_count} total)")
+        
+        # Write block status to file so slots can read it
+        try:
+            block_file = status_dir() / "block_status.json"
+            import json
+            block_file.write_text(json.dumps({
+                "block_count": self._block_count,
+                "last_block": self._last_block_time,
+                "max_slots": self._max_slots_override,
+            }), encoding="utf-8")
+        except Exception:
+            pass
 
     def run_loop(self, on_tick) -> None:
         self.start()
