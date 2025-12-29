@@ -17,6 +17,17 @@ $env:GLOORBOT_COORDINATOR_URL="http://127.0.0.1:8000"
 .\.venv\Scripts\python -m gloorbot_worker
 ```
 
+## Akamai smoke test (manual)
+
+```powershell
+cd apps/worker
+.\.venv\Scripts\python .\tools\akamai_smoke_test.py
+
+# Optional: force system Chrome (requires Chrome installed)
+$env:GLOORBOT_BROWSER_CHANNEL="chrome"
+.\.venv\Scripts\python .\tools\akamai_smoke_test.py
+```
+
 ## Packaging
 
 The repo includes a GitHub Actions workflow + Inno Setup script (added later in this refactor)
