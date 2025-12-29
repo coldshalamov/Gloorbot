@@ -12,19 +12,94 @@ import traceback
 from datetime import datetime
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse, urlunparse
 
 # Handle PyInstaller frozen executable - need absolute imports
 if getattr(sys, 'frozen', False):
     from gloorbot_worker import api
-    from gloorbot_worker.paths import profiles_dir, status_dir
+    from gloorbot_worker.paths import logs_dir, profiles_dir, status_dir
 else:
     from . import api
-    from .paths import profiles_dir, status_dir
+    from .paths import logs_dir, profiles_dir, status_dir
 
 
 DEAL_THRESHOLD = float(os.getenv("DEAL_THRESHOLD", "0.50"))
 COOLDOWN_SECONDS = int(os.getenv("BLOCK_COOLDOWN_SECONDS", "300"))
 MAX_CATEGORY_SECONDS = int(os.getenv("MAX_CATEGORY_SECONDS", "1200"))
+
+_FALSE_VALUES = {"0", "false", "no", "off"}
+
+
+def _normalize_lowes_url(url: str) -> str:
+    if not url:
+        return url
+    try:
+        parsed = urlparse(url)
+        if not parsed.netloc:
+            return url
+        if parsed.netloc.endswith("lowes.com"):
+            return urlunparse(
+                (
+                    "https",
+                    "www.lowes.com",
+                    parsed.path,
+                    parsed.params,
+                    parsed.query,
+                    parsed.fragment,
+                )
+            )
+        return url
+    except Exception:
+        return url
+
+
+async def _dump_block_artifacts(*, slot_id: int, lease: api.Lease, page: Any, error: Exception) -> None:
+    if os.getenv("GLOORBOT_BLOCK_DIAGNOSTICS", "0").strip().lower() in _FALSE_VALUES:
+        return
+    try:
+        block_dir = logs_dir() / "blocks"
+        block_dir.mkdir(parents=True, exist_ok=True)
+        ts = datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
+        prefix = f"slot{slot_id}_task{getattr(lease, 'task_id', 'unknown')}_{ts}"
+
+        meta: dict[str, Any] = {
+            "slot_id": slot_id,
+            "task_id": getattr(lease, "task_id", None),
+            "store_id": getattr(lease, "store_id", None),
+            "store_url": getattr(lease, "store_url", None),
+            "category_url": getattr(lease, "category_url", None),
+            "page_url": getattr(page, "url", None),
+            "error": str(error),
+        }
+        try:
+            meta["title"] = await page.title()
+        except Exception:
+            pass
+        try:
+            meta["navigator_ua"] = await page.evaluate("() => navigator.userAgent")
+            meta["navigator_webdriver"] = await page.evaluate("() => navigator.webdriver")
+        except Exception:
+            pass
+        try:
+            import importlib.metadata as _m
+
+            meta["playwright"] = _m.version("playwright")
+        except Exception:
+            pass
+
+        (block_dir / f"{prefix}.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
+        try:
+            await page.screenshot(path=str(block_dir / f"{prefix}.png"), full_page=True)
+        except Exception:
+            pass
+        try:
+            html = await page.content()
+            (block_dir / f"{prefix}.html").write_text(html, encoding="utf-8")
+        except Exception:
+            pass
+    except Exception:
+        # Never crash the worker due to diagnostics
+        return
 
 
 def _find_parallel_dir() -> Path:
@@ -187,15 +262,24 @@ async def _run_slot(client_id: str, slot_id: int) -> None:
                 ],
             }
 
-            # Optional: allow using system Chrome if installed (matches PARALLEL).
-            channel = os.getenv("GLOORBOT_BROWSER_CHANNEL")
-            if channel:
-                launch_kwargs["channel"] = channel.strip()
+            # Prefer system Chrome when available (matches PARALLEL’s most reliable setup).
+            explicit_channel = (os.getenv("GLOORBOT_BROWSER_CHANNEL") or "").strip() or None
+            prefer_chrome = os.getenv("GLOORBOT_PREFER_CHROME", "1").strip().lower() not in _FALSE_VALUES
+            force_bundled = os.getenv("GLOORBOT_FORCE_BUNDLED", "0").strip().lower() not in _FALSE_VALUES
+            try_channel = explicit_channel or ("chrome" if (prefer_chrome and not force_bundled) else None)
 
             # Launch Chromium browser
             print(f"[slot-{slot_id}] Launching browser...", flush=True)
             try:
-                browser = await p.chromium.launch(**launch_kwargs)
+                if try_channel:
+                    try:
+                        browser = await p.chromium.launch(channel=try_channel, **launch_kwargs)
+                    except Exception:
+                        if explicit_channel:
+                            raise
+                        browser = await p.chromium.launch(**launch_kwargs)
+                else:
+                    browser = await p.chromium.launch(**launch_kwargs)
 
                 context_kwargs: dict[str, Any] = {
                     "viewport": {"width": 1440, "height": 900},
@@ -214,8 +298,9 @@ async def _run_slot(client_id: str, slot_id: int) -> None:
             print(f"[slot-{slot_id}] Browser ready, starting warmup...", flush=True)
 
             # Do the simple proven warmup (homepage visit + human behavior)
+            store_url = _normalize_lowes_url(lease.store_url)
             await parallel.warmup_session(page)
-            if not await parallel.set_store_context(page, lease.store_url, lease.store_name):
+            if not await parallel.set_store_context(page, store_url, lease.store_name):
                 print(f"[slot-{slot_id}] Failed to set store {lease.store_name} - aborting lease", flush=True)
                 # Close context to force rebuild next time, ensuring fresh retry
                 if context:
@@ -277,10 +362,11 @@ async def _run_slot(client_id: str, slot_id: int) -> None:
                     "name": lease.store_name,
                     "city": "",
                     "state": "",
-                    "url": lease.store_url,
+                    "url": _normalize_lowes_url(lease.store_url),
                 }
+                category_url = _normalize_lowes_url(lease.category_url)
                 products = await asyncio.wait_for(
-                    parallel.scrape_category_all_pages(page, lease.category_url, store_info),
+                    parallel.scrape_category_all_pages(page, category_url, store_info),
                     timeout=MAX_CATEGORY_SECONDS,
                 )
                 products_seen = len(products)
@@ -343,6 +429,11 @@ async def _run_slot(client_id: str, slot_id: int) -> None:
                 # Block/cooldown behavior: if blocked, wait then rebuild browser.
                 msg = str(e).lower()
                 if "access denied" in msg or "robot" in msg or "blocked" in msg:
+                    try:
+                        if page and lease:
+                            await _dump_block_artifacts(slot_id=slot_id, lease=lease, page=page, error=e)
+                    except Exception:
+                        pass
                     try:
                         if context:
                             await context.close()
