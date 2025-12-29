@@ -29,8 +29,9 @@ function renderDeals(deals) {
   const tbody = document.getElementById("deals");
   tbody.innerHTML = deals.map(d => {
     const pct = Math.round(d.pct_off * 100);
+    const normalizedStore = d.store_name?.replace(/Lowe's of /i, "") || d.store_id;
     return `<tr>
-      <td><span class="pill">${d.store_id}</span></td>
+      <td><span class="pill" title="${d.store_name || d.store_id}">${normalizedStore.slice(0, 20)}</span></td>  
       <td class="item"><a target="_blank" rel="noreferrer" href="${d.product_url}">${escapeHtml(d.title).slice(0, 110)}</a></td>
       <td>${fmtMoney(d.price)}</td>
       <td>${fmtMoney(d.was_price)}</td>

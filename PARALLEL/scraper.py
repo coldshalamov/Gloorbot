@@ -520,6 +520,22 @@ async def scrape_category_page(page: Page, url: str, store_info: dict, page_num:
 
     money_re = re.compile(r"\$([0-9]{1,5})(?:\.\s*([0-9]{2}))?")
 
+    def clean_money_values(text: str) -> list[float]:
+        if not text:
+            return []
+            
+        # 1. Remove "Save $X", "Savings: $X", "$X Off" patterns to avoid capturing savings as price
+        # Capture standard savings phrases
+        cleaned = re.sub(r"(?i)(save|savings|saved)\s*:?\s*\$?\s*[0-9]+(?:\.[0-9]{1,2})?", " ", text)
+        # Capture suffix savings phrases ("$20 Off")
+        cleaned = re.sub(r"(?i)\$?\s*[0-9]+(?:\.[0-9]{1,2})?\s*(?:off|%)", " ", cleaned)
+        
+        # Remove common threshold phrases that look like prices
+        # "Free shipping on orders over $45" -> remove "$45"
+        cleaned = re.sub(r"(?i)(orders?|shipping|spend)\s*(?:over)?\s*\$?\s*[0-9]+", " ", cleaned)
+        
+        return money_values(cleaned)
+
     def money_values(text: str) -> list[float]:
         if not text:
             return []
@@ -603,16 +619,29 @@ async def scrape_category_page(page: Page, url: str, store_info: dict, page_num:
                 if (not price_text or price_text == "N/A") or (not was_price):
                     try:
                         blob = await card.inner_text()
-                        vals = money_values(blob)
+                        # Use SAFE extraction that ignores savings/off amounts
+                        vals = clean_money_values(blob)
                         if vals:
                             if not price_text or price_text == "N/A":
                                 price_text = fmt_money(min(vals))
                             if not was_price and len(vals) >= 2:
+                                # Assume largest value is the original "Was" price
                                 was_price = fmt_money(max(vals))
                     except Exception:
                         pass
 
                 if title_text and href and len(title_text) > 5:
+                    # Filter out bad titles
+                    bad_titles = ["pickup today", "free pickup", "delivery", "add to cart", "view details", "unavailable", "out of stock"]
+                    if any(bt in title_text.lower() for bt in bad_titles):
+                        # Try to fall back to image alt text if available, or just skip
+                        alt_title = await card.locator("img").get_attribute("alt")
+                        if alt_title and len(alt_title) > 5 and not any(bt in alt_title.lower() for bt in bad_titles):
+                            title_text = alt_title
+                        else:
+                            # Skip this item if we can't find a real title
+                            return None
+
                     return {
                         "title": title_text.strip(),
                         "price": price_text.strip() if price_text else "N/A",
