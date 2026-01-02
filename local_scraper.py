@@ -17,6 +17,7 @@ Usage:
 import asyncio
 import argparse
 import gc
+import os
 import random
 import re
 import sqlite3
@@ -26,6 +27,7 @@ from urllib.parse import parse_qsl, urlencode, urlparse
 
 from playwright.async_api import async_playwright, Browser, Page, Route
 from playwright_stealth import Stealth
+import requests
 import sys
 
 if sys.platform == "win32":
@@ -46,6 +48,12 @@ GOTO_TIMEOUT_MS = 45000
 PAGE_SIZE = 24
 MIN_PRODUCTS_TO_CONTINUE = 6
 PARALLEL_CONTEXTS = 2  # REDUCED: 2 is safer for carrier IP than 3
+
+# CheapSkater Integration
+CHEAPSKATER_URL = os.getenv("CHEAPSKATER_URL", "https://cheapskater.onrender.com")
+CHEAPSKATER_API_KEY = os.getenv("CHEAPSKATER_API_KEY", "")
+CHEAPSKATER_ENABLED = os.getenv("CHEAPSKATER_ENABLED", "true").lower() == "true"
+CHEAPSKATER_BATCH_SIZE = 100  # Send in batches of 100 products
 
 # Store data
 WA_OR_STORES = {
@@ -188,6 +196,86 @@ def save_products(db_path: str, products: list[dict]) -> None:
 
     conn.commit()
     conn.close()
+
+
+def send_to_cheapskater(products: list[dict]) -> dict:
+    """Send products to CheapSkater ingest API.
+    
+    Returns:
+        dict with 'sent' and 'errors' counts
+    """
+    if not products:
+        return {"sent": 0, "errors": 0}
+    
+    if not CHEAPSKATER_ENABLED:
+        print("⚠️  CheapSkater integration disabled (set CHEAPSKATER_ENABLED=true to enable)")
+        return {"sent": 0, "errors": 0}
+    
+    sent = 0
+    errors = 0
+    
+    # Send in batches to avoid overwhelming the API
+    for i in range(0, len(products), CHEAPSKATER_BATCH_SIZE):
+        batch = products[i:i + CHEAPSKATER_BATCH_SIZE]
+        
+        # Convert to CheapSkater format
+        deals = []
+        for p in batch:
+            # Skip products without required fields
+            if not p.get("product_url") or not p.get("price"):
+                errors += 1
+                continue
+            
+            deals.append({
+                "store_id": p.get("store_id", "0000"),
+                "store_name": p.get("store_name", "Unknown Store"),
+                "category_url": f"{BASE_URL}/pl/{p.get('category', 'Unknown').replace(' ', '-')}/0",
+                "product_url": p.get("product_url"),
+                "title": p.get("title", "Unknown Product"),
+                "price": p.get("price"),
+                "was_price": p.get("price_was") or p.get("price"),
+                "pct_off": p.get("pct_off") or 0.0,
+                "found_at": p.get("timestamp", datetime.now(timezone.utc).isoformat()),
+            })
+        
+        if not deals:
+            continue
+        
+        # Send HTTP POST to CheapSkater
+        try:
+            headers = {}
+            if CHEAPSKATER_API_KEY:
+                headers["X-API-Key"] = CHEAPSKATER_API_KEY
+            
+            response = requests.post(
+                f"{CHEAPSKATER_URL}/api/ingest/deals",
+                json={"source": "gloorbot-local", "deals": deals},
+                headers=headers,
+                timeout=30
+            )
+            response.raise_for_status()
+            result = response.json()
+            
+            accepted = result.get("accepted", 0)
+            batch_errors = result.get("errors", 0)
+            sent += accepted
+            errors += batch_errors
+            
+            print(f"✅ Sent batch to CheapSkater: {accepted} accepted, {batch_errors} errors")
+            
+        except requests.exceptions.Timeout:
+            print(f"⏱️  Timeout sending batch to CheapSkater (batch size: {len(deals)})")
+            errors += len(deals)
+        except requests.exceptions.RequestException as e:
+            print(f"❌ Failed to send batch to CheapSkater: {e}")
+            errors += len(deals)
+        except Exception as e:
+            print(f"❌ Unexpected error sending to CheapSkater: {e}")
+            errors += len(deals)
+    
+    return {"sent": sent, "errors": errors}
+
+
 
 
 # ============================================================================
@@ -656,8 +744,14 @@ async def run_scrape(
                 # Process results
                 for result in results:
                     if isinstance(result, list):
+                        # Save to local database
                         save_products(db_path, result)
                         total_products += len(result)
+                        
+                        # Send to CheapSkater
+                        if result:
+                            cheapskater_result = send_to_cheapskater(result)
+                            print(f"📤 CheapSkater: {cheapskater_result['sent']} sent, {cheapskater_result['errors']} errors")
                     elif isinstance(result, Exception):
                         print(f"Batch error: {result}")
 
