@@ -1,0 +1,126 @@
+================================================================================
+GLOORBOT <-> CHEAPSKATER DATA FLOW DIAGNOSIS
+================================================================================
+Completed: 2026-01-03
+
+================================================================================
+CURRENT STATUS
+================================================================================
+
+Your scraper IS working:
+  - Sends deals to Gloorbot Coordinator ✅
+  - Coordinator receives and stores them ✅
+  - You can verify this by checking coordinator database
+
+BUT deals are NOT reaching CheapSkater:
+  - Coordinator has NO knowledge of CheapSkater's URL ❌
+  - Forwarding is silently disabled ❌
+  - Zero deals in CheapSkater ❌
+
+================================================================================
+ROOT CAUSE
+================================================================================
+
+Missing environment variables on Gloorbot Coordinator (Render service):
+
+  ❌ CHEAPSKATER_INGEST_URL
+     Should be: https://cheapskater-dashboard.onrender.com/api/ingest/deals
+
+  ❌ CHEAPSKATER_INGEST_API_KEY
+     Should be: [your secure API key - you need to generate one]
+
+Without these, the coordinator code at line 58-59 returns early:
+
+  if not CHEAPSKATER_INGEST_URL or not deals:
+      return  # ← EXIT HERE - never forwards to CheapSkater
+
+================================================================================
+THE FIX (CRITICAL - MUST DO THIS)
+================================================================================
+
+1. Go to https://dashboard.render.com
+
+2. Click "gloorbot-coordinator" service
+
+3. Settings → Environment → Add these:
+
+   CHEAPSKATER_INGEST_URL = https://cheapskater-dashboard.onrender.com/api/ingest/deals
+   CHEAPSKATER_INGEST_API_KEY = [generate any secure key, e.g., "super-secret-key-xyz"]
+
+4. Save (service auto-redeploys)
+
+5. Click "cheapskater-dashboard" service
+
+6. Settings → Environment → Add/update:
+
+   CHEAPSKATER_INGEST_API_KEY = [SAME KEY FROM STEP 3]
+
+7. Save (service auto-redeploys)
+
+8. Wait 2-3 minutes for redeployment
+
+9. Your scraper data will now flow: Local → Coordinator → CheapSkater ✅
+
+================================================================================
+VERIFICATION
+================================================================================
+
+After ~5 minutes, check the Render logs for:
+
+Coordinator logs should show:
+  "Forwarded X deals to Cheapskater: accepted=X"
+
+CheapSkater logs should show:
+  "Processed X deals from gloorbot"
+
+If you see these, the integration is working! ✅
+
+================================================================================
+FILES GENERATED FOR YOU
+================================================================================
+
+DATA_FLOW_REPORT.md
+  - Detailed technical explanation of the system architecture
+  - Full code references and line numbers
+  - Comprehensive troubleshooting guide
+
+QUICK_FIXES.md
+  - Step-by-step instructions with exact steps
+  - Expected timeline
+  - Common troubleshooting scenarios
+
+This file
+  - Quick summary of the problem and solution
+
+================================================================================
+WHAT'S CURRENTLY WORKING
+================================================================================
+
+✅ Local scraper → Coordinator connection
+✅ Coordinator stores deals in its database
+✅ Coordinator is healthy and responsive
+✅ Both services are running on Render
+✅ CheapSkater ingest endpoint exists (just not configured)
+
+================================================================================
+WHAT'S BROKEN
+================================================================================
+
+❌ Coordinator doesn't know where CheapSkater is (missing URL)
+❌ Coordinator doesn't have authentication key for CheapSkater
+❌ No error messages when forwarding fails (silent failure)
+❌ Deals accumulate in Coordinator but never move to CheapSkater
+
+================================================================================
+NEXT ACTION ITEM
+================================================================================
+
+→ READ: QUICK_FIXES.md for step-by-step instructions
+
+→ DO: Set the two environment variables on Render (takes 5 minutes)
+
+→ VERIFY: Check logs and run debug again after 5 minutes
+
+→ MONITOR: Your scraped deals should appear on the CheapSkater dashboard
+
+================================================================================
