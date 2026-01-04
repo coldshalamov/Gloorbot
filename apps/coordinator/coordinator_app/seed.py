@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+import os
 import re
 from pathlib import Path
 
-from sqlalchemy import select, inspect, text
+from sqlalchemy import select, inspect, text, delete
 
 from .db import Base, engine, db_session
 from .models import Task
@@ -94,5 +95,16 @@ def seed_tasks_from_parallel_urls(repo_root: Path) -> int:
                     )
                 )
                 inserted += 1
+        # Optional safety: if the seed list changes (e.g. we remove confirmed 404 categories),
+        # purge tasks that can never succeed so workers stop getting handed dead URLs.
+        prune_flag = os.getenv("PRUNE_TASKS_NOT_IN_SEED", "true").strip().lower() not in {"0", "false", "no", "off"}
+        if prune_flag and categories:
+            keep = set(categories)
+            pruned = db.execute(
+                delete(Task).where(Task.state.in_(("WA", "OR"))).where(~Task.category_url.in_(keep))
+            ).rowcount
+            if pruned:
+                # Prints are OK here; Render captures stdout and this is a rare, high-signal event.
+                print(f"[seed] pruned_tasks_not_in_seed={pruned}")
         db.commit()
     return inserted
