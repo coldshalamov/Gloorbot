@@ -76,3 +76,48 @@ class Deal(Base):
     seen_count: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
     last_client_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
+
+class DealSource(Base):
+    __tablename__ = "deal_sources"
+    __table_args__ = (
+        UniqueConstraint("store_id", "product_url", "category_url", name="uq_deal_source"),
+        Index("idx_deal_source_product", "store_id", "product_url"),
+        Index("idx_deal_source_last_seen", "last_seen_at"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    store_id: Mapped[str] = mapped_column(String(16), nullable=False)
+    product_url: Mapped[str] = mapped_column(String(2048), nullable=False)
+    category_url: Mapped[str] = mapped_column(String(2048), nullable=False)
+
+    first_seen_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    last_seen_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    seen_count: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+
+    last_client_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    last_batch_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    last_task_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+
+class IngestEvent(Base):
+    __tablename__ = "ingest_events"
+    __table_args__ = (
+        Index("idx_ingest_events_created", "created_at"),
+        Index("idx_ingest_events_batch", "batch_id"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+
+    batch_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    client_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    task_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+    received_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    unique_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    below_threshold: Mapped[int] = mapped_column(Integer, nullable=False)
+    upserted: Mapped[int] = mapped_column(Integer, nullable=False)
+
+    forwarded_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    forward_status_code: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    forward_error: Mapped[str | None] = mapped_column(String(512), nullable=True)

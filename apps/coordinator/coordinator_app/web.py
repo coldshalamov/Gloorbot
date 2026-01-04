@@ -15,10 +15,12 @@ from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse, PlainTextResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from sqlalchemy import select, func, and_, or_, update
+from sqlalchemy import select, func, and_, or_, update, delete
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 
 from .db import db_session
-from .models import Client, Task, Deal
+from .models import Client, Task, Deal, DealSource, IngestEvent
 from .schemas import (
     RegisterRequest,
     RegisterResponse,
@@ -40,10 +42,15 @@ MAX_DEALS_PER_BATCH = int(os.getenv("MAX_DEALS_PER_BATCH", "500"))
 CHEAPSKATER_INGEST_URL = os.getenv("CHEAPSKATER_INGEST_URL", "")
 CHEAPSKATER_INGEST_API_KEY = os.getenv("CHEAPSKATER_INGEST_API_KEY", "")
 
+DEBUG_API_TOKEN = os.getenv("DEBUG_API_TOKEN", "")
+DEBUG_RETENTION_DAYS = int(os.getenv("DEBUG_RETENTION_DAYS", "3"))
+
 logger = logging.getLogger(__name__)
 
 # HTTP client for forwarding to Cheapskater (reused for connection pooling)
 _http_client: httpx.Client | None = None
+
+_last_debug_cleanup_at: datetime | None = None
 
 
 def _get_http_client() -> httpx.Client:
@@ -53,33 +60,96 @@ def _get_http_client() -> httpx.Client:
     return _http_client
 
 
-def _forward_deals_to_cheapskater(deals: list[dict]) -> None:
+def _forward_deals_to_cheapskater(
+    deals: list[dict],
+    *,
+    batch_id: str | None = None,
+    client_id: str | None = None,
+) -> dict:
     """Forward deals to Cheapskater website (best-effort, non-blocking)."""
     if not CHEAPSKATER_INGEST_URL or not deals:
         if not CHEAPSKATER_INGEST_URL:
             logger.warning("CHEAPSKATER_INGEST_URL not configured - deals will not be forwarded")
-        return
+        return {"attempted": False, "status_code": None, "accepted": 0, "error": "not_configured"}
 
-    logger.info(f"Attempting to forward {len(deals)} deals to Cheapskater...")
+    logger.info(
+        "[FORWARD] batch_id=%s client_id=%s attempting count=%s url_configured=%s",
+        batch_id,
+        client_id,
+        len(deals),
+        bool(CHEAPSKATER_INGEST_URL),
+    )
     try:
         client = _get_http_client()
         headers = {}
         if CHEAPSKATER_INGEST_API_KEY:
             headers["X-API-Key"] = CHEAPSKATER_INGEST_API_KEY
+        if batch_id:
+            headers["X-Gloorbot-Batch-Id"] = batch_id
+        if client_id:
+            headers["X-Gloorbot-Client-Id"] = client_id
 
         payload = {
             "source": "gloorbot",
+            "batch_id": batch_id,
+            "client_id": client_id,
             "deals": deals,
         }
 
         resp = client.post(CHEAPSKATER_INGEST_URL, json=payload, headers=headers)
         if resp.status_code == 200:
             data = resp.json()
-            logger.info(f"Forwarded {len(deals)} deals to Cheapskater: accepted={data.get('accepted', 0)}")
+            logger.info(
+                "[FORWARD] batch_id=%s client_id=%s ok accepted=%s",
+                batch_id,
+                client_id,
+                data.get("accepted", 0),
+            )
+            return {
+                "attempted": True,
+                "status_code": resp.status_code,
+                "accepted": int(data.get("accepted", 0) or 0),
+                "error": None,
+            }
         else:
-            logger.warning(f"Cheapskater ingest failed: {resp.status_code} {resp.text[:200]}")
+            logger.warning(
+                "[FORWARD] batch_id=%s client_id=%s failed status=%s body=%s",
+                batch_id,
+                client_id,
+                resp.status_code,
+                resp.text[:200],
+            )
+            return {
+                "attempted": True,
+                "status_code": resp.status_code,
+                "accepted": 0,
+                "error": f"{resp.status_code}: {resp.text[:200]}",
+            }
     except Exception as e:
-        logger.warning(f"Failed to forward deals to Cheapskater: {e}")
+        logger.warning("[FORWARD] batch_id=%s client_id=%s exception=%s", batch_id, client_id, e)
+        return {"attempted": True, "status_code": None, "accepted": 0, "error": str(e)[:200]}
+
+
+def _require_debug_token(request: Request) -> None:
+    if not DEBUG_API_TOKEN:
+        raise HTTPException(status_code=404, detail="debug endpoints disabled")
+    provided = request.headers.get("x-debug-token") or ""
+    if provided != DEBUG_API_TOKEN:
+        raise HTTPException(status_code=401, detail="invalid debug token")
+
+
+def _maybe_cleanup_debug_tables(*, force: bool = False) -> None:
+    global _last_debug_cleanup_at
+    now = datetime.utcnow()
+    if not force and _last_debug_cleanup_at and (now - _last_debug_cleanup_at) < timedelta(hours=1):
+        return
+
+    cutoff = now - timedelta(days=DEBUG_RETENTION_DAYS)
+    with db_session() as db:
+        db.execute(delete(IngestEvent).where(IngestEvent.created_at < cutoff))
+        db.execute(delete(DealSource).where(DealSource.last_seen_at < cutoff))
+        db.commit()
+    _last_debug_cleanup_at = now
 
 
 base_dir = Path(__file__).resolve().parents[1]  # apps/coordinator
@@ -148,6 +218,7 @@ def create_app() -> FastAPI:
     async def _startup() -> None:
         bus.set_loop(asyncio.get_running_loop())
         create_tables()
+        _maybe_cleanup_debug_tables(force=True)
         try:
             inserted = seed_tasks_from_parallel_urls(repo_root)
         except FileNotFoundError:
@@ -210,6 +281,10 @@ def create_app() -> FastAPI:
                 .limit(50)
             ).scalars().all()
 
+            latest_ingest = db.execute(
+                select(IngestEvent).order_by(IngestEvent.created_at.desc()).limit(1)
+            ).scalars().first()
+
         return {
             "utc": now.isoformat(),
             "tasks": {
@@ -220,6 +295,25 @@ def create_app() -> FastAPI:
                 "median_duration_sec": median_duration,
             },
             "clients": {"active": active_clients},
+            "integration": {
+                "cheapskater_ingest_url_configured": bool(CHEAPSKATER_INGEST_URL),
+                "cheapskater_ingest_api_key_configured": bool(CHEAPSKATER_INGEST_API_KEY),
+                "debug_api_enabled": bool(DEBUG_API_TOKEN),
+                "latest_ingest": (
+                    {
+                        "created_at": latest_ingest.created_at.isoformat(),
+                        "batch_id": latest_ingest.batch_id,
+                        "client_id": latest_ingest.client_id,
+                        "task_id": latest_ingest.task_id,
+                        "upserted": latest_ingest.upserted,
+                        "forwarded_count": latest_ingest.forwarded_count,
+                        "forward_status_code": latest_ingest.forward_status_code,
+                        "forward_error": latest_ingest.forward_error,
+                    }
+                    if latest_ingest
+                    else None
+                ),
+            },
             "recent_deals": [
                 {
                     "store_id": d.store_id,
@@ -232,6 +326,64 @@ def create_app() -> FastAPI:
                     "last_seen_at": d.last_seen_at.isoformat(),
                 }
                 for d in recent_deals
+            ],
+        }
+
+    @app.get("/api/v1/debug/ingest-events")
+    def debug_ingest_events(request: Request, limit: int = 100) -> dict:
+        _require_debug_token(request)
+        limit = max(1, min(int(limit), 500))
+        with db_session() as db:
+            events = db.execute(
+                select(IngestEvent).order_by(IngestEvent.created_at.desc()).limit(limit)
+            ).scalars().all()
+        return {
+            "ok": True,
+            "events": [
+                {
+                    "id": e.id,
+                    "created_at": e.created_at.isoformat(),
+                    "batch_id": e.batch_id,
+                    "client_id": e.client_id,
+                    "task_id": e.task_id,
+                    "received_count": e.received_count,
+                    "unique_count": e.unique_count,
+                    "below_threshold": e.below_threshold,
+                    "upserted": e.upserted,
+                    "forwarded_count": e.forwarded_count,
+                    "forward_status_code": e.forward_status_code,
+                    "forward_error": e.forward_error,
+                }
+                for e in events
+            ],
+        }
+
+    @app.get("/api/v1/debug/deal-sources")
+    def debug_deal_sources(request: Request, store_id: str, product_url: str, limit: int = 200) -> dict:
+        _require_debug_token(request)
+        limit = max(1, min(int(limit), 500))
+        with db_session() as db:
+            sources = db.execute(
+                select(DealSource)
+                .where(DealSource.store_id == store_id, DealSource.product_url == product_url)
+                .order_by(DealSource.seen_count.desc(), DealSource.last_seen_at.desc())
+                .limit(limit)
+            ).scalars().all()
+        return {
+            "ok": True,
+            "store_id": store_id,
+            "product_url": product_url,
+            "sources": [
+                {
+                    "category_url": s.category_url,
+                    "seen_count": s.seen_count,
+                    "first_seen_at": s.first_seen_at.isoformat(),
+                    "last_seen_at": s.last_seen_at.isoformat(),
+                    "last_client_id": s.last_client_id,
+                    "last_batch_id": s.last_batch_id,
+                    "last_task_id": s.last_task_id,
+                }
+                for s in sources
             ],
         }
 
@@ -371,66 +523,151 @@ def create_app() -> FastAPI:
         if len(req.deals) > MAX_DEALS_PER_BATCH:
             raise HTTPException(status_code=413, detail="Too many deals in one request")
         now = datetime.utcnow()
+        batch_id = getattr(req, "batch_id", None) or secrets.token_urlsafe(12)
+        received_count = len(req.deals)
         upserts = 0
+        below_threshold = 0
         accepted_deals: list[dict] = []  # For forwarding to Cheapskater
 
+        # Defensive: de-dupe deals within this request to avoid violating the
+        # UNIQUE(store_id, product_url) constraint when multiple identical deals
+        # arrive in one batch.
+        unique_deals: dict[tuple[str, str], object] = {}
+        for deal in req.deals:
+            key = (deal.store_id, deal.product_url)
+            existing = unique_deals.get(key)
+            # Keep the "best" (highest pct_off) entry if duplicates exist.
+            if existing is None or getattr(deal, "pct_off", 0) > getattr(existing, "pct_off", 0):
+                unique_deals[key] = deal
+        if len(unique_deals) != received_count:
+            logger.info(
+                "[DEALS] batch_id=%s client_id=%s dedupe %s -> %s unique",
+                batch_id,
+                req.client_id,
+                received_count,
+                len(unique_deals),
+            )
+
+        _maybe_cleanup_debug_tables()
+
         with db_session() as db:
-            for d in req.deals:
-                if d.pct_off < DEAL_THRESHOLD:
-                    continue
-                existing = db.execute(
-                    select(Deal).where(and_(Deal.store_id == d.store_id, Deal.product_url == d.product_url))
-                ).scalars().first()
-                if existing:
-                    existing.title = d.title
-                    existing.store_name = d.store_name
-                    existing.category_url = d.category_url
-                    existing.price = d.price
-                    existing.was_price = d.was_price
-                    existing.pct_off = d.pct_off
-                    existing.last_seen_at = now
-                    existing.seen_count += 1
-                    existing.last_client_id = req.client_id
-                else:
-                    db.add(
-                        Deal(
-                            store_id=d.store_id,
-                            store_name=d.store_name,
-                            category_url=d.category_url,
-                            product_url=d.product_url,
-                            title=d.title,
-                            price=d.price,
-                            was_price=d.was_price,
-                            pct_off=d.pct_off,
-                            first_seen_at=now,
-                            last_seen_at=now,
-                            seen_count=1,
-                            last_client_id=req.client_id,
-                        )
+            try:
+                for d in unique_deals.values():
+                    if d.pct_off < DEAL_THRESHOLD:
+                        below_threshold += 1
+                        continue
+
+                    base = sqlite_insert(Deal).values(
+                        store_id=d.store_id,
+                        store_name=d.store_name,
+                        category_url=d.category_url,
+                        product_url=d.product_url,
+                        title=d.title,
+                        price=d.price,
+                        was_price=d.was_price,
+                        pct_off=d.pct_off,
+                        first_seen_at=now,
+                        last_seen_at=now,
+                        seen_count=1,
+                        last_client_id=req.client_id,
                     )
-                upserts += 1
-                # Collect deal for Cheapskater forwarding
-                accepted_deals.append({
-                    "store_id": d.store_id,
-                    "store_name": d.store_name,
-                    "category_url": d.category_url,
-                    "product_url": d.product_url,
-                    "title": d.title,
-                    "price": d.price,
-                    "was_price": d.was_price,
-                    "pct_off": d.pct_off,
-                    "found_at": now.isoformat() + "Z",
-                })
-            db.commit()
+                    stmt = base.on_conflict_do_update(
+                        index_elements=[Deal.store_id, Deal.product_url],
+                        set_={
+                            Deal.store_name.key: base.excluded.store_name,
+                            Deal.category_url.key: base.excluded.category_url,
+                            Deal.title.key: base.excluded.title,
+                            Deal.price.key: base.excluded.price,
+                            Deal.was_price.key: base.excluded.was_price,
+                            Deal.pct_off.key: base.excluded.pct_off,
+                            Deal.last_seen_at.key: now,
+                            Deal.seen_count.key: Deal.seen_count + 1,
+                            Deal.last_client_id.key: req.client_id,
+                        },
+                    )
+                    db.execute(stmt)
+                    upserts += 1
+
+                    category_url = d.category_url or "(missing)"
+                    src_base = sqlite_insert(DealSource).values(
+                        store_id=d.store_id,
+                        product_url=d.product_url,
+                        category_url=category_url,
+                        first_seen_at=now,
+                        last_seen_at=now,
+                        seen_count=1,
+                        last_client_id=req.client_id,
+                        last_batch_id=batch_id,
+                        last_task_id=getattr(req, "task_id", None),
+                    )
+                    src_stmt = src_base.on_conflict_do_update(
+                        index_elements=[DealSource.store_id, DealSource.product_url, DealSource.category_url],
+                        set_={
+                            DealSource.last_seen_at.key: now,
+                            DealSource.seen_count.key: DealSource.seen_count + 1,
+                            DealSource.last_client_id.key: req.client_id,
+                            DealSource.last_batch_id.key: batch_id,
+                            DealSource.last_task_id.key: getattr(req, "task_id", None),
+                        },
+                    )
+                    db.execute(src_stmt)
+
+                    # Collect deal for Cheapskater forwarding
+                    accepted_deals.append(
+                        {
+                            "store_id": d.store_id,
+                            "store_name": d.store_name,
+                            "category_url": d.category_url,
+                            "product_url": d.product_url,
+                            "title": d.title,
+                            "price": d.price,
+                            "was_price": d.was_price,
+                            "pct_off": d.pct_off,
+                            "found_at": now.isoformat() + "Z",
+                        }
+                    )
+                db.commit()
+            except IntegrityError as exc:
+                db.rollback()
+                logger.exception("[DEALS] batch_id=%s client_id=%s integrity_error=%s", batch_id, req.client_id, exc)
+                raise HTTPException(status_code=500, detail="database integrity error") from exc
+
+        logger.info(
+            "[DEALS] batch_id=%s client_id=%s received=%s unique=%s below_threshold=%s upserted=%s",
+            batch_id,
+            req.client_id,
+            received_count,
+            len(unique_deals),
+            below_threshold,
+            upserts,
+        )
 
         if upserts:
             bus.publish(f"event:deals\ndata:{{\"type\":\"deals\",\"count\":{upserts}}}\n\n")
 
         # Forward to Cheapskater (best-effort, non-blocking on failure)
+        forward_result = {"attempted": False, "status_code": None, "accepted": 0, "error": None}
         if accepted_deals:
-            _forward_deals_to_cheapskater(accepted_deals)
+            forward_result = _forward_deals_to_cheapskater(accepted_deals, batch_id=batch_id, client_id=req.client_id)
 
-        return {"ok": True, "accepted": upserts}
+        with db_session() as db:
+            db.add(
+                IngestEvent(
+                    batch_id=batch_id,
+                    client_id=req.client_id,
+                    task_id=getattr(req, "task_id", None),
+                    received_count=received_count,
+                    unique_count=len(unique_deals),
+                    below_threshold=below_threshold,
+                    upserted=upserts,
+                    forwarded_count=len(accepted_deals) if forward_result.get("attempted") else 0,
+                    forward_status_code=forward_result.get("status_code"),
+                    forward_error=forward_result.get("error"),
+                )
+            )
+            db.commit()
+
+        return {"ok": True, "accepted": upserts, "batch_id": batch_id}
 
     async def _sse_stream() -> AsyncIterator[bytes]:
         yield b":ok\n\n"

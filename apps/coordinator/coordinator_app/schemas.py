@@ -60,5 +60,6 @@ class DealItem(BaseModel):
 
 class DealsBulkRequest(BaseModel):
     client_id: str
+    batch_id: str | None = None
+    task_id: int | None = None
     deals: list[DealItem]
-

@@ -1,0 +1,17 @@
+# Gloorbot Agent Coordination Rules
+
+You are part of a multi-agent fleet working on the Gloorbot project. To prevent conflicts and maintain shared memory, you MUST follow these rules:
+
+## 1. Interaction with Agent-MCP
+- **Before starting any task**: Use `agent-mcp_retrieve_memory` to check for recent status updates or coordination notes from other agents.
+- **Before editing a file**: Use `agent-mcp_check_file_lock` to ensure no other agent is currently modifying it.
+- **After completing a task**: ALWAYS use `agent-mcp_store_memory` to summarize what you did, which files you changed, and what the next agent should do.
+
+## 2. Shared Memory Keys
+- Use the project-dir: `c:/Users/User/Documents/GitHub/Telomere/Gloorbot`
+- Key Statuses to track: `scraper-status`, `indexing-progress`, `architecture-decisions`.
+
+## 3. Communication
+If you see that another agent (e.g., Codex or Claude) has left a memory about a feature you are working on, you MUST acknowledge it and align your work with their path.
+
+FAILURE TO COORDINATE VIA AGENT-MCP WILL CAUSE PROJECT FRAGMENTATION.

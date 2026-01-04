@@ -1,11 +1,29 @@
 # Gloorbot <-> CheapSkater Integration Status
 
-**Date**: December 28, 2025
-**Status**: ✅ READY (with action items)
+**Date**: January 4, 2026
+**Status**: 🟡 IN PROGRESS (root causes identified; deploy + config needed)
 
 ---
 
-## ✅ COMPLETED
+## ✅ Key Findings (Jan 4, 2026)
+
+### Root Cause #1 (Coordinator 500s block forwarding)
+- Coordinator `POST /api/v1/deals/bulk` was returning **500** due to `UNIQUE(store_id, product_url)` conflicts.
+- When that endpoint 500s, **forwarding to CheapSkater never happens** reliably.
+
+### Root Cause #2 (CheapSkater ingest wrote to the wrong DB)
+- CheapSkater dashboard reads from `CHEAPSKATER_DB_PATH` (or repo default).
+- CheapSkater ingest was hard-coded to write to `orwa_lowes.sqlite` in the repo root.
+- Result: ingest can return **200 OK** but the dashboard won’t show new deals (different DB files).
+
+### Persistence
+- CheapSkater must use a **persistent disk** (or a proper DB) if you want data to survive restarts/redeploys.
+
+See: `docs/OBSERVABILITY_RUNBOOK.md`
+
+---
+
+## ✅ COMPLETED (Historical)
 
 ### 1. Database Cleanup
 - **CheapSkater database cleared**: Removed 30,888 observations, 22,802 price history records
@@ -35,7 +53,7 @@
 
 **Diagnosis**:
 - Health check: Returns 503 (Service Unavailable)
-- /api/ingest: Returns 500 (Internal Server Error)
+- /api/ingest/deals: Can return 401/500 depending on auth/DB issues
 - Likely cause: Service not deployed or startup error
 
 **Required Actions**:
@@ -82,7 +100,7 @@ Worker .exe → Scrapes Lowe's
     ↓
 Gloorbot Coordinator → Stores locally + forwards
     ↓
-CheapSkater /api/ingest → Ingests to orwa_lowes.sqlite
+CheapSkater /api/ingest/deals → Ingests into CheapSkater DB
     ↓
 CheapSkater Dashboard → Displays deals
 ```
@@ -102,7 +120,7 @@ CheapSkater Dashboard → Displays deals
 3. Should see all 5 tests passing
 
 ### Testing (Once CheapSkater is Live)
-1. **Manual test**: Send test deal to `/api/ingest`
+1. **Manual test**: Send test deal to `/api/ingest/deals`
    ```bash
    python test_integration.py
    ```
@@ -119,8 +137,8 @@ CheapSkater Dashboard → Displays deals
    - Verify timestamps match recent scraping
 
 ### Monitoring
-- **Coordinator logs**: Check for "Forwarded N deals to Cheapskater" messages
-- **CheapSkater logs**: Check for "Ingested N deals from gloorbot" messages
+- **Coordinator logs**: search for `[DEALS]` and `[FORWARD]` (includes `batch_id`)
+- **CheapSkater logs**: search for `[INGEST]` (includes `batch_id`)
 - **Database query**:
   ```sql
   SELECT COUNT(*) FROM observations WHERE ts_utc > datetime('now', '-1 hour');
@@ -134,23 +152,27 @@ CheapSkater Dashboard → Displays deals
 
 1. **Check coordinator env var**:
    ```
-   CHEAPSKATER_INGEST_URL = https://cheapskater.onrender.com/api/ingest
+   CHEAPSKATER_INGEST_URL = https://cheapskater.onrender.com/api/ingest/deals
    ```
 
 2. **Check coordinator logs** for forwarding errors:
    ```
-   "Cheapskater ingest failed: 500"
-   "Failed to forward deals to Cheapskater: <error>"
+   "[FORWARD] ... failed status=..."
+   "[FORWARD] ... exception=..."
    ```
 
-3. **Test CheapSkater directly**:
+3. **Check service health/config (no secrets)**:
+   - Coordinator: `GET /api/v1/status` → `integration.*`
+   - CheapSkater: `GET /api/ingest/health` → `db_path`, `db_exists`
+
+4. **Test CheapSkater directly**:
    ```bash
-   curl -X POST https://cheapskater.onrender.com/api/ingest \
+   curl -X POST https://cheapskater.onrender.com/api/ingest/deals \
      -H "Content-Type: application/json" \
      -d '{"source":"test","deals":[...]}'
    ```
 
-4. **Check database permissions** on Render persistent disk
+5. **If still unclear**: use `docs/OBSERVABILITY_RUNBOOK.md` (batch_id tracing + debug endpoints)
 
 ---
 

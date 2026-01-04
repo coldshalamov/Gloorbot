@@ -389,9 +389,10 @@ async def _run_slot(client_id: str, slot_id: int) -> None:
 
                 # Bulk submit in one call (deals are already filtered).
                 submit_attempts = 0
+                batch_id = ""
                 while True:
                     try:
-                        deals_sent = api.submit_deals(client_id, deals)
+                        deals_sent, batch_id = api.submit_deals(client_id, deals, task_id=lease.task_id)
                         break
                     except Exception:
                         submit_attempts += 1
@@ -409,6 +410,7 @@ async def _run_slot(client_id: str, slot_id: int) -> None:
                             "last_done_at": datetime.utcnow().isoformat(),
                             "products_seen": products_seen,
                             "deals_sent": deals_sent,
+                            "last_batch_id": batch_id,
                         },
                         indent=2,
                     ),

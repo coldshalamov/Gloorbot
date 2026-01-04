@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import socket
+import uuid
 from dataclasses import dataclass
 
 import requests
@@ -91,16 +92,18 @@ def lease_fail(client_id: str, task_id: int, duration_sec: float | None) -> None
         pass
 
 
-def submit_deals(client_id: str, deals: list[dict]) -> int:
+def submit_deals(client_id: str, deals: list[dict], *, task_id: int | None = None) -> tuple[int, str]:
     if not deals:
-        return 0
+        return 0, ""
+    batch_id = uuid.uuid4().hex[:16]
     res = requests.post(
         f"{coordinator_url()}/api/v1/deals/bulk",
-        json={"client_id": client_id, "deals": deals},
+        json={"client_id": client_id, "batch_id": batch_id, "task_id": task_id, "deals": deals},
         timeout=30,
     )
     res.raise_for_status()
-    return int(res.json().get("accepted", 0))
+    data = res.json()
+    return int(data.get("accepted", 0)), str(data.get("batch_id") or batch_id)
 
 
 def fetch_status() -> dict | None:
@@ -111,4 +114,3 @@ def fetch_status() -> dict | None:
         return res.json()
     except Exception:
         return None
-
