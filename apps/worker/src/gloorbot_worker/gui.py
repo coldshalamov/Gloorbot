@@ -49,7 +49,12 @@ class App:
         self._poll()
 
     def _check_chrome(self) -> None:
-        """Check if Google Chrome is installed. Disable Join if not."""
+        """Check if Google Chrome is installed.
+
+        The worker can still run using the bundled Playwright Chromium when the
+        installer ships it, so missing system Chrome should not block starting
+        on a fresh machine.
+        """
         import shutil
         import os
         
@@ -70,9 +75,15 @@ class App:
         if chrome_found:
             self.status.set("Ready. Click Join.")
         else:
-            self.status.set("⚠️ Chrome NOT FOUND! Please install Google Chrome to use this app.")
-            self.join_btn.configure(state="disabled")
-            self.stats.set("Download Chrome: https://www.google.com/chrome/")
+            # Run with bundled browsers (installer includes Playwright Chromium).
+            os.environ["GLOORBOT_FORCE_BUNDLED"] = "1"
+            os.environ["GLOORBOT_PREFER_CHROME"] = "0"
+            self.status.set("Chrome not found. Will use bundled browser. Click Join.")
+            self.stats.set(
+                "Tip: Installing Chrome can improve reliability vs. bot blocks,\n"
+                "but it is not required to run.\n"
+                "Download Chrome: https://www.google.com/chrome/"
+            )
 
 
     def join(self) -> None:
