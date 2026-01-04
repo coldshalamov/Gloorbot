@@ -52,6 +52,7 @@ class DealItem(BaseModel):
     category_url: str | None = None
     product_url: str
     title: str
+    image_url: str | None = None
     price: float
     was_price: float
     pct_off: float = Field(ge=0.0, le=1.0)

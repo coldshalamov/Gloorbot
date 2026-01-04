@@ -66,6 +66,7 @@ class Deal(Base):
 
     product_url: Mapped[str] = mapped_column(String(2048), nullable=False)
     title: Mapped[str] = mapped_column(String(2048), nullable=False)
+    image_url: Mapped[str | None] = mapped_column(String(2048), nullable=True)
 
     price: Mapped[float] = mapped_column(Float, nullable=False)
     was_price: Mapped[float] = mapped_column(Float, nullable=False)

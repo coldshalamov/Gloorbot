@@ -22,6 +22,7 @@ else:
 TARGET_LOW = 70.0
 TARGET_HIGH = 90.0
 CHECK_INTERVAL_SECONDS = 90
+MAX_SLOTS_DEFAULT = int(os.getenv("MAX_SLOTS", "5"))
 
 
 @dataclass
@@ -172,7 +173,8 @@ class Supervisor:
             return {"running": True, "connected": False, "slots": 0, "cpu": cpu, "mem": mem}
 
         # Scale decisions
-        max_slots = self._max_slots_override or 999  # 999 = no limit (CPU/mem based)
+        max_slots_cfg = max(1, MAX_SLOTS_DEFAULT)
+        max_slots = self._max_slots_override if self._max_slots_override is not None else max_slots_cfg
         if len(self.slots) == 0:
             self._spawn_slot()
         elif len(self.slots) < max_slots and cpu < TARGET_LOW and mem < TARGET_LOW:

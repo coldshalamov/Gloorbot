@@ -630,6 +630,30 @@ async def scrape_category_page(page: Page, url: str, store_info: dict, page_num:
                     except Exception:
                         pass
 
+                image_url = None
+                try:
+                    img = card.locator(":scope img").first
+                    if await img.count() > 0:
+                        src = (
+                            await img.get_attribute("src")
+                            or await img.get_attribute("data-src")
+                            or await img.get_attribute("data-lazy-src")
+                            or ""
+                        )
+                        if not src:
+                            srcset = (
+                                await img.get_attribute("srcset")
+                                or await img.get_attribute("data-srcset")
+                                or ""
+                            )
+                            first = srcset.split(",")[0].strip()
+                            src = first.split(" ")[0].strip() if first else ""
+                        if src.startswith("//"):
+                            src = "https:" + src
+                        image_url = src or None
+                except Exception:
+                    image_url = None
+
                 if title_text and href and len(title_text) > 5:
                     # Filter out bad titles
                     bad_titles = ["pickup today", "free pickup", "delivery", "add to cart", "view details", "unavailable", "out of stock"]
@@ -646,6 +670,7 @@ async def scrape_category_page(page: Page, url: str, store_info: dict, page_num:
                         "title": title_text.strip(),
                         "price": price_text.strip() if price_text else "N/A",
                         "was_price": was_price.strip() if was_price else "",
+                        "image_url": image_url,
                         "has_markdown": bool(was_price),
                         "url": f"https://www.lowes.com{href}" if href.startswith("/") else href,
                         "category_url": url,

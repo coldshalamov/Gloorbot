@@ -181,12 +181,22 @@ def _deal_from_product(p: dict, category_url: str) -> dict | None:
     pct_off = (was_price - price_now) / was_price
     if pct_off < DEAL_THRESHOLD:
         return None
+    image_url = p.get("image_url")
+    if isinstance(image_url, str):
+        image_url = image_url.strip() or None
+        if image_url and not (image_url.startswith("http://") or image_url.startswith("https://")):
+            image_url = None
+        if image_url:
+            image_url = image_url[:2048]
+    else:
+        image_url = None
     return {
         "store_id": p.get("store_id"),
         "store_name": p.get("store_name"),
         "category_url": category_url,
         "product_url": p.get("url"),
         "title": p.get("title", "")[:2048],
+        "image_url": image_url,
         "price": float(price_now),
         "was_price": float(was_price),
         "pct_off": float(round(pct_off, 4)),

@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from sqlalchemy import select
+from sqlalchemy import select, inspect, text
 
 from .db import Base, engine, db_session
 from .models import Task
@@ -14,6 +14,22 @@ _STORE_RE = re.compile(r"/store/([A-Z]{2})-([^/]+)/(\d+)")
 
 def create_tables() -> None:
     Base.metadata.create_all(bind=engine)
+
+    # Lightweight SQLite migrations (Render often reuses an existing persistent DB).
+    # We avoid a full migration framework here and only do additive schema updates.
+    try:
+        if not str(engine.url).startswith("sqlite"):
+            return
+        inspector = inspect(engine)
+        if not inspector.has_table("deals"):
+            return
+        deal_cols = {c.get("name") for c in inspector.get_columns("deals")}
+        if "image_url" not in deal_cols:
+            with engine.begin() as conn:
+                conn.execute(text("ALTER TABLE deals ADD COLUMN image_url VARCHAR(2048)"))
+    except Exception:
+        # Never crash startup due to a best-effort migration.
+        return
 
 
 def _load_urls_file(path: Path) -> tuple[list[dict], list[str]]:
