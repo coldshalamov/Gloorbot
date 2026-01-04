@@ -1,6 +1,9 @@
 # Lowe's Store and Department Map for WA/OR Crawler
+
 This file contains the canonical list of Lowe's stores in Washington and Oregon, plus all department/category URLs discovered from the Lowe's website.
+
 ## WASHINGTON STORES
+
 https://www.lowes.com/store/WA-Arlington/0061
 https://www.lowes.com/store/WA-Auburn/1089
 https://www.lowes.com/store/WA-Bellingham/1631
@@ -36,7 +39,9 @@ https://www.lowes.com/store/WA-Vancouver/1632
 https://www.lowes.com/store/WA-Vancouver/2954
 https://www.lowes.com/store/WA-Wenatchee/0152
 https://www.lowes.com/store/WA-Yakima/3240
+
 ## OREGON STORES
+
 https://www.lowes.com/store/OR-Albany/3057
 https://www.lowes.com/store/OR-Bend/1690
 https://www.lowes.com/store/OR-Eugene/2940
@@ -51,7 +56,9 @@ https://www.lowes.com/store/OR-Roseburg/1741
 https://www.lowes.com/store/OR-Salem/1600
 https://www.lowes.com/store/OR-Tigard/1108
 https://www.lowes.com/store/OR-WoodVillage/1114
+
 ## CATEGORIES
+
 https://www.lowes.com/pl/Accessible-bathroom-Accessible-home/37721669146437
 https://www.lowes.com/pl/Accessible-bedroom-Accessible-home/4294644781
 https://www.lowes.com/pl/Accessible-entry-home-Accessible-home/37721669146444
@@ -97,7 +104,9 @@ https://www.lowes.com/pl/Clothing-Clothing-work-apparel/15211541027983
 https://www.lowes.com/pl/Coffee-Drinks-snacks/4294606035
 https://www.lowes.com/pl/Columns-accessories-Building-supplies/4294425046
 https://www.lowes.com/pl/Commercial-bathroom-components-Bathroom/4294737179
+https://www.lowes.com/pl/Commercial-lighting-Lighting-ceiling-fans/
 https://www.lowes.com/pl/Coolers-water-bottles-Sports-fitness/4294610589
+https://www.lowes.com/pl/Craft-paint-supplies-Paint/
 https://www.lowes.com/pl/Crafting-machines-accessories-Appliances/37721669146480
 https://www.lowes.com/pl/Daily-assistance-Accessible-home/4294644797
 https://www.lowes.com/pl/Door-trim-paint-Paint/861738257
@@ -130,6 +139,7 @@ https://www.lowes.com/pl/Generators-Electrical/4294641574
 https://www.lowes.com/pl/Gift-center-Drinks-snacks/4294625950
 https://www.lowes.com/pl/Glass-acrylic-Building-supplies/4294713161
 https://www.lowes.com/pl/Glass-window-cleaners-Cleaning-supplies/1920333672
+https://www.lowes.com/pl/Glues-Glues-tapes/
 https://www.lowes.com/pl/Golf-Outdoor-recreation/3515281005
 https://www.lowes.com/pl/Greenhouses-accessories-Lawn-garden/4294512248
 https://www.lowes.com/pl/Gym-flooring-Flooring/4294515431
@@ -249,6 +259,7 @@ https://www.lowes.com/pl/Sports-drinks-Drinks-snacks/4294633168
 https://www.lowes.com/pl/Sports-equipment-Sports-fitness/2108258635
 https://www.lowes.com/pl/Succulents-Plants-bulbs-seeds-Plants-planters-Lawn-garden/4294392552
 https://www.lowes.com/pl/Table-covers-Dining-entertaining/4294606036
+https://www.lowes.com/pl/Tapes-Glues-tapes/
 https://www.lowes.com/pl/Terrariums-habitats-Animal-pet-care/2311219941942
 https://www.lowes.com/pl/Test-kits-Safety/3385023924
 https://www.lowes.com/pl/Traffic-safety-equipment-Safety/4294644940

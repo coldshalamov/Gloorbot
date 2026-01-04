@@ -1,17 +1,16 @@
-# Gloorbot Agent Coordination Rules
+# CLAUDE CODE COORDINATION RULES (v1.3)
 
-You are part of a multi-agent fleet working on the Gloorbot project. To prevent conflicts and maintain shared memory, you MUST follow these rules:
+You are part of a multi-agent fleet (including Codex and Antigravity Agent). You MUST follow the **Universal AI Agent Coordination Protocol** at `C:/Users/User/AGENT_PROTOCOL.md`.
 
-## 1. Interaction with Agent-MCP
-- **Before starting any task**: Use `agent-mcp_retrieve_memory` to check for recent status updates or coordination notes from other agents.
-- **Before editing a file**: Use `agent-mcp_check_file_lock` to ensure no other agent is currently modifying it.
-- **After completing a task**: ALWAYS use `agent-mcp_store_memory` to summarize what you did, which files you changed, and what the next agent should do.
+## 1. Interaction with Fleet Dashboard (Mandatory)
+- **Check-In**: At the start of every session, READ `agents.md` in the repo root. Update the status table (YOUR NAME: Claude Code, STATUS: Active).
+- **Milestones**: Log only HIGH-LEVEL accomplishments in `agents.md`. Avoid granular "fixed typo" logs.
+- **Milestone Compaction**: If "Recent Milestones" reaches 20 entries, you MUST summarize the oldest 15 into a single "Archival Block" bullet and delete the redundant lines.
 
-## 2. Shared Memory Keys
-- Use the project-dir: `c:/Users/User/Documents/GitHub/Telomere/Gloorbot`
-- Key Statuses to track: `scraper-status`, `indexing-progress`, `architecture-decisions`.
+## 2. Interaction with Agent-MCP
+- **Brain**: All agents share a single Agent-MCP instance via the proxy.
+- **Locks**: Respect file locks. If a file is locked, work on a different task listed in `agents.md`.
+- **Memory**: Log all granular changes and reasoning to `agent_mcp_store_memory`.
 
-## 3. Communication
-If you see that another agent (e.g., Codex or Claude) has left a memory about a feature you are working on, you MUST acknowledge it and align your work with their path.
-
-FAILURE TO COORDINATE VIA AGENT-MCP WILL CAUSE PROJECT FRAGMENTATION.
+## 3. Philosophy: Slow & Steady
+We prioritize quality and persistence. If you fail a task 3 times, STOP and ask the user for a pivot.

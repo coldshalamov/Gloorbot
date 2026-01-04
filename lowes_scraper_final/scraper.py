@@ -30,15 +30,15 @@ def load_urls(urls_file: Path):
     """Load stores and categories from URL file"""
     stores = []
     categories = []
-    
+
     with open(urls_file) as f:
         for line in f:
             line = line.strip()
             if not line or line.startswith('#'):
                 continue
-                
+
             if '/store/' in line:
-                match = re.search(r'/store/([A-Z]{2})-([^/]+)/(\d+)', line)
+                match = re.search(r'/store/([A-Z]{2})-([^/]+)/(\d+)', line)     
                 if match:
                     state, city, store_id = match.groups()
                     stores.append({
@@ -48,9 +48,9 @@ def load_urls(urls_file: Path):
                         "state": state,
                         "name": f"{city}, {state} (#{store_id})"
                     })
-            elif '/pl/' in line and 'the-back-aisle' not in line.lower():
+            elif '/pl/' in line and 'the-back-aisle' not in line.lower():       
                 categories.append(line)
-                
+
     return stores, categories
 
 

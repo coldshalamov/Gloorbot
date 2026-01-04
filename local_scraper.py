@@ -314,13 +314,26 @@ async def setup_request_interception(page: Page) -> None:
 def parse_price(text: Optional[str]) -> Optional[float]:
     if not text:
         return None
-    match = re.search(r'(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)', str(text))
-    if not match:
+    
+    # Find ALL numeric values in the text
+    matches = re.findall(r'(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)', str(text))
+    if not matches:
         return None
-    try:
-        return float(match.group(1).replace(",", ""))
-    except (ValueError, TypeError):
-        return None
+    
+    # Convert all matches to floats
+    prices = []
+    for match in matches:
+        try:
+            price = float(match.replace(",", ""))
+            # Only consider reasonable prices (>= $1.00)
+            # This filters out cents-only prices, ratings, and small metadata numbers
+            if price >= 1.0:
+                prices.append(price)
+        except (ValueError, TypeError):
+            continue
+    
+    # Return the largest price found (actual product price is usually the largest number)
+    return max(prices) if prices else None
 
 
 def extract_sku(url: Optional[str]) -> Optional[str]:

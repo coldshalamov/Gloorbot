@@ -285,14 +285,23 @@ class Orchestrator:
 
 async def main():
     import argparse
-    
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--state", default="WA,OR", help="Comma-separated states (e.g. WA,OR)")
     parser.add_argument("--workers", type=int, default=5, help="Max parallel workers")
     args = parser.parse_args()
-    
+
     base_dir = Path(__file__).parent
-    orchestrator = Orchestrator(base_dir, args.state, args.workers)
+    # Safety guard: keep a hard cap on visible Chrome windows even if a caller
+    # passes a higher value by mistake. 6+ Chrome windows is easy to trigger by
+    # accident and makes debugging painful.
+    try:
+        workers = int(args.workers)
+    except (TypeError, ValueError):
+        workers = 5
+    workers = max(1, min(workers, 5))
+
+    orchestrator = Orchestrator(base_dir, args.state, workers)
     await orchestrator.run()
 
 
