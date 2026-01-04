@@ -56,8 +56,11 @@ def _get_http_client() -> httpx.Client:
 def _forward_deals_to_cheapskater(deals: list[dict]) -> None:
     """Forward deals to Cheapskater website (best-effort, non-blocking)."""
     if not CHEAPSKATER_INGEST_URL or not deals:
+        if not CHEAPSKATER_INGEST_URL:
+            logger.warning("CHEAPSKATER_INGEST_URL not configured - deals will not be forwarded")
         return
 
+    logger.info(f"Attempting to forward {len(deals)} deals to Cheapskater...")
     try:
         client = _get_http_client()
         headers = {}
