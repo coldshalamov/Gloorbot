@@ -13,6 +13,10 @@ services:
         sync: false
       - key: DEAL_THRESHOLD
         value: "0.50"
+      - key: CHEAPSKATER_INGEST_URL
+        value: https://cheapskater.onrender.com/api/ingest/deals
+      - key: CHEAPSKATER_INGEST_API_KEY
+        value: JZhdARITo9ujVU2OcCaiqkx6ktB7SNh28ouQXz6U2f0=
     disk:
       name: gloorbot-data
       mountPath: /var/data
