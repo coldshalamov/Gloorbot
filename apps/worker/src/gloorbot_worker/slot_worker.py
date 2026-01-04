@@ -17,9 +17,11 @@ from urllib.parse import urlparse, urlunparse
 # Handle PyInstaller frozen executable - need absolute imports
 if getattr(sys, 'frozen', False):
     from gloorbot_worker import api
+    from gloorbot_worker.navlog import default_event_logger, set_default_parallel_navlog_path
     from gloorbot_worker.paths import logs_dir, profiles_dir, status_dir
 else:
     from . import api
+    from .navlog import default_event_logger, set_default_parallel_navlog_path
     from .paths import logs_dir, profiles_dir, status_dir
 
 
@@ -205,6 +207,15 @@ def _deal_from_product(p: dict, category_url: str) -> dict | None:
 
 
 async def _run_slot(client_id: str, slot_id: int) -> None:
+    # Ensure navigation logging for PARALLEL is enabled by default (to file), but
+    # allow overriding via env vars set by the supervisor/installer.
+    try:
+        set_default_parallel_navlog_path(slot_id=slot_id)
+    except Exception:
+        pass
+
+    eventlog = default_event_logger(slot_id=slot_id)
+
     # If the installer ships Playwright Chromium alongside the EXE, use it.
     if "PLAYWRIGHT_BROWSERS_PATH" not in os.environ:
         try:
@@ -222,6 +233,7 @@ async def _run_slot(client_id: str, slot_id: int) -> None:
 
     preferred_store_id: str | None = None
     slot_status_path = status_dir() / f"slot_{slot_id}.json"
+    task_c_failures: dict[int, int] = {}
 
     # CRITICAL: Stagger slot startup to prevent concurrent fresh sessions
     # PARALLEL staggers worker launches by 5 seconds (orchestrator.py:524)
@@ -358,6 +370,15 @@ async def _run_slot(client_id: str, slot_id: int) -> None:
                 continue
 
             start = time.time()
+            eventlog.write(
+                "lease_acquired",
+                slot_id=slot_id,
+                task_id=getattr(lease, "task_id", None),
+                store_id=getattr(lease, "store_id", None),
+                store_name=getattr(lease, "store_name", None),
+                store_url=getattr(lease, "store_url", None),
+                category_url=getattr(lease, "category_url", None),
+            )
             slot_status_path.write_text(
                 json.dumps(
                     {
@@ -385,6 +406,20 @@ async def _run_slot(client_id: str, slot_id: int) -> None:
                     "url": _normalize_lowes_url(lease.store_url),
                 }
                 category_url = _normalize_lowes_url(lease.category_url)
+                # High-level trace: what we're about to scrape (without pagination noise).
+                try:
+                    title = await asyncio.wait_for(page.title(), timeout=5.0)
+                except Exception:
+                    title = None
+                eventlog.write(
+                    "category_start",
+                    slot_id=slot_id,
+                    task_id=getattr(lease, "task_id", None),
+                    store_id=getattr(lease, "store_id", None),
+                    category_url=category_url,
+                    page_url=getattr(page, "url", None),
+                    title=title,
+                )
                 products = await asyncio.wait_for(
                     parallel.scrape_category_all_pages(page, category_url, store_info),
                     timeout=MAX_CATEGORY_SECONDS,
@@ -426,13 +461,81 @@ async def _run_slot(client_id: str, slot_id: int) -> None:
                     ),
                     encoding="utf-8",
                 )
+
+                try:
+                    done_title = await asyncio.wait_for(page.title(), timeout=5.0)
+                except Exception:
+                    done_title = None
+                eventlog.write(
+                    "category_done",
+                    slot_id=slot_id,
+                    task_id=getattr(lease, "task_id", None),
+                    store_id=getattr(lease, "store_id", None),
+                    category_url=category_url,
+                    page_url=getattr(page, "url", None),
+                    title=done_title,
+                    duration_sec=round(time.time() - start, 3),
+                    products_seen=products_seen,
+                    deals_sent=deals_sent,
+                    batch_id=batch_id,
+                )
                 
                 # CRITICAL: Add inter-lease delay to match PARALLEL's pacing
                 # PARALLEL sleeps 2.0-4.55s between categories (scraper.py:802-803)
                 # Without this, Worker hammers the server too fast → detection
                 await asyncio.sleep(2.0 + random.random() * 2.55)
             except Exception as e:
-                api.lease_fail(client_id, lease.task_id, time.time() - start)
+                # If a task keeps landing on a non-listing `/c/` page, it can get
+                # re-leased repeatedly and appear "stuck" overnight. After a small
+                # number of confirmations, mark the task done (0 products) so the
+                # fleet can move on.
+                page_url = getattr(page, "url", None)
+                raw_category_url = getattr(lease, "category_url", "") or ""
+                msg_lower = str(e).lower()
+                is_c = (
+                    (isinstance(page_url, str) and ("/c/" in page_url) and ("/pl/" not in page_url))
+                    or ("/c/" in msg_lower and "redirect" in msg_lower)
+                    or (isinstance(raw_category_url, str) and ("/c/" in raw_category_url) and ("/pl/" not in raw_category_url))
+                )
+                should_abandon = False
+                task_id_val = getattr(lease, "task_id", None)
+                if is_c and isinstance(task_id_val, int):
+                    prev = task_c_failures.get(task_id_val, 0)
+                    task_c_failures[task_id_val] = prev + 1
+                    # First strike often indicates a persistent bad URL (stale DB task);
+                    # allow one retry in case it's a transient redirect, then abandon.
+                    should_abandon = task_c_failures[task_id_val] >= 2
+                elif is_c:
+                    should_abandon = True
+
+                if should_abandon:
+                    api.lease_complete(client_id, lease.task_id, time.time() - start, 0, 0)
+                    eventlog.write(
+                        "task_abandoned_non_pl",
+                        slot_id=slot_id,
+                        task_id=getattr(lease, "task_id", None),
+                        store_id=getattr(lease, "store_id", None),
+                        category_url=getattr(lease, "category_url", None),
+                        page_url=page_url,
+                        error=str(e),
+                    )
+                else:
+                    api.lease_fail(client_id, lease.task_id, time.time() - start)
+                try:
+                    err_title = await asyncio.wait_for(page.title(), timeout=5.0) if page else None
+                except Exception:
+                    err_title = None
+                eventlog.write(
+                    "category_error",
+                    slot_id=slot_id,
+                    task_id=getattr(lease, "task_id", None),
+                    store_id=getattr(lease, "store_id", None),
+                    category_url=getattr(lease, "category_url", None),
+                    page_url=page_url,
+                    title=err_title,
+                    duration_sec=round(time.time() - start, 3),
+                    error=str(e),
+                )
                 slot_status_path.write_text(
                     json.dumps(
                         {

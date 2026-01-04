@@ -93,7 +93,8 @@ class Supervisor:
             return
         slot_id = (max([s.slot_id for s in self.slots]) + 1) if self.slots else 0
         log_path = logs_dir() / f"slot_{slot_id}.log"
-        log_file = open(log_path, "a", encoding="utf-8")
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        log_file = open(log_path, "a", encoding="utf-8", buffering=1)
         if getattr(sys, "frozen", False):
             cmd = [
                 sys.executable,
@@ -114,12 +115,21 @@ class Supervisor:
                 "--slot-id",
                 str(slot_id),
             ]
+        env = dict(os.environ)
+        env["PYTHONUNBUFFERED"] = "1"
+        # Per-slot JSONL logs so multiple slots don't contend for the same file.
+        try:
+            env.setdefault("GLOORBOT_NAVLOG_PATH", str(logs_dir() / f"nav_slot_{slot_id}.jsonl"))
+            env.setdefault("GLOORBOT_EVENTLOG_PATH", str(logs_dir() / f"events_slot_{slot_id}.jsonl"))
+        except Exception:
+            pass
+        env.setdefault("GLOORBOT_SLOT_ID", str(slot_id))
         proc = subprocess.Popen(
             cmd,
             stdout=log_file,
             stderr=subprocess.STDOUT,
             cwd=str(Path(__file__).resolve().parents[2]),
-            env=dict(os.environ),
+            env=env,
         )
         self.slots.append(SlotProc(slot_id=slot_id, proc=proc))
 

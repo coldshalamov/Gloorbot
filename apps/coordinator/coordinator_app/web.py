@@ -436,6 +436,8 @@ def create_app() -> FastAPI:
 
             base_filter = and_(
                 or_(Task.lease_expires_at == None, Task.lease_expires_at < now),  # noqa: E711
+                # Never lease non-listing /c/ categories; they cause workers to spin.
+                Task.category_url.not_like("%/c/%"),
             )
 
             query = select(Task).where(base_filter)

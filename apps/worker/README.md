@@ -6,6 +6,17 @@ This is the **1-click** Windows worker app:
 - Runs one or more scraping “slots” (browsers) and keeps the PC around **70–90%** utilization
 - Only submits **≥50% off** deals to the coordinator
 
+## Logs (installed worker)
+
+The installed worker writes logs under:
+
+- `%LOCALAPPDATA%\\GloorbotWorkerData\\logs`
+
+Key files:
+
+- `events_slot_<N>.jsonl` — high-level worker events (leased task, category start/done/error)
+- `nav_slot_<N>.jsonl` — low-level navigation trace from `PARALLEL/scraper.py` with pagination stripped (`offset` removed)
+
 ## Dev run (not for friends)
 
 ```powershell

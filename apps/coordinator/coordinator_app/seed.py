@@ -76,6 +76,15 @@ def seed_tasks_from_parallel_urls(repo_root: Path) -> int:
 
     inserted = 0
     with db_session() as db:
+        # Safety: purge any legacy /c/ category tasks (they are non-listing pages and will
+        # cause workers to spin/retry forever when the pickup filter UI doesn't match).
+        try:
+            pruned_c = db.execute(delete(Task).where(Task.category_url.like("%/c/%"))).rowcount
+            if pruned_c:
+                print(f"[seed] pruned_tasks_c_category={pruned_c}")
+        except Exception:
+            pass
+
         existing = set(db.execute(select(Task.store_id, Task.category_url)).all())
         # CRITICAL: Insert category-major (not store-major) to prevent store clustering
         # Old order (store → categories) caused all early tasks to be for store #1

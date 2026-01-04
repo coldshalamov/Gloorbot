@@ -16,10 +16,14 @@ Scrapes "pickup today" products from every department in every store.
 from __future__ import annotations
 
 import asyncio
+import json
+import os
 import re
 import random
+import time
 from datetime import datetime
 from pathlib import Path
+from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
 from playwright.async_api import async_playwright, Page
 
@@ -36,6 +40,62 @@ class Actor:
         def warning(msg): print(f"[WARN] {msg}")
         @staticmethod
         def error(msg): print(f"[ERROR] {msg}")
+
+
+# ============================================================================
+# OPTIONAL NAVIGATION LOGGING (used by the installed Worker)
+# ============================================================================
+
+def _strip_pagination(url: str) -> str:
+    try:
+        p = urlparse(url)
+        q = parse_qs(p.query, keep_blank_values=True)
+        q.pop("offset", None)
+        new_query = urlencode(q, doseq=True)
+        return urlunparse((p.scheme, p.netloc, p.path, p.params, new_query, p.fragment))
+    except Exception:
+        return url
+
+
+def _navlog(event: str, payload: dict) -> None:
+    """
+    Best-effort JSONL navigation log.
+
+    Enabled by setting env var `GLOORBOT_NAVLOG_PATH` (worker sets this).
+    """
+    path = (os.getenv("GLOORBOT_NAVLOG_PATH") or "").strip()
+    if not path:
+        return
+    try:
+        out_path = Path(path)
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+
+        # 10MB rotation, keep a few siblings (best-effort).
+        try:
+            if out_path.exists() and out_path.stat().st_size >= 10 * 1024 * 1024:
+                ts = datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
+                rotated = out_path.with_name(f"{out_path.stem}.{ts}{out_path.suffix}")
+                try:
+                    out_path.rename(rotated)
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
+        record = {"ts": datetime.utcnow().isoformat(), "event": event}
+        record.update(payload)
+        for k in ["requested_url", "landed_url", "url", "page_url", "category_url"]:
+            v = record.get(k)
+            if isinstance(v, str) and v:
+                record[f"{k}_canonical"] = _strip_pagination(v)
+        with open(out_path, "a", encoding="utf-8") as f:
+            f.write(json.dumps(record, ensure_ascii=False) + "\n")
+    except Exception:
+        return
+
+
+def _is_redirected_to_c(url: str) -> bool:
+    return ("/c/" in url) and ("/pl/" not in url)
 
 
 # ============================================================================
@@ -465,6 +525,20 @@ async def scrape_category_page(page: Page, url: str, store_info: dict, page_num:
             raise  # Re-raise to stop category scraping
         return []  # Otherwise just skip this page
 
+    # If pagination navigation got redirected to a /c/ page, abort the category.
+    if _is_redirected_to_c(page.url):
+        _navlog(
+            "redirect_to_c",
+            {
+                "store_id": store_info.get("store_id"),
+                "store_name": store_info.get("name"),
+                "requested_url": page_url,
+                "landed_url": page.url,
+                "page_num": page_num,
+            },
+        )
+        raise RuntimeError(f"Category redirected from /pl/ to /c/ page: {page.url}")
+
     await asyncio.sleep(2.0 + random.random() * 2.55)  # 2.0-4.55 seconds (30% inc) after page load
 
     try:
@@ -711,6 +785,33 @@ async def scrape_category_all_pages(page: Page, category_url: str, store_info: d
     try:
         await page.goto(category_url, wait_until='domcontentloaded', timeout=60000)
         await asyncio.sleep(2)
+        try:
+            _navlog(
+                "category_goto",
+                {
+                    "store_id": store_info.get("store_id"),
+                    "store_name": store_info.get("name"),
+                    "cat_name": cat_name,
+                    "requested_url": category_url,
+                    "landed_url": page.url,
+                },
+            )
+        except Exception:
+            pass
+
+        # If Lowe's redirected us to a /c/ category page, abort early.
+        if _is_redirected_to_c(page.url):
+            _navlog(
+                "redirect_to_c",
+                {
+                    "store_id": store_info.get("store_id"),
+                    "store_name": store_info.get("name"),
+                    "cat_name": cat_name,
+                    "requested_url": category_url,
+                    "landed_url": page.url,
+                },
+            )
+            raise RuntimeError(f"Category redirected from /pl/ to /c/ page: {page.url}")
 
         # Some categories legitimately have zero products (seasonal/legal/empty).
         # In that case, the pickup filter UI will not exist, and we should NOT retry forever.
@@ -742,8 +843,42 @@ async def scrape_category_all_pages(page: Page, category_url: str, store_info: d
             raise RuntimeError(f"Pickup filter FAILED for {store_info['name']} - {cat_name}. Aborting to trigger retry.")
 
         # Update category_url to include the new query params (facets)
-        category_url = page.url
-        Actor.log.info(f"{store_info['name']} - {cat_name}: Pickup filter applied, URL now: {category_url[:100]}...")
+        new_url = page.url
+        
+        # CRITICAL BUG FIX: Validate we're still on a /pl/ product listing page
+        # If Lowe's redirected us to a /c/ category page, we CANNOT scrape it (no products)
+        # This was causing infinite loops where the scraper kept reloading /c/Generators-Electrical
+        if '/c/' in new_url and '/pl/' not in new_url:
+            _navlog(
+                "redirect_to_c",
+                {
+                    "store_id": store_info.get("store_id"),
+                    "store_name": store_info.get("name"),
+                    "cat_name": cat_name,
+                    "requested_url": category_url,
+                    "landed_url": new_url,
+                },
+            )
+            Actor.log.error(f"{store_info['name']} - {cat_name}: ABORT - Page redirected to /c/ category page: {new_url}")
+            Actor.log.error(f"Original /pl/ URL was: {category_url}")
+            raise RuntimeError(f"Category redirected from /pl/ to /c/ page - this category has no product listings to scrape")
+        
+        # Only update URL if we're still on a valid /pl/ product listing page
+        if '/pl/' in new_url:
+            category_url = new_url
+            Actor.log.info(f"{store_info['name']} - {cat_name}: Pickup filter applied, URL now: {category_url[:100]}...")
+            _navlog(
+                "pickup_applied",
+                {
+                    "store_id": store_info.get("store_id"),
+                    "store_name": store_info.get("name"),
+                    "cat_name": cat_name,
+                    "category_url": category_url,
+                },
+            )
+        else:
+            # Unexpected URL format - keep original and log warning
+            Actor.log.warning(f"{store_info['name']} - {cat_name}: URL changed to unexpected format, keeping original: {new_url[:100]}")
 
     except Exception as e:
         Actor.log.warning(f"{store_info['name']} - Failed setup: {e}")
