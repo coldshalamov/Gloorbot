@@ -3,15 +3,17 @@ from __future__ import annotations
 import sys
 import threading
 import tkinter as tk
-from tkinter import ttk
+from tkinter import messagebox, ttk
 
 # Handle PyInstaller frozen executable - need absolute imports
 if getattr(sys, 'frozen', False):
     from gloorbot_worker import api
     from gloorbot_worker.supervisor import Supervisor
+    from gloorbot_worker.paths import status_dir
 else:
     from . import api
     from .supervisor import Supervisor
+    from .paths import status_dir
 
 
 class App:
@@ -131,6 +133,45 @@ def run_gui() -> None:
     root = tk.Tk()
     try:
         ttk.Style().theme_use("clam")
+    except Exception:
+        pass
+
+    try:
+        import atexit
+        import os
+
+        import psutil
+
+        pid_file = status_dir() / "worker_gui.pid"
+        if pid_file.exists():
+            try:
+                prev_pid = int(pid_file.read_text(encoding="utf-8").strip())
+            except Exception:
+                prev_pid = -1
+            if prev_pid > 0 and psutil.pid_exists(prev_pid):
+                try:
+                    prev = psutil.Process(prev_pid)
+                    if prev.is_running() and prev.status() != psutil.STATUS_ZOMBIE:
+                        messagebox.showerror(
+                            "Gloorbot Worker",
+                            "Gloorbot Worker is already running.\n\n"
+                            "Close the existing window (or end the process) before starting another.",
+                        )
+                        root.destroy()
+                        return
+                except Exception:
+                    # If we can't inspect the process, assume it's running to avoid duplicates.
+                    messagebox.showerror(
+                        "Gloorbot Worker",
+                        "Gloorbot Worker may already be running.\n\n"
+                        "Close the existing window (or end the process) before starting another.",
+                    )
+                    root.destroy()
+                    return
+
+        pid_file.parent.mkdir(parents=True, exist_ok=True)
+        pid_file.write_text(str(os.getpid()), encoding="utf-8")
+        atexit.register(lambda: pid_file.unlink(missing_ok=True))
     except Exception:
         pass
 

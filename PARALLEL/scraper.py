@@ -650,6 +650,10 @@ async def scrape_category_page(page: Page, url: str, store_info: dict, page_num:
                             src = first.split(" ")[0].strip() if first else ""
                         if src.startswith("//"):
                             src = "https:" + src
+                        if src.startswith("/"):
+                            src = "https://www.lowes.com" + src
+                        if src.startswith("data:"):
+                            src = ""
                         image_url = src or None
                 except Exception:
                     image_url = None
