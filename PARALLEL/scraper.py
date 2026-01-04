@@ -697,10 +697,31 @@ async def scrape_category_page(page: Page, url: str, store_info: dict, page_num:
                         vals = clean_money_values(blob)
                         if vals:
                             if not price_text or price_text == "N/A":
-                                price_text = fmt_money(min(vals))
+                                candidates = sorted({v for v in vals if v >= 1.0})
+                                inferred_was = max(candidates) if candidates else None
+                                inferred_now = None
+                                if inferred_was is not None:
+                                    smaller = [v for v in candidates if v < inferred_was]
+                                    inferred_now = max(smaller) if smaller else None
+
+                                # Sanity: prevent impossible-looking matches like a $1000 item
+                                # being treated as "$4" due to noise in the blob.
+                                if inferred_was is not None and inferred_was >= 200 and inferred_now is not None and inferred_now <= 10:
+                                    inferred_now = None
+
+                                if inferred_now is not None:
+                                    price_text = fmt_money(inferred_now)
                             if not was_price and len(vals) >= 2:
-                                # Assume largest value is the original "Was" price
-                                was_price = fmt_money(max(vals))
+                                candidates = sorted({v for v in vals if v >= 1.0})
+                                inferred_was = max(candidates) if candidates else None
+                                inferred_now = None
+                                if inferred_was is not None:
+                                    smaller = [v for v in candidates if v < inferred_was]
+                                    inferred_now = max(smaller) if smaller else None
+                                if inferred_was is not None and inferred_was >= 200 and inferred_now is not None and inferred_now <= 10:
+                                    inferred_now = None
+                                if inferred_was is not None and inferred_now is not None:
+                                    was_price = fmt_money(inferred_was)
                     except Exception:
                         pass
 

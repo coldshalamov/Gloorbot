@@ -13,6 +13,7 @@ apps/worker/build/
 apps/worker/dist/
 apps/worker/dist-installer/
 apps/worker/ms-playwright/
+GloorbotWorker/
 
 # Local/Runtime files
 **/.playwright-profiles/

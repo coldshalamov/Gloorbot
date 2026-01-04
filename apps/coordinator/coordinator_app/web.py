@@ -329,6 +329,47 @@ def create_app() -> FastAPI:
             ],
         }
 
+    @app.get("/api/v1/debug/task-url-stats")
+    def debug_task_url_stats(request: Request, limit: int = 25) -> dict:
+        """
+        Debug helper: show whether any legacy non-listing `/c/` category URLs exist in tasks.
+
+        Token-gated via DEBUG_API_TOKEN (same as other debug endpoints).
+        """
+        _require_debug_token(request)
+        limit = max(1, min(int(limit), 200))
+        now = datetime.utcnow()
+        with db_session() as db:
+            total = db.scalar(select(func.count(Task.id))) or 0
+            c_count = db.scalar(select(func.count(Task.id)).where(Task.category_url.like("%/c/%"))) or 0
+            pl_count = db.scalar(select(func.count(Task.id)).where(Task.category_url.like("%/pl/%"))) or 0
+            leased_c = (
+                db.scalar(
+                    select(func.count(Task.id))
+                    .where(Task.category_url.like("%/c/%"))
+                    .where(Task.lease_expires_at != None, Task.lease_expires_at >= now)  # noqa: E711
+                )
+                or 0
+            )
+            examples = (
+                db.execute(
+                    select(Task.category_url, func.count(Task.id).label("n"))
+                    .where(Task.category_url.like("%/c/%"))
+                    .group_by(Task.category_url)
+                    .order_by(func.count(Task.id).desc())
+                    .limit(limit)
+                )
+                .all()
+            )
+        return {
+            "utc": now.isoformat(),
+            "tasks_total": total,
+            "tasks_pl_count": pl_count,
+            "tasks_c_count": c_count,
+            "tasks_c_leased_count": leased_c,
+            "tasks_c_examples": [{"category_url": url, "count": int(n)} for (url, n) in examples],
+        }
+
     @app.get("/api/v1/debug/ingest-events")
     def debug_ingest_events(request: Request, limit: int = 100) -> dict:
         _require_debug_token(request)

@@ -62,6 +62,19 @@
 *Shared Servers*: One instance of Serena and Agent-MCP is shared by all 3 agents via the proxy.
 *Shared Logic*: Agents must use the `AGENT_PROTOCOL.md` for all workflow steps.
 
+**Render deployment map (source of truth)**
+- **Coordinator service (Render)**: `gloorbot-coordinator` (deploys from this repo)
+  - Health: `https://gloorbot-coordinator.onrender.com/healthz`
+  - Status: `https://gloorbot-coordinator.onrender.com/api/v1/status`
+  - Debug (requires `DEBUG_API_TOKEN`): `GET /api/v1/debug/task-url-stats` (proves `/c/` URLs are not present/leased)
+- **CheapSkater service (Render)**: `cheapskater` (user-facing site + ingest)
+  - Ingest health: `https://cheapskater.onrender.com/api/ingest/health`
+  - Disk persistence: must mount a Render Disk and set `CHEAPSKATER_DB_PATH` to the mount path (expected to be under `/var/data/...`)
+
+**Current verified runtime signals (2026-01-04)**
+- Coordinator `/api/v1/status` reports `cheapskater_ingest_url_configured=true` and `...api_key_configured=true`.
+- CheapSkater `/api/ingest/health` reports `db_path=/var/data/orwa_lowes.sqlite` and `db_exists=true`.
+
 **✅ MEMORY COORDINATION STACK**:
 - **Agent-MCP**: Running (SSE on port 8080) for agent handshake, messaging, task coordination
 - **Anthropic Memory Server** (NEW): Added to `unified_config.json` — provides `create_entities`, `add_observations`, `read_graph`, `search_nodes` for persistent fleet memory

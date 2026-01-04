@@ -177,10 +177,20 @@ def _deal_from_product(p: dict, category_url: str) -> dict | None:
     was_price = _to_float_price(str(p.get("was_price", "")))
     if not price_now or not was_price or was_price <= 0:
         return None
+    # Guard against obvious parse noise (e.g. "$4" captured from unrelated text
+    # on a high-ticket item). We prefer dropping a rare true extreme deal over
+    # spamming false positives.
+    if was_price >= 200 and price_now <= 10:
+        return None
     # Ensure price is actually discounted (price < was_price)
     if price_now >= was_price:
         return None
     pct_off = (was_price - price_now) / was_price
+    # Additional sanity: extremely high discounts on expensive items are almost
+    # always parse errors. Keep the general >=50% rule but reject the most
+    # suspicious tail.
+    if was_price >= 200 and pct_off > 0.97:
+        return None
     if pct_off < DEAL_THRESHOLD:
         return None
     image_url = p.get("image_url")
