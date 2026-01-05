@@ -605,6 +605,27 @@ def create_app() -> FastAPI:
                     if d.was_price >= 200 and d.pct_off > 0.97:
                         rejected_suspicious += 1
                         continue
+                    # Reject absurdly high was_prices that are clearly parse errors.
+                    # No retail appliance, tool, or home item costs $10,000+ at Lowe's.
+                    # These are malformed captures from promotional sections or concatenated strings.
+                    if d.was_price >= 10000:
+                        rejected_suspicious += 1
+                        logger.warning(
+                            "[DEALS] batch_id=%s rejecting absurd was_price=%s for product=%s",
+                            batch_id, d.was_price, d.product_url[:100] if d.product_url else "?"
+                        )
+                        continue
+                    # Reject deals where the "savings" ($was - $now) exceeds $5000.
+                    # This catches the "$11,068 was, $848 now" type of parse errors where
+                    # both prices look reasonable individually but the delta is impossible.
+                    if (d.was_price - d.price) > 5000:
+                        rejected_suspicious += 1
+                        logger.warning(
+                            "[DEALS] batch_id=%s rejecting implausible savings=%s for product=%s (was=%s, now=%s)",
+                            batch_id, d.was_price - d.price, d.product_url[:100] if d.product_url else "?",
+                            d.was_price, d.price
+                        )
+                        continue
                     if d.pct_off < DEAL_THRESHOLD:
                         below_threshold += 1
                         continue

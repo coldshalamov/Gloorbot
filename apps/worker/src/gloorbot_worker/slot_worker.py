@@ -199,6 +199,13 @@ def _deal_from_product(p: dict, category_url: str) -> dict | None:
     # suspicious tail.
     if was_price >= 200 and pct_off > 0.97:
         return None
+    # Reject absurdly high was_prices that are clearly parse errors.
+    # No retail appliance, tool, or home item costs $10,000+ at Lowe's.
+    if was_price >= 10000:
+        return None
+    # Reject deals where the "savings" exceeds $5000 - these are malformed captures.
+    if (was_price - price_now) > 5000:
+        return None
     if pct_off < DEAL_THRESHOLD:
         return None
     image_url = p.get("image_url")

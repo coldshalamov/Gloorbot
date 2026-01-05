@@ -550,6 +550,23 @@ async def scrape_category_page(page: Page, url: str, store_info: dict, page_num:
 
     await asyncio.sleep(1.5 + random.random() * 1.75)  # 1.5-3.25 seconds (30% inc) before scraping
 
+    # CRITICAL: Verify the URL still has pickup filter applied.
+    # The pickup filter adds parameters like inStock=1 or refinement IDs.
+    # If these are missing, we might be scraping unfiltered nationwide inventory.
+    current_url_lower = page.url.lower()
+    has_pickup_indicator = (
+        "instock=1" in current_url_lower or
+        "pickup" in current_url_lower or
+        "refinement" in current_url_lower
+    )
+    if not has_pickup_indicator and page_num == 1:
+        # On page 1, the filter should definitely be applied.
+        # Log a warning but continue - the main grid scoping should still help.
+        Actor.log.warning(
+            f"[{store_info['name']}] Page {page_num} URL missing pickup filter indicators. "
+            f"Results may include non-local inventory. URL: {page.url[:150]}"
+        )
+
     # Check for blocking with timeout
     try:
         title = await asyncio.wait_for(page.title(), timeout=10.0)
@@ -563,7 +580,40 @@ async def scrape_category_page(page: Page, url: str, store_info: dict, page_num:
     # Find product cards with timeout
     # CRITICAL: Lowe's uses div.tile_group for the actual product container with content
     # The data-selector="splp-prd-crd" elements are empty wrappers
-    selectors = [
+    #
+    # IMPORTANT: We MUST scope our search to the MAIN PRODUCT GRID only.
+    # Lowe's pages have promotional carousels ("Save Now Storewide", "Recommended Products")
+    # at the bottom that are NOT filtered by the pickup filter and show nationwide prices.
+    # These carousels would pollute our results with wrong prices and store associations.
+    #
+    # The main product grid is inside: #listingPagesSearchResults, .search-results-wrapper,
+    # or sections with role="main" / id="main-content"
+    main_grid_containers = [
+        '#listingPagesSearchResults',           # Primary Lowe's search results container
+        '#listItems',                            # Alternative results container
+        '[data-selector="splp-prd-lst"]',        # Product list container
+        '.search-results-wrapper',               # Search results wrapper
+        '[class*="searchResults"]',              # Any search results class
+        '[class*="product-listing"]',            # Product listing container
+        'main[role="main"]',                     # Main content area
+        '#main-content',                         # Main content ID
+        'main',                                  # Main element fallback
+    ]
+
+    # First, try to find the main grid container to scope our search
+    main_container = None
+    for container_sel in main_grid_containers:
+        try:
+            container = page.locator(container_sel).first
+            if await container.count() > 0:
+                main_container = container
+                Actor.log.info(f"Found main grid container: {container_sel}")
+                break
+        except Exception:
+            continue
+
+    # Define card selectors - these should be SPECIFIC to actual product cards
+    card_selectors = [
         'div.tile_group',  # Lowe's actual product tile with content
         '[class*="tile_group"]',  # Alternative class selector
         '[data-selector="splp-prd-crd"]',  # Wrapper (may be empty)
@@ -574,16 +624,29 @@ async def scrape_category_page(page: Page, url: str, store_info: dict, page_num:
         "div[data-itemid]",
         "li[data-itemid]",
         "[data-itemid]",
-        "li:has(a[href*='/pd/'])",
-        "article:has(a[href*='/pd/'])",
-        "article",
     ]
+
     product_cards = []
     try:
-        for sel in selectors:
-            cards = await asyncio.wait_for(page.locator(sel).all(), timeout=15.0)
-            if len(cards) > len(product_cards):
-                product_cards = cards
+        # If we found the main container, search ONLY within it
+        search_base = main_container if main_container else page
+
+        for sel in card_selectors:
+            try:
+                if main_container:
+                    # Scope the search to the main container
+                    cards = await asyncio.wait_for(
+                        main_container.locator(sel).all(), timeout=15.0
+                    )
+                else:
+                    cards = await asyncio.wait_for(
+                        page.locator(sel).all(), timeout=15.0
+                    )
+                if len(cards) > len(product_cards):
+                    product_cards = cards
+            except asyncio.TimeoutError:
+                continue
+
     except asyncio.TimeoutError:
         Actor.log.error(f"Timeout finding product cards on page {page_num}")
         raise
