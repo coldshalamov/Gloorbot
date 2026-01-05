@@ -40,6 +40,7 @@
 - [2026-01-04]: Worker installer: Inno Setup now honors the git tag version passed in CI so “latest” installers show the correct version and upgrade cleanly.
 - [2026-01-04]: CheapSkater (Render): added safe DB-path resolution so `CHEAPSKATER_DB_PATH=/var/data/...` won't crash if `/var/data` isn't writable yet; persistence still requires attaching a Render disk to the `Gloorbot` service and then pointing `CHEAPSKATER_DB_PATH` at that mount.
 - [2026-01-04 14:30]: Claude Code: **Root cause analysis** of IntegrityError escaping try-except—identified 4 hypotheses: (1) **Race condition** between query & insert (most likely in WAL mode); (2) `seen_count += 1` mutation tracking; (3) Exception type mismatch in catch block; (4) Stale session. Code already has defensive de-dupe + IntegrityError catch, but it's still 500'ing → suggests exception escaping pre-commit. Drafting solutions: SQLite upsert (atomic), savepoint per deal, broader exception catch, session isolation.
+- [2026-01-04 16:45]: Claude Code: **FOUND THE BUG**: Deployed commit `8e59a497` has OLD vulnerable code (query+insert race pattern). The fix (atomic SQLite upsert + batch de-dupe + error handling) was implemented in commit `ad79ab5d` but NOT deployed to Render. Current HEAD `4b03db14` includes the fix. **ACTION**: Deploy HEAD to Render to stop the 500s.
 - [2026-01-04 16:00]: **CORE ARCHITECTURE UPGRADE**: Unified all agents (Native, Codex, Claude Code) under a single shared **SSE backend** (Ports 24281 & 8080). Flattened MCP Proxy hierarchy to eliminate "hidden tools" bug in Claude. Agent-MCP database locking issue resolved by moving to singleton process model. All agents now share the same "Brain."
 - [2026-01-04 11:15]: **CRITICAL BUG FIX + SYSTEMATIC DEBUG (Antigravity)**: Fixed `local_scraper.py` price parsing bug ($4 vs $998 issue). Changed `parse_price()` from `re.search()` to `re.findall()` + filter < $1 + return max. All 7 tests pass. Also improved page loading (domcontentloaded vs networkidle) and added diagnostic logging. **Identified**: Akamai is blocking scraper - needs warmup or persistent profile from dev-browser. Full report: `DEBUG_REPORT_2026-01-04.md`
 - [2026-01-04 11:30]: **URL LIST AUDIT (Antigravity)**: Investigated `/c/` category pages causing infinite loops. **Found**: Local files clean (0 `/c/` URLs), but remote Render coordinator has legacy `/c/` URLs in database. **Fix**: DELETE FROM tasks WHERE category_url LIKE '%/c/%'; Also identified 300 potential parent categories needing review. Full report: `URL_AUDIT_REPORT.md`
@@ -75,11 +76,11 @@
 - Coordinator `/api/v1/status` reports `cheapskater_ingest_url_configured=true` and `...api_key_configured=true`.
 - CheapSkater `/api/ingest/health` reports `db_path=/var/data/orwa_lowes.sqlite` and `db_exists=true`.
 
-**✅ MEMORY COORDINATION STACK**:
-- **Agent-MCP**: Running (SSE on port 8080) for agent handshake, messaging, task coordination
-- **Anthropic Memory Server** (NEW): Added to `unified_config.json` — provides `create_entities`, `add_observations`, `read_graph`, `search_nodes` for persistent fleet memory
-- **agents.md**: Tier 1 dashboard (high-level milestones, status table)
-- **Lazy-MCP Proxy**: Routes all 3 agents through single proxy — memory tools load on-demand without context bloat 
+**⚠️ AGENT-MCP MEMORY FUNCTIONS - STILL TODO**:
+- Agent-MCP is running (SSE on port 8080) but `store_memory` / `retrieve_memory` functions are **not yet implemented** in the tool registry
+- **Current workaround**: Using `agents.md` for Tier 1 coordination (working fine)
+- **Needed**: Implement memory tool handlers in Agent-MCP's tool registry + wire them to the project context database
+- **For now**: `agents.md` + manual file edits are sufficient for fleet coordination 
 
 ---
 
