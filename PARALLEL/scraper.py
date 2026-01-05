@@ -577,6 +577,193 @@ async def scrape_category_page(page: Page, url: str, store_info: dict, page_num:
         Actor.log.error(f"Timeout getting page title on page {page_num} - browser may be hung")
         raise  # Re-raise - this indicates a serious problem
 
+    # ------------------------------------------------------------------------
+    # Prefer a DOM-scoped extraction for the "Near Me" product list.
+    #
+    # Why: the page includes multiple non-local sections ("Save Now Storewide",
+    # "You May Also Like", etc.) that can pollute results with unrelated products
+    # and nonsensical prices (e.g. ads / carousels). We only want the local,
+    # pickup-filtered list.
+    # ------------------------------------------------------------------------
+    expected_tiles = None
+    try:
+        total_attr = await page.locator("#listItems").first.get_attribute("data-totaltile")
+        if total_attr and total_attr.strip().isdigit():
+            expected_tiles = int(total_attr.strip())
+    except Exception:
+        expected_tiles = None
+
+    # Some pages lazily render tiles; do a gentle scroll pass to encourage all
+    # items to hydrate before we read the DOM.
+    try:
+        if expected_tiles and expected_tiles > 3:
+            for _ in range(6):
+                await page.mouse.wheel(0, 900)
+                await asyncio.sleep(0.35 + random.random() * 0.25)
+            await page.evaluate("window.scrollTo(0, 0)")
+            await asyncio.sleep(0.6 + random.random() * 0.4)
+    except Exception:
+        pass
+
+    try:
+        near_me_payload = await page.evaluate(
+            """
+            () => {
+                function normText(t) {
+                    return (t || "").replace(/\\s+/g, " ").trim();
+                }
+
+                function firstMoney(t) {
+                    const m = String(t || "").match(/\\$\\s*\\d{1,3}(?:,\\d{3})*(?:\\.\\d{2})?/);
+                    return m ? m[0].replace(/\\s+/g, "") : null;
+                }
+
+                function normalizeHref(href) {
+                    if (!href) return null;
+                    if (href.startsWith("/")) return "https://www.lowes.com" + href;
+                    if (href.startsWith("http")) return href;
+                    return href;
+                }
+
+                function extractCard(card) {
+                    const a = card.querySelector('a[href*="/pd/"]');
+                    const href = normalizeHref(a && a.getAttribute("href"));
+                    if (!href) return null;
+
+                    const titleEl =
+                        card.querySelector('[data-selector="splp-prd-ttl"]') ||
+                        card.querySelector('[data-testid="item-description"]') ||
+                        card.querySelector('a[data-testid="item-description-link"]') ||
+                        card.querySelector("h3") ||
+                        card.querySelector("h2") ||
+                        a;
+                    let title = normText(titleEl && titleEl.textContent);
+
+                    // Reject obvious non-product titles.
+                    const lowTitle = (title || "").toLowerCase();
+                    if (!title || title.length < 5) return null;
+                    if (lowTitle.includes("you may also like")) return null;
+                    if (lowTitle.includes("previously viewed")) return null;
+                    if (lowTitle.includes("related products")) return null;
+                    if (lowTitle.includes("related searches")) return null;
+                    if (lowTitle.includes("pickup today at")) return null;
+
+                    const nowEl = card.querySelector('[data-selector="splp-prd-act-$"]');
+                    const wasEl = card.querySelector('[data-selector="splp-prd-promo-was-$"]');
+                    const strike = card.querySelector("s, del");
+
+                    const text = normText(card.textContent);
+                    const pickupMatch = /pickup\\b/i.test(text) ? (text.match(/pickup[^.]{0,80}/i) || [])[0] : null;
+
+                    // CRITICAL: only keep cards that show pickup availability.
+                    // This avoids capturing non-local promotional carousels.
+                    if (!pickupMatch) return null;
+
+                    const now = firstMoney(nowEl && nowEl.textContent) || firstMoney(text);
+                    const was = firstMoney(wasEl && wasEl.textContent) || firstMoney(strike && strike.textContent);
+
+                    let imageUrl = null;
+                    const img = card.querySelector("img");
+                    if (img) {
+                        let src = img.getAttribute("src") || img.getAttribute("data-src") || "";
+                        if (!src) {
+                            const srcset = img.getAttribute("srcset") || img.getAttribute("data-srcset") || "";
+                            const first = srcset.split(",")[0].trim();
+                            src = first ? first.split(" ")[0].trim() : "";
+                        }
+                        if (src.startsWith("//")) src = "https:" + src;
+                        if (src.startsWith("/")) src = "https://www.lowes.com" + src;
+                        if (src.startsWith("data:")) src = "";
+                        imageUrl = src || null;
+                    }
+
+                    return {
+                        href,
+                        title,
+                        now_price: now,
+                        was_price: was,
+                        pickup: pickupMatch,
+                        image_url: imageUrl,
+                    };
+                }
+
+                // Find the local list section: from the "Near Me" heading to before "Save Now Storewide".
+                const hCandidates = Array.from(document.querySelectorAll("h1,h2,h3"));
+                const nearMeHeading = hCandidates.find((h) => (h.textContent || "").toLowerCase().includes("near me"));
+                if (!nearMeHeading) return { ok: false, reason: "near_me_heading_not_found", products: [] };
+
+                const allH = Array.from(document.querySelectorAll("h1,h2,h3,h4"));
+                const boundaryHeading =
+                    allH.find((h) => (h.textContent || "").toLowerCase().includes("save now storewide")) ||
+                    allH.find((h) => (h.textContent || "").toLowerCase().includes("you may also like")) ||
+                    allH.find((h) => (h.textContent || "").toLowerCase().includes("previously viewed")) ||
+                    null;
+
+                const range = document.createRange();
+                range.setStartBefore(nearMeHeading);
+                if (boundaryHeading) range.setEndBefore(boundaryHeading);
+                else range.setEndAfter(document.body);
+
+                const fragment = range.cloneContents();
+                const tmp = document.createElement("div");
+                tmp.appendChild(fragment);
+
+                const cards = Array.from(tmp.querySelectorAll("div.tile_group"));
+                const out = [];
+                const seen = new Set();
+                for (const c of cards) {
+                    const p = extractCard(c);
+                    if (!p) continue;
+                    if (seen.has(p.href)) continue;
+                    seen.add(p.href);
+                    out.push(p);
+                }
+
+                return { ok: true, products: out };
+            }
+            """
+        )
+
+        if isinstance(near_me_payload, dict) and near_me_payload.get("ok") and near_me_payload.get("products"):
+            now = datetime.utcnow().isoformat()
+            for p in near_me_payload["products"]:
+                try:
+                    product_url = p.get("href")
+                    title_text = (p.get("title") or "").strip()
+                    price_text = (p.get("now_price") or "").strip()
+                    was_price_text = (p.get("was_price") or "").strip()
+                    if not product_url or not title_text:
+                        continue
+                    products.append(
+                        {
+                            "title": title_text,
+                            "price": price_text if price_text else "N/A",
+                            "was_price": was_price_text if was_price_text else "",
+                            "image_url": p.get("image_url"),
+                            "has_markdown": bool(was_price_text),
+                            "url": product_url,
+                            "category_url": url,
+                            "store_id": store_info["store_id"],
+                            "store_name": store_info["name"],
+                            "store_city": store_info["city"],
+                            "store_state": store_info["state"],
+                            "scraped_at": now,
+                        }
+                    )
+                except Exception:
+                    continue
+
+            if expected_tiles and len(products) != expected_tiles:
+                Actor.log.warning(
+                    f"[{store_info['name']}] Near-me DOM extraction returned {len(products)} items, "
+                    f"expected {expected_tiles} (data-totaltile)."
+                )
+
+            if products:
+                return products
+    except Exception as e:
+        Actor.log.warning(f"Near-me DOM extraction failed on page {page_num}: {e}")
+
     # Find product cards with timeout
     # CRITICAL: Lowe's uses div.tile_group for the actual product container with content
     # The data-selector="splp-prd-crd" elements are empty wrappers
@@ -590,7 +777,6 @@ async def scrape_category_page(page: Page, url: str, store_info: dict, page_num:
     # or sections with role="main" / id="main-content"
     main_grid_containers = [
         '#listingPagesSearchResults',           # Primary Lowe's search results container
-        '#listItems',                            # Alternative results container
         '[data-selector="splp-prd-lst"]',        # Product list container
         '.search-results-wrapper',               # Search results wrapper
         '[class*="searchResults"]',              # Any search results class
@@ -598,6 +784,7 @@ async def scrape_category_page(page: Page, url: str, store_info: dict, page_num:
         'main[role="main"]',                     # Main content area
         '#main-content',                         # Main content ID
         'main',                                  # Main element fallback
+        '#listItems',                            # WARNING: often includes promo carousels; keep as last resort
     ]
 
     # First, try to find the main grid container to scope our search
