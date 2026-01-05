@@ -52,6 +52,7 @@
 - [2026-01-04 11:54]: **CRITICAL BUG FIX - Infinite Loop on /c/ Pages (Antigravity)**: **ROOT CAUSE FOUND**: After applying pickup filter, `scraper.py` line 745 blindly updates `category_url = page.url`. If Lowe's redirects to a `/c/` category page, scraper loops forever trying to paginate a non-product page. **FIX**: Added validation to detect `/c/` redirects and abort with clear error. Now prevents infinite loops and identifies problematic categories. File: `PARALLEL/scraper.py` lines 744-761.
 - [2026-01-05]: **CRITICAL BUG FIX - Wrong Prices (Save % misread as $)**: Dev-browser confirmed Lowe’s `/pl/` cards can expose `data-testid*='price'` as `Save 5%` while the `/pd/` link wraps the whole card (title+prices+rating). Fixes applied: `PARALLEL/scraper.py` ignores savings/% nodes and uses blob-inferred `$now/$was` to override non-price text; `apps/worker/.../slot_worker.py` rejects percent-only strings and correctly parses `$1,049.90`; coordinator `/api/v1/deals/bulk` now drops obviously suspicious deals server-side.
 
+- [2026-01-05]: Worker installer: published `v0.11.3` GitHub Release asset `WorkerSetup.exe`; updated Render coordinator `WORKER_DOWNLOAD_URL` so `https://gloorbot-coordinator.onrender.com/download` redirects to the new installer. Also verified `/api/v1/deals/bulk` rejects a synthetic `was_price=994.9, price=5.0, pct_off=0.995` payload (`rejected_suspicious=1`).
 
 ---
 
