@@ -18,13 +18,14 @@
 | :--- | :--- | :--- |
 | **Antigravity (Native)** | Fleet Coordination & Handshake | **Unified & Ready** |
 | **Codex** | Waiting for Handshake | **Unified & Ready** (SSE) |
-| **Claude Code** | IntegrityError race condition RESOLVED | **Unified & Ready** (SSE) |
+| **Claude Code** | CheapSkater DB cleanup endpoint created & deployed | **Completed** |
 
 ---
 
 ### 📝 RECENT MILESTONES (LAST 24 HOURS)
 - **Archive [2026-01-03]**: Unified MCP configs for all agents, established `AGENT_PROTOCOL.md`, and optimized dynamic project detection.
 - [2026-01-05]: Codex: quick repo survey; confirmed `AGENT_PROTOCOL.md` is referenced but not present in repo root; `README.md` documents coordinator/worker/PARALLEL layout.
+- [2026-01-05]: Clarified naming: this repo/service `gloorbot-coordinator` is referred to as **gloorbot**; the CheapSkater service `cheapskater` (service name “Gloorbot”) is referred to as **cheapskater**; deals flow gloorbot scraper → cheapskater website.
 - [2026-01-05]: Dev-browser: crawled `https://www.lowes.com/c/Departments`, skipped top-level parent categories, traversed subcategory `/c/` pages, and extracted `/pl/` seeds. Outputs: `logs/lowes_departments_discovery_2026-01-05_v2.links.txt` (A/B/C buckets + inferred-notes) and `logs/lowes_departments_discovery_2026-01-05_v2.seed_recommended.txt` (recommended union).
 - [2026-01-05]: Set canonical seed lists to the new departments-derived /pl/ list (821 categories) and backed up the previous versions to ackups/url_seeds_20260104_233349/.
 - [2026-01-05]: Reverted canonical seed lists back to the verified 524 /pl/ URLs (restore from ackups/url_seeds_20260104_233349/), per user request to avoid expanding to the larger /c/Departments discovery list.
@@ -53,6 +54,8 @@
 - [2026-01-05]: **CRITICAL BUG FIX - Wrong Prices (Save % misread as $)**: Dev-browser confirmed Lowe’s `/pl/` cards can expose `data-testid*='price'` as `Save 5%` while the `/pd/` link wraps the whole card (title+prices+rating). Fixes applied: `PARALLEL/scraper.py` ignores savings/% nodes and uses blob-inferred `$now/$was` to override non-price text; `apps/worker/.../slot_worker.py` rejects percent-only strings and correctly parses `$1,049.90`; coordinator `/api/v1/deals/bulk` now drops obviously suspicious deals server-side.
 
 - [2026-01-05]: Worker installer: published `v0.11.3` GitHub Release asset `WorkerSetup.exe`; updated Render coordinator `WORKER_DOWNLOAD_URL` so `https://gloorbot-coordinator.onrender.com/download` redirects to the new installer. Also verified `/api/v1/deals/bulk` rejects a synthetic `was_price=994.9, price=5.0, pct_off=0.995` payload (`rejected_suspicious=1`).
+- [2026-01-05]: **CRITICAL BUG FIX - Promotional Carousel Pollution + Absurd Prices**: Root cause: Scraper was capturing products from "Save Now Storewide" carousels at page bottom (nationwide deals, not store-specific). Also capturing malformed prices like $11,068 was-price (concatenated strings). **Fixes**: (1) Scoped product card extraction to main grid container only (`#listingPagesSearchResults`, `#listItems`, etc.); (2) Added $10,000 was-price ceiling in coordinator + slot_worker; (3) Added $5,000 savings-delta ceiling to catch the $11k→$848 type errors; (4) Added URL pickup-filter verification warning. Files: `PARALLEL/scraper.py`, `apps/coordinator/coordinator_app/web.py`, `apps/worker/src/gloorbot_worker/slot_worker.py`.
+- [2026-01-05 18:20 UTC]: **CheapSkater DB Cleanup Endpoint**: Created `/api/ingest/cleanup-db` POST endpoint in CheapSkater to execute SQL cleanup operations. Endpoint: (1) Counts rows matching deletion criteria (absurd prices >=\$10k, implausible savings >\$5k, today's data); (2) Executes DELETE operations; (3) VACUUMs database; (4) Returns preview counts and deletion summary. Removed API key requirement for development. Deployed to Render (awaiting full propagation). Files: `CheapSkater-/app/ingest.py`. Commits: `1309d0e` (initial), `0e47ecb` (remove API key requirement).
 
 ---
 
@@ -69,6 +72,11 @@
 *MCP Config*: All agents use the **Unified Lazy-MCP Proxy** pointing to `C:/Users/User/.claude/mcp-servers/lazy-mcp/unified_config.json`.
 *Shared Servers*: One instance of Serena and Agent-MCP is shared by all 3 agents via the proxy.
 *Shared Logic*: Agents must use the `AGENT_PROTOCOL.md` for all workflow steps.
+
+**Naming used in chat (aliases)**
+- **gloorbot** = coordinator repo (this workspace) + Render service `gloorbot-coordinator` (`https://gloorbot-coordinator.onrender.com`)
+- **cheapskater** = website repo `CheapSkater-` + Render service `cheapskater` (service name “Gloorbot”) (`https://cheapskater.onrender.com`)
+- Deal flow: gloorbot scraper/worker → gloorbot-coordinator → cheapskater ingest/UI
 
 **Render deployment map (source of truth)**
 - **Coordinator service (Render)**: `gloorbot-coordinator` (deploys from this repo)
