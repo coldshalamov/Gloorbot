@@ -18,12 +18,16 @@
 | :--- | :--- | :--- |
 | **Antigravity (Native)** | Fleet Coordination & Handshake | **Unified & Ready** |
 | **Codex** | Waiting for Handshake | **Unified & Ready** (SSE) |
-| **Claude Code** | Investigating IntegrityError race condition in `/api/v1/deals/bulk` | **Unified & Active** (SSE) |
+| **Claude Code** | IntegrityError race condition RESOLVED | **Unified & Ready** (SSE) |
 
 ---
 
 ### 📝 RECENT MILESTONES (LAST 24 HOURS)
 - **Archive [2026-01-03]**: Unified MCP configs for all agents, established `AGENT_PROTOCOL.md`, and optimized dynamic project detection.
+- [2026-01-05]: Codex: quick repo survey; confirmed `AGENT_PROTOCOL.md` is referenced but not present in repo root; `README.md` documents coordinator/worker/PARALLEL layout.
+- [2026-01-05]: Dev-browser: crawled `https://www.lowes.com/c/Departments`, skipped top-level parent categories, traversed subcategory `/c/` pages, and extracted `/pl/` seeds. Outputs: `logs/lowes_departments_discovery_2026-01-05_v2.links.txt` (A/B/C buckets + inferred-notes) and `logs/lowes_departments_discovery_2026-01-05_v2.seed_recommended.txt` (recommended union).
+- [2026-01-05]: Set canonical seed lists to the new departments-derived /pl/ list (821 categories) and backed up the previous versions to ackups/url_seeds_20260104_233349/.
+- [2026-01-05]: Reverted canonical seed lists back to the verified 524 /pl/ URLs (restore from ackups/url_seeds_20260104_233349/), per user request to avoid expanding to the larger /c/Departments discovery list.
 - [2026-01-04]: Found coordinator 500s on `/api/v1/deals/bulk` (UNIQUE constraint) blocking forwarding; added in-batch de-dupe + 409 on integrity errors.
 - [2026-01-04]: Security: refused to exfiltrate handshake secret; rotate if exposed.
 - [2026-01-04]: Agent-MCP: verified stdio MCP handshake; stdio is newline-delimited JSON; use `--project-dir` to avoid DB locks.
@@ -41,6 +45,7 @@
 - [2026-01-04]: CheapSkater (Render): added safe DB-path resolution so `CHEAPSKATER_DB_PATH=/var/data/...` won't crash if `/var/data` isn't writable yet; persistence still requires attaching a Render disk to the `Gloorbot` service and then pointing `CHEAPSKATER_DB_PATH` at that mount.
 - [2026-01-04 14:30]: Claude Code: **Root cause analysis** of IntegrityError escaping try-except—identified 4 hypotheses: (1) **Race condition** between query & insert (most likely in WAL mode); (2) `seen_count += 1` mutation tracking; (3) Exception type mismatch in catch block; (4) Stale session. Code already has defensive de-dupe + IntegrityError catch, but it's still 500'ing → suggests exception escaping pre-commit. Drafting solutions: SQLite upsert (atomic), savepoint per deal, broader exception catch, session isolation.
 - [2026-01-04 16:45]: Claude Code: **FOUND THE BUG**: Deployed commit `8e59a497` has OLD vulnerable code (query+insert race pattern). The fix (atomic SQLite upsert + batch de-dupe + error handling) was implemented in commit `ad79ab5d` but NOT deployed to Render. Current HEAD `4b03db14` includes the fix. **ACTION**: Deploy HEAD to Render to stop the 500s.
+- [2026-01-05 03:35]: Claude Code: **ISSUE RESOLVED**: Verified Render coordinator is running commit `4b03db14` (deployed 2026-01-04 18:29 UTC). Atomic SQLite upsert fix is LIVE. Confirmed via `/api/v1/status`: latest ingest shows `forward_status_code=200` (not 500), `forward_error=null`. IntegrityError race condition eliminated. 500 errors on `/api/v1/deals/bulk` are gone.
 - [2026-01-04 16:00]: **CORE ARCHITECTURE UPGRADE**: Unified all agents (Native, Codex, Claude Code) under a single shared **SSE backend** (Ports 24281 & 8080). Flattened MCP Proxy hierarchy to eliminate "hidden tools" bug in Claude. Agent-MCP database locking issue resolved by moving to singleton process model. All agents now share the same "Brain."
 - [2026-01-04 11:15]: **CRITICAL BUG FIX + SYSTEMATIC DEBUG (Antigravity)**: Fixed `local_scraper.py` price parsing bug ($4 vs $998 issue). Changed `parse_price()` from `re.search()` to `re.findall()` + filter < $1 + return max. All 7 tests pass. Also improved page loading (domcontentloaded vs networkidle) and added diagnostic logging. **Identified**: Akamai is blocking scraper - needs warmup or persistent profile from dev-browser. Full report: `DEBUG_REPORT_2026-01-04.md`
 - [2026-01-04 11:30]: **URL LIST AUDIT (Antigravity)**: Investigated `/c/` category pages causing infinite loops. **Found**: Local files clean (0 `/c/` URLs), but remote Render coordinator has legacy `/c/` URLs in database. **Fix**: DELETE FROM tasks WHERE category_url LIKE '%/c/%'; Also identified 300 potential parent categories needing review. Full report: `URL_AUDIT_REPORT.md`
