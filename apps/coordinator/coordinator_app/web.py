@@ -570,6 +570,7 @@ def create_app() -> FastAPI:
         received_count = len(req.deals)
         upserts = 0
         below_threshold = 0
+        rejected_suspicious = 0
         accepted_deals: list[dict] = []  # For forwarding to Cheapskater
 
         # Defensive: de-dupe deals within this request to avoid violating the
@@ -596,6 +597,14 @@ def create_app() -> FastAPI:
         with db_session() as db:
             try:
                 for d in unique_deals.values():
+                    # Server-side sanity checks (defense-in-depth):
+                    # Reject obviously bad price parses even if older clients submit them.
+                    if d.was_price >= 200 and d.price <= 10:
+                        rejected_suspicious += 1
+                        continue
+                    if d.was_price >= 200 and d.pct_off > 0.97:
+                        rejected_suspicious += 1
+                        continue
                     if d.pct_off < DEAL_THRESHOLD:
                         below_threshold += 1
                         continue
@@ -679,12 +688,13 @@ def create_app() -> FastAPI:
                 raise HTTPException(status_code=500, detail="database integrity error") from exc
 
         logger.info(
-            "[DEALS] batch_id=%s client_id=%s received=%s unique=%s below_threshold=%s upserted=%s",
+            "[DEALS] batch_id=%s client_id=%s received=%s unique=%s below_threshold=%s rejected_suspicious=%s upserted=%s",
             batch_id,
             req.client_id,
             received_count,
             len(unique_deals),
             below_threshold,
+            rejected_suspicious,
             upserts,
         )
 
@@ -713,7 +723,12 @@ def create_app() -> FastAPI:
             )
             db.commit()
 
-        return {"ok": True, "accepted": upserts, "batch_id": batch_id}
+        return {
+            "ok": True,
+            "accepted": upserts,
+            "rejected_suspicious": rejected_suspicious,
+            "batch_id": batch_id,
+        }
 
     async def _sse_stream() -> AsyncIterator[bytes]:
         yield b":ok\n\n"

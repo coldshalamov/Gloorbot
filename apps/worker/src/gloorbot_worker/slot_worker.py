@@ -151,6 +151,14 @@ def _to_float_price(text: str) -> float | None:
         return None
     # Normalize weird newlines like "$\n42\n.29"
     compact = re.sub(r"\s+", "", text)
+    # Remove thousand separators like "$1,049.90" -> "$1049.90"
+    compact = compact.replace(",", "")
+    # Avoid interpreting non-price discount labels as money (e.g. "Save 5%").
+    if "$" not in compact:
+        if "%" in compact:
+            return None
+        if re.search(r"(?i)\b(save|savings|off)\b", text):
+            return None
     # Prefer explicit $ patterns first
     m = re.search(r"\$([0-9]{1,5})(?:\.([0-9]{2}))?", compact)
     if m:

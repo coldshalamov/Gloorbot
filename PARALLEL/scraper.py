@@ -613,7 +613,7 @@ async def scrape_category_page(page: Page, url: str, store_info: dict, page_num:
     def money_values(text: str) -> list[float]:
         if not text:
             return []
-        compact = re.sub(r"\s+", "", text)
+        compact = re.sub(r"\s+", "", text).replace(",", "")
         vals: list[float] = []
         for m in money_re.finditer(compact):
             whole = m.group(1)
@@ -650,7 +650,36 @@ async def scrape_category_page(page: Page, url: str, store_info: dict, page_num:
                 if await title_el.count() > 0:
                     title_text = (await title_el.inner_text()).strip()
                 if not title_text:
-                    title_text = (await link_el.inner_text()).strip()
+                    # On some /pl/ pages, the /pd/ link wraps the entire card
+                    # (including prices + ratings). Avoid using link text as the title.
+                    try:
+                        aria = (await link_el.get_attribute("aria-label")) or ""
+                        title_text = aria.strip()
+                    except Exception:
+                        title_text = ""
+
+                if (not title_text) or ("$" in title_text) or ("%" in title_text) or ("save" in title_text.lower()):
+                    # Best-effort fallback: use the first non-price line from the card blob.
+                    try:
+                        blob_title = await card.inner_text()
+                        for line in (blob_title or "").splitlines():
+                            s = (line or "").strip()
+                            if not s:
+                                continue
+                            low = s.lower()
+                            if "$" in s:
+                                continue
+                            if "add to cart" in low or "pickup" in low or "delivery" in low:
+                                continue
+                            if "save" in low or "savings" in low or "off" == low:
+                                continue
+                            # Skip bare rating count / noise (e.g. "61")
+                            if re.fullmatch(r"[0-9]{1,4}", s):
+                                continue
+                            title_text = s
+                            break
+                    except Exception:
+                        pass
 
                 # Price - Lowe's uses data-selector="splp-prd-act-$" for current price
                 # and "splp-prd-promo-was-$" for was price
@@ -667,8 +696,16 @@ async def scrape_category_page(page: Page, url: str, store_info: dict, page_num:
                 ]:
                     price_el = card.locator(sel).first
                     if await price_el.count() > 0:
-                        price_text = (await price_el.inner_text()).strip()
-                        if price_text and '$' in price_text:
+                        candidate = (await price_el.inner_text()).strip()
+                        if not candidate:
+                            continue
+                        # Ignore savings/percent nodes that often match broad selectors
+                        # like data-testid*='price' (e.g. "Save 5%").
+                        if "%" in candidate or re.search(r"(?i)\b(save|savings|off)\b", candidate):
+                            continue
+                        # Prefer explicit $ prices.
+                        if "$" in candidate:
+                            price_text = candidate
                             break
 
                 # Was price (markdown indicator) - Lowe's uses data-selector="splp-prd-promo-was-$"
@@ -685,8 +722,14 @@ async def scrape_category_page(page: Page, url: str, store_info: dict, page_num:
                 ]:
                     was_el = card.locator(sel).first
                     if await was_el.count() > 0:
-                        was_price = (await was_el.inner_text()).strip()
-                        if was_price and '$' in was_price:
+                        candidate = (await was_el.inner_text()).strip()
+                        if not candidate:
+                            continue
+                        # Avoid interpreting "Save $X" / "% off" as a was-price.
+                        if "%" in candidate or re.search(r"(?i)\b(save|savings|off)\b", candidate):
+                            continue
+                        if "$" in candidate:
+                            was_price = candidate
                             break
 
                 # Fallback: parse money from text blobs (covers "$\\n42\\n.29" style)
@@ -696,32 +739,24 @@ async def scrape_category_page(page: Page, url: str, store_info: dict, page_num:
                         # Use SAFE extraction that ignores savings/off amounts
                         vals = clean_money_values(blob)
                         if vals:
-                            if not price_text or price_text == "N/A":
-                                candidates = sorted({v for v in vals if v >= 1.0})
-                                inferred_was = max(candidates) if candidates else None
-                                inferred_now = None
-                                if inferred_was is not None:
-                                    smaller = [v for v in candidates if v < inferred_was]
-                                    inferred_now = max(smaller) if smaller else None
+                            candidates = sorted({v for v in vals if v >= 1.0})
+                            inferred_was = max(candidates) if candidates else None
+                            inferred_now = None
+                            if inferred_was is not None:
+                                smaller = [v for v in candidates if v < inferred_was]
+                                inferred_now = max(smaller) if smaller else None
 
-                                # Sanity: prevent impossible-looking matches like a $1000 item
-                                # being treated as "$4" due to noise in the blob.
-                                if inferred_was is not None and inferred_was >= 200 and inferred_now is not None and inferred_now <= 10:
-                                    inferred_now = None
-
-                                if inferred_now is not None:
-                                    price_text = fmt_money(inferred_now)
-                            if not was_price and len(vals) >= 2:
-                                candidates = sorted({v for v in vals if v >= 1.0})
-                                inferred_was = max(candidates) if candidates else None
+                            # Sanity: prevent impossible-looking matches like a $1000 item
+                            # being treated as "$4" due to noise in the blob.
+                            if inferred_was is not None and inferred_was >= 200 and inferred_now is not None and inferred_now <= 10:
                                 inferred_now = None
-                                if inferred_was is not None:
-                                    smaller = [v for v in candidates if v < inferred_was]
-                                    inferred_now = max(smaller) if smaller else None
-                                if inferred_was is not None and inferred_was >= 200 and inferred_now is not None and inferred_now <= 10:
-                                    inferred_now = None
-                                if inferred_was is not None and inferred_now is not None:
-                                    was_price = fmt_money(inferred_was)
+
+                            # IMPORTANT: If a selector returned non-price text (e.g. "Save 5%"),
+                            # treat it as missing and replace using inferred values from the blob.
+                            if inferred_now is not None and (not price_text or price_text == "N/A" or "$" not in price_text):
+                                price_text = fmt_money(inferred_now)
+                            if inferred_was is not None and inferred_now is not None and (not was_price or "$" not in was_price):
+                                was_price = fmt_money(inferred_was)
                     except Exception:
                         pass
 
