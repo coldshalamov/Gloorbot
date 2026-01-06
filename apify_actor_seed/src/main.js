@@ -451,9 +451,18 @@ async function extractProducts(page, store, categoryName, pickupOnly) {
       for (const product of products) {
         const offersValue = product.offers || {};
         const offers = Array.isArray(offersValue) ? (offersValue[0] || {}) : offersValue;
+
+        // DETAILED LOGGING: See what JSON-LD contains
+        log.info(`[JSON-LD] Product name: ${product.name}`);
+        log.info(`[JSON-LD] Offers.price raw: "${offers.price}"`);
+        log.info(`[JSON-LD] Offers.priceWas raw: "${offers.priceWas}"`);
+        log.info(`[JSON-LD] Full offers object: ${JSON.stringify(offers)}`);
+
         const price = parsePrice(offers.price);
+        log.info(`[JSON-LD] Parsed price: $${price}`);
         if (price == null) continue;
         const priceWas = parsePrice(offers.priceWas);
+        log.info(`[JSON-LD] Parsed was price: $${priceWas}`);
         const productUrl = ensureStoreUrl(offers.url || product.url, store.store_id);
         rows.push({
           retailer: 'lowes',
@@ -497,9 +506,18 @@ async function extractProducts(page, store, categoryName, pickupOnly) {
     const link = await card.locator(SELECTORS.LINK).first().getAttribute('href').catch(() => null);
     const img = await card.locator(SELECTORS.IMG).first().getAttribute('src').catch(() => null);
 
+    // DETAILED LOGGING: See exactly what we're extracting
+    log.info(`[CARD ${i}] Title: ${title}`);
+    log.info(`[CARD ${i}] Price selector text: "${priceText}"`);
+    log.info(`[CARD ${i}] Price alt selector text: "${priceAlt}"`);
+    log.info(`[CARD ${i}] Was price selector text: "${wasText}"`);
+    log.info(`[CARD ${i}] Link: ${link}`);
+
     const price = parsePrice(priceText || priceAlt);
+    log.info(`[CARD ${i}] Parsed price: $${price}`);
     if (price == null) continue;
     const priceWas = parsePrice(wasText);
+    log.info(`[CARD ${i}] Parsed was price: $${priceWas}`);
     const productUrl = link ? new URL(link, BASE_URL).toString() : null;
     const sku = skuFromUrl(productUrl) || (await card.getAttribute('data-itemid').catch(() => null));
     const pctOff = priceWas ? (priceWas - price) / priceWas : null;

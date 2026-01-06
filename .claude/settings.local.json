@@ -13,7 +13,13 @@
       "Bash(curl:*)",
       "Bash(python apify_helper.py:*)",
       "Bash(git clone:*)",
-      "Bash(python test_fingerprint_standalone.py:*)"
+      "Bash(python test_fingerprint_standalone.py:*)",
+      "Skill(ultrathink:ultrathink)",
+      "Skill(ultrathink:ultrathink:*)",
+      "Skill(dev-browser)",
+      "Skill(dev-browser:*)",
+      "Bash(npx tsx:*)",
+      "Bash(timeout:*)"
     ],
     "deny": [],
     "ask": []

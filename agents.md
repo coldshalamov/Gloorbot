@@ -23,6 +23,18 @@
 ---
 
 ### 📝 RECENT MILESTONES (LAST 24 HOURS)
+- [2026-01-06]: Codex: added Kilo CLI MCP wrapper (kilo-cli-mcp), installed deps, and wired it into unified proxy + main agent configs.
+- [2026-01-06]: Codex: moved nucleus to unified proxy and switched Codex/Claude/Antigravity/Kilo configs to `http://localhost:9090/nucleus/sse`.
+- [2026-01-06]: Codex: updated Gemini CLI settings to use proxy tool hub and set model to `gemini-3-pro`.
+- [2026-01-06]: Codex: created `agent-swarm-planner` skill and refreshed global instructions (GEMINI.md, CLAUDE.md, Kilo rules, Codex GLOBAL_INSTRUCTIONS).
+- [2026-01-06]: Codex: verified Gemini CLI MCP config supports SSE (`url` field) plus `httpUrl` and `tcp` transports in settings schema.
+- [2026-01-06]: Codex: clarified gemini-cli vs gemini-mcp-tool roles; tool-hub goal requires gemini CLI to act as MCP client (proxy usable only if supported).
+- [2026-01-06]: Codex: diagnosed gemini-cli MCP ping failure (uses `echo` with `shell: false` on Windows) and pointed unified_config to local patched gemini-mcp-tool; rebuild done, proxy restart still needed.
+- [2026-01-06]: Codex: attempted gemini MCP ping (`hello`); tool failed with `spawn echo ENOENT`.
+- [2026-01-06]: Codex: enumerated configured MCP servers from the unified Lazy-MCP proxy configs (unified_config.json + mcp-proxy config.json) for quick debugging/verification.
+- [2026-01-06]: Codex: confirmed unified MCP list includes `serena` (SSE), `desktop-commander`, `render`, `github`, `apify`, `fetch`; `C:/Users/User/.mcp.json` has an empty `mcpServers` map.
+- [2026-01-06]: Codex: fixed local Codex MCP config for Serena by adding `type = "sse"` under `[mcp_servers.serena]` in `C:/Users/User/.codex/config.toml` (restart required).
+- [2026-01-06]: Codex: clarified Gemini MCP auth split (CLI OAuth vs API key quotas) and when free-tier API keys are usable.
 - **Archive [2026-01-03]**: Unified MCP configs for all agents, established `AGENT_PROTOCOL.md`, and optimized dynamic project detection.
 - [2026-01-05]: Codex: quick repo survey; confirmed `AGENT_PROTOCOL.md` is referenced but not present in repo root; `README.md` documents coordinator/worker/PARALLEL layout.
 - [2026-01-05]: Clarified naming: this repo/service `gloorbot-coordinator` is referred to as **gloorbot**; the CheapSkater service `cheapskater` (service name “Gloorbot”) is referred to as **cheapskater**; deals flow gloorbot scraper → cheapskater website.
