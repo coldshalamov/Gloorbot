@@ -659,8 +659,22 @@ async def scrape_category_page(page: Page, url: str, store_info: dict, page_num:
                     // This avoids capturing non-local promotional carousels.
                     if (!pickupMatch) return null;
 
-                    const now = firstMoney(nowEl && nowEl.textContent) || firstMoney(text);
-                    const was = firstMoney(wasEl && wasEl.textContent) || firstMoney(strike && strike.textContent);
+                    // FIX: Use aria-label first (contains clean price like "Actual Price $1,597.99")
+                    // Only fallback to textContent if aria-label fails
+                    let now = null;
+                    if (nowEl) {
+                        const ariaLabel = nowEl.getAttribute("aria-label") || "";
+                        now = firstMoney(ariaLabel) || firstMoney(nowEl.textContent);
+                    }
+                    // DO NOT fallback to firstMoney(text) - it grabs random $ amounts from card!
+
+                    let was = null;
+                    if (wasEl) {
+                        const wasAriaLabel = wasEl.getAttribute("aria-label") || "";
+                        was = firstMoney(wasAriaLabel) || firstMoney(wasEl.textContent);
+                    } else if (strike) {
+                        was = firstMoney(strike.textContent);
+                    }
 
                     let imageUrl = null;
                     const img = card.querySelector("img");
@@ -734,6 +748,7 @@ async def scrape_category_page(page: Page, url: str, store_info: dict, page_num:
                     was_price_text = (p.get("was_price") or "").strip()
                     if not product_url or not title_text:
                         continue
+
                     products.append(
                         {
                             "title": title_text,
@@ -933,60 +948,81 @@ async def scrape_category_page(page: Page, url: str, store_info: dict, page_num:
 
                 # Price - Lowe's uses data-selector="splp-prd-act-$" for current price
                 # and "splp-prd-promo-was-$" for was price
+                # FIX: Prioritize aria-label which contains clean price like "Actual Price $1,597.99"
                 price_text = ""
-                for sel in [
-                    ":scope [data-selector='splp-prd-act-$']",     # Current/actual price
-                    ":scope [data-selector='splp-prd-$']",          # Price element
-                    ":scope [data-selector='prd-price-holder']",    # Price container
-                    ":scope [data-testid='current-price']",
-                    ":scope [data-testid*='price']",
-                    ":scope div[class*='ProductCard_price']",
-                    ":scope [data-test*='current']",
-                    ":scope [data-test*='price']",
-                ]:
-                    price_el = card.locator(sel).first
-                    if await price_el.count() > 0:
-                        candidate = (await price_el.inner_text()).strip()
-                        if not candidate:
-                            continue
-                        # Ignore savings/percent nodes that often match broad selectors
-                        # like data-testid*='price' (e.g. "Save 5%").
-                        if "%" in candidate or re.search(r"(?i)\b(save|savings|off)\b", candidate):
-                            continue
-                        # Prefer explicit $ prices.
-                        if "$" in candidate:
-                            price_text = candidate
-                            break
 
-                # Was price (markdown indicator) - Lowe's uses data-selector="splp-prd-promo-was-$"
+                # FIRST: Try the primary selector with aria-label (MOST RELIABLE)
+                # aria-label contains clean price like "Actual Price $1,597.99"
+                price_el = card.locator(":scope [data-selector='splp-prd-act-$']").first
+                if await price_el.count() > 0:
+                    aria_label = await price_el.get_attribute("aria-label") or ""
+                    if aria_label and "$" in aria_label:
+                        match = re.search(r'\$[\d,]+(?:\.\d{2})?', aria_label)
+                        if match:
+                            price_text = match.group(0)
+
+                # SECOND: Fallback to other selectors if primary failed
+                if not price_text:
+                    for sel in [
+                        ":scope [data-selector='splp-prd-act-$']",     # Current/actual price
+                        ":scope [data-selector='splp-prd-$']",          # Price element
+                        ":scope [data-selector='prd-price-holder']",    # Price container
+                        ":scope [data-testid='current-price']",
+                        ":scope [data-testid*='price']",
+                        ":scope div[class*='ProductCard_price']",
+                        ":scope [data-test*='current']",
+                        ":scope [data-test*='price']",
+                    ]:
+                        price_el = card.locator(sel).first
+                        if await price_el.count() > 0:
+                            candidate = (await price_el.inner_text()).strip()
+                            if not candidate:
+                                continue
+                            # Ignore savings/percent nodes
+                            if "%" in candidate or re.search(r"(?i)\b(save|savings|off)\b", candidate):
+                                continue
+                            if "$" in candidate:
+                                price_text = candidate
+                                break
+
+                # Was price (markdown indicator) - use aria-label first for reliability
                 was_price = ""
-                for sel in [
-                    ":scope [data-selector='splp-prd-promo-was-$']",  # Lowe's was price
-                    ":scope [data-testid='was-price']",
-                    ":scope [data-testid*='was']",
-                    ":scope [class*='was-price']",
-                    ":scope [data-test*='was']",
-                    ":scope [data-test*='savings']",
-                    ":scope s",  # Strikethrough text often used for was-price
-                    ":scope del",  # Deleted text
-                ]:
-                    was_el = card.locator(sel).first
-                    if await was_el.count() > 0:
-                        candidate = (await was_el.inner_text()).strip()
-                        if not candidate:
-                            continue
-                        # Avoid interpreting "Save $X" / "% off" as a was-price.
-                        if "%" in candidate or re.search(r"(?i)\b(save|savings|off)\b", candidate):
-                            continue
-                        if "$" in candidate:
-                            was_price = candidate
-                            break
+                was_el = card.locator(":scope [data-selector='splp-prd-promo-was-$']").first
+                if await was_el.count() > 0:
+                    was_aria = await was_el.get_attribute("aria-label") or ""
+                    if was_aria and "$" in was_aria:
+                        match = re.search(r'\$[\d,]+(?:\.\d{2})?', was_aria)
+                        if match:
+                            was_price = match.group(0)
 
-                # Fallback: parse money from text blobs (covers "$\\n42\\n.29" style)
+                # Fallback to other was-price selectors
+                if not was_price:
+                    for sel in [
+                        ":scope [data-selector='splp-prd-promo-was-$']",  # Lowe's was price
+                        ":scope [data-testid='was-price']",
+                        ":scope [data-testid*='was']",
+                        ":scope [class*='was-price']",
+                        ":scope [data-test*='was']",
+                        ":scope s",  # Strikethrough
+                        ":scope del",
+                    ]:
+                        was_el = card.locator(sel).first
+                        if await was_el.count() > 0:
+                            candidate = (await was_el.inner_text()).strip()
+                            if not candidate:
+                                continue
+                            # Avoid interpreting "Save $X" / "% off" as was-price
+                            if "%" in candidate or re.search(r"(?i)\b(save|savings|off)\b", candidate):
+                                continue
+                            if "$" in candidate:
+                                was_price = candidate
+                                break
+
+                # Fallback: parse money from text blobs (covers "$\n42\n.29" style)
+                # NOTE: This is a last resort - aria-label extraction above is preferred
                 if (not price_text or price_text == "N/A") or (not was_price):
                     try:
                         blob = await card.inner_text()
-                        # Use SAFE extraction that ignores savings/off amounts
                         vals = clean_money_values(blob)
                         if vals:
                             candidates = sorted({v for v in vals if v >= 1.0})
@@ -996,13 +1032,11 @@ async def scrape_category_page(page: Page, url: str, store_info: dict, page_num:
                                 smaller = [v for v in candidates if v < inferred_was]
                                 inferred_now = max(smaller) if smaller else None
 
-                            # Sanity: prevent impossible-looking matches like a $1000 item
-                            # being treated as "$4" due to noise in the blob.
+                            # Sanity: prevent impossible matches (e.g., $1000 item = $4)
                             if inferred_was is not None and inferred_was >= 200 and inferred_now is not None and inferred_now <= 10:
                                 inferred_now = None
 
-                            # IMPORTANT: If a selector returned non-price text (e.g. "Save 5%"),
-                            # treat it as missing and replace using inferred values from the blob.
+                            # Only use blob inference if selector extraction failed completely
                             if inferred_now is not None and (not price_text or price_text == "N/A" or "$" not in price_text):
                                 price_text = fmt_money(inferred_now)
                             if inferred_was is not None and inferred_now is not None and (not was_price or "$" not in was_price):
@@ -1146,7 +1180,21 @@ async def scrape_category_all_pages(page: Page, category_url: str, store_info: d
         filter_applied = await apply_pickup_filter(page, f"{store_info['name']}-{cat_name}")
 
         if not filter_applied:
-            raise RuntimeError(f"Pickup filter FAILED for {store_info['name']} - {cat_name}. Aborting to trigger retry.")
+            Actor.log.error(f"{store_info['name']} - {cat_name}: Pickup filter could not be applied - SKIPPING CATEGORY")
+            return []  # Skip this category entirely instead of scraping wrong data
+
+        # CRITICAL: Verify the URL actually has pickup filter parameters
+        current_url_lower = page.url.lower()
+        has_filter_params = (
+            "instock=1" in current_url_lower or
+            "pickup" in current_url_lower or
+            "refinement" in current_url_lower
+        )
+
+        if not has_filter_params:
+            Actor.log.error(f"{store_info['name']} - {cat_name}: URL missing pickup filter params after filter was 'applied' - SKIPPING CATEGORY")
+            Actor.log.error(f"URL: {page.url}")
+            return []  # Don't scrape unfiltered results
 
         # Update category_url to include the new query params (facets)
         new_url = page.url
