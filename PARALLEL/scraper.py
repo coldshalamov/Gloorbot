@@ -355,12 +355,19 @@ async def extract_tile_group_products(card: Locator) -> list[dict]:
 
 async def apply_pickup_filter(page: Page, category_name: str) -> bool:
     """
-    Apply the pickup filter with VERIFICATION.
+    Apply the pickup filter with VERIFICATION and AVAILABILITY CHECK.
 
     This is the most critical function - without the pickup filter,
     we get inventory for ALL stores, not just local availability.
 
-    Returns True if filter was successfully applied and verified.
+    IMPORTANT FIX: Now checks if the pickup filter is DISABLED (greyed out).
+    When a store has no pickup items in a category, the filter button is disabled.
+    Previously, the scraper would continue scraping empty/wrong results.
+    Now it detects disabled filters and skips the category entirely.
+
+    Returns:
+        True: Filter was successfully applied and verified
+        False: Filter is disabled/unavailable OR cannot be applied - SKIP CATEGORY
     """
     print(f"[DEBUG] Applying Pickup Filter for {category_name}", flush=True)
 
@@ -415,6 +422,36 @@ async def apply_pickup_filter(page: Page, category_name: str) -> bool:
                 continue
         return False
 
+    async def is_element_disabled(element) -> bool:
+        """Check if an element is disabled or greyed out."""
+        try:
+            # Check disabled attribute
+            disabled = await element.get_attribute("disabled")
+            if disabled is not None:
+                return True
+
+            # Check aria-disabled
+            aria_disabled = await element.get_attribute("aria-disabled")
+            if aria_disabled == "true":
+                return True
+
+            # Check if element or parent has disabled/greyed CSS classes
+            class_name = await element.get_attribute("class") or ""
+            if any(cls in class_name.lower() for cls in ["disabled", "greyed", "inactive", "unavailable"]):
+                return True
+
+            # Check if input checkbox is disabled
+            try:
+                is_disabled = await element.is_disabled()
+                if is_disabled:
+                    return True
+            except Exception:
+                pass
+
+            return False
+        except Exception:
+            return False
+
     async def is_filter_selected(el) -> bool:
         """Check if filter element is in selected state."""
         try:
@@ -450,7 +487,14 @@ async def apply_pickup_filter(page: Page, category_name: str) -> bool:
     # APPROACH 1: Try JavaScript-based click on the "Pickup Today at" checkbox
     # This is the most reliable for Lowe's current UI
     async def try_js_checkbox_click():
-        """Use JavaScript to find and click the pickup checkbox."""
+        """
+        Use JavaScript to find and click the pickup checkbox.
+
+        Returns:
+            True: Filter successfully applied/verified
+            False: Filter not found or error occurred (continue to fallback)
+            'disabled': Filter is disabled (no pickup items available - SKIP CATEGORY)
+        """
         try:
             result = await page.evaluate("""
                 () => {
@@ -460,6 +504,18 @@ async def apply_pickup_filter(page: Page, category_name: str) -> bool:
                         // Check the parent/label for "Pickup Today" text
                         const parent = cb.closest('div, label, li');
                         if (parent && parent.textContent.includes('Pickup Today')) {
+                            // CRITICAL: Check if the checkbox is disabled
+                            if (cb.disabled || cb.hasAttribute('disabled')) {
+                                return {clicked: false, wasChecked: false, disabled: true};
+                            }
+                            // Check parent for disabled classes
+                            if (parent.classList.contains('disabled') ||
+                                parent.classList.contains('greyed') ||
+                                parent.classList.contains('inactive') ||
+                                parent.getAttribute('aria-disabled') === 'true') {
+                                return {clicked: false, wasChecked: false, disabled: true};
+                            }
+
                             if (!cb.checked) {
                                 cb.click();
                                 return {clicked: true, wasChecked: false};
@@ -480,21 +536,39 @@ async def apply_pickup_filter(page: Page, category_name: str) -> bool:
                         const container = pickupLabel.closest('div, label, li');
                         if (container) {
                             const cb = container.querySelector('input[type="checkbox"]');
-                            if (cb && !cb.checked) {
-                                cb.click();
-                                return {clicked: true, wasChecked: false, method: 'xpath'};
-                            } else if (cb && cb.checked) {
-                                return {clicked: false, wasChecked: true, method: 'xpath'};
+                            if (cb) {
+                                // Check if disabled
+                                if (cb.disabled || cb.hasAttribute('disabled') ||
+                                    container.classList.contains('disabled') ||
+                                    container.getAttribute('aria-disabled') === 'true') {
+                                    return {clicked: false, wasChecked: false, disabled: true};
+                                }
+
+                                if (!cb.checked) {
+                                    cb.click();
+                                    return {clicked: true, wasChecked: false, method: 'xpath'};
+                                } else {
+                                    return {clicked: false, wasChecked: true, method: 'xpath'};
+                                }
                             }
                         }
-                        // Click the label itself
-                        pickupLabel.click();
-                        return {clicked: true, wasChecked: false, method: 'label-click'};
+                        // Click the label itself (if not disabled)
+                        if (!pickupLabel.classList.contains('disabled') &&
+                            pickupLabel.getAttribute('aria-disabled') !== 'true') {
+                            pickupLabel.click();
+                            return {clicked: true, wasChecked: false, method: 'label-click'};
+                        }
+                        return {clicked: false, wasChecked: false, disabled: true};
                     }
 
                     return {clicked: false, wasChecked: false, notFound: true};
                 }
             """)
+
+            # Check if the filter is disabled (no items available for pickup)
+            if result.get('disabled'):
+                Actor.log.info(f"[{category_name}] Pickup filter is DISABLED (no pickup items available at this store) - skipping category")
+                return 'disabled'  # Special return value to indicate we should skip
 
             if result.get('wasChecked'):
                 Actor.log.info(f"[{category_name}] Pickup filter already checked (JS)")
@@ -520,8 +594,12 @@ async def apply_pickup_filter(page: Page, category_name: str) -> bool:
         return False
 
     # Try JS approach first (most reliable)
-    if await try_js_checkbox_click():
-        return True  # Already verified inside the function
+    js_result = await try_js_checkbox_click()
+    if js_result is True:
+        return True  # Filter successfully applied
+    elif js_result == 'disabled':
+        return False  # Filter is disabled - skip this category entirely
+    # If js_result is False, continue to fallback selector-based approach
 
     # APPROACH 2: Fallback to selector-based clicking
     for attempt in range(3):
@@ -536,6 +614,11 @@ async def apply_pickup_filter(page: Page, category_name: str) -> bool:
                         visible = await element.is_visible()
                         if not visible:
                             continue
+
+                        # CRITICAL: Check if element is disabled before attempting to click
+                        if await is_element_disabled(element):
+                            Actor.log.info(f"[{category_name}] Pickup filter is DISABLED (no pickup items available) - skipping category")
+                            return False
 
                         text = ""
                         try:

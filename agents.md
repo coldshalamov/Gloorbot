@@ -23,6 +23,7 @@
 ---
 
 ### 📝 RECENT MILESTONES (LAST 24 HOURS)
+- [2026-01-06]: Codex: installed code-executor-mcp globally and wired gemini-cli MCP PATH env across agent configs; switched Gemini CLI settings to call code-executor-mcp directly (no npx).
 - [2026-01-06]: Codex: fixed price mixing by splitting `div.tile_group` rows into per-product records using `data-tile`; added regression test `test_tile_group_extraction.py` and updated main extractor to use the new helper.
 - [2026-01-06]: Codex: dev-browser audit of Lowe's dishwashers PLP (Pickup Today) found actual price nodes at `data-selector="splp-prd-act-$"` (aria-label "Actual Price $X") and was-price at `data-selector="splp-prd-promo-was-$"`/`span.was-price`; `div.tile_group` is a ROW container holding 4 products with data split across elements sharing `data-tile` (1-4). Using `tile_group` as a card mixes prices/titles; pickup text not in `tile_group`, so "Near Me" extraction returns empty on this page. Fix should group by `data-tile` per product and use aria-label prices.
 - [2026-01-06]: Codex: added startup launcher to auto-run Docker MCP Gateway on user logon (startup cmd + wait-for-docker script).
