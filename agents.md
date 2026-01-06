@@ -23,6 +23,10 @@
 ---
 
 ### 📝 RECENT MILESTONES (LAST 24 HOURS)
+- [2026-01-06]: Codex: fixed price mixing by splitting `div.tile_group` rows into per-product records using `data-tile`; added regression test `test_tile_group_extraction.py` and updated main extractor to use the new helper.
+- [2026-01-06]: Codex: dev-browser audit of Lowe's dishwashers PLP (Pickup Today) found actual price nodes at `data-selector="splp-prd-act-$"` (aria-label "Actual Price $X") and was-price at `data-selector="splp-prd-promo-was-$"`/`span.was-price`; `div.tile_group` is a ROW container holding 4 products with data split across elements sharing `data-tile` (1-4). Using `tile_group` as a card mixes prices/titles; pickup text not in `tile_group`, so "Near Me" extraction returns empty on this page. Fix should group by `data-tile` per product and use aria-label prices.
+- [2026-01-06]: Codex: added startup launcher to auto-run Docker MCP Gateway on user logon (startup cmd + wait-for-docker script).
+- [2026-01-06]: Codex: replaced Claude Code Antigravity MCP config with minimal toolset + gemini-cli/kilo-cli/code-executor; removed proxy-master env overrides; enabled gemini-cli tools for native antigravity; cleaned Kilo gemini envDisabled.
 - [2026-01-06]: Codex: added Kilo CLI MCP wrapper (kilo-cli-mcp), installed deps, and wired it into unified proxy + main agent configs.
 - [2026-01-06]: Codex: moved nucleus to unified proxy and switched Codex/Claude/Antigravity/Kilo configs to `http://localhost:9090/nucleus/sse`.
 - [2026-01-06]: Codex: updated Gemini CLI settings to use proxy tool hub and set model to `gemini-3-pro`.
@@ -40,6 +44,8 @@
 - [2026-01-06]: Codex: clarified proxy master tradeoffs and proposed tool-grouped proxy configs to reduce context/resource bloat.
 - [2026-01-06]: Codex: found Gemini CLI supports includeTools/excludeTools and hooks.BeforeToolSelection for dynamic tool filtering; MCP supports tools/list + list_changed but still needs schemas to call tools.
 - [2026-01-06]: Codex: removed zai-* MCP servers from Gemini CLI settings to reduce redundant tool exposure.
+- [2026-01-06]: Codex: removed magic-mcp from Gemini CLI settings per user request.
+- [2026-01-06]: Codex: installed code-executor-mcp + docker mcp gateway stack, created tool-hub config and gateway run script, and wired Codex/Gemini/Antigravity configs to code-executor for low-context tool access.
 - **Archive [2026-01-03]**: Unified MCP configs for all agents, established `AGENT_PROTOCOL.md`, and optimized dynamic project detection.
 - [2026-01-05]: Codex: quick repo survey; confirmed `AGENT_PROTOCOL.md` is referenced but not present in repo root; `README.md` documents coordinator/worker/PARALLEL layout.
 - [2026-01-05]: Clarified naming: this repo/service `gloorbot-coordinator` is referred to as **gloorbot**; the CheapSkater service `cheapskater` (service name “Gloorbot”) is referred to as **cheapskater**; deals flow gloorbot scraper → cheapskater website.
@@ -88,8 +94,8 @@
 
 ### 🧠 PERSISTENT CONTEXT (KEY DETAILS)
 *Project Path*: `c:/Users/User/Documents/GitHub/Telomere/Gloorbot`
-*MCP Config*: All agents use the **Unified Lazy-MCP Proxy** pointing to `C:/Users/User/.claude/mcp-servers/lazy-mcp/unified_config.json`.
-*Shared Servers*: One instance of Serena and Agent-MCP is shared by all 3 agents via the proxy.
+*MCP Config*: Main agents use a minimal toolset + subagents (Gemini CLI + Kilo CLI) plus `code-executor-mcp` for low-context tool access. Tool hub runs behind Docker MCP Gateway at `http://localhost:9094/sse` with Bearer auth (`C:/Users/User/.mcp-toolhub.json`).
+*Shared Servers*: Serena (SSE) and nucleus (SSE) are shared; Docker MCP Gateway lazily spawns catalog servers and shares them across agents.
 *Shared Logic*: Agents must use the `AGENT_PROTOCOL.md` for all workflow steps.
 
 **Naming used in chat (aliases)**

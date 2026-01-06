@@ -25,7 +25,7 @@ from datetime import datetime
 from pathlib import Path
 from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
-from playwright.async_api import async_playwright, Page
+from playwright.async_api import async_playwright, Page, Locator
 
 
 # ============================================================================
@@ -246,6 +246,107 @@ async def set_store_context(page: Page, store_url: str, store_name: str):
 
     Actor.log.warning("Could not explicitly set store - hoping default cookies work")
     return False
+
+
+# ============================================================================
+# TILE GROUP EXTRACTION (ROW -> PER-PRODUCT)
+# ============================================================================
+
+async def extract_tile_group_products(card: Locator) -> list[dict]:
+    # Lowe's tile_group rows contain multiple products grouped by data-tile.
+    # Split each tile_group into per-product records to avoid mixing prices/titles.
+    tile_nodes = card.locator("[data-tile]")
+    tile_ids: set[str] = set()
+    for i in range(await tile_nodes.count()):
+        tid = await tile_nodes.nth(i).get_attribute("data-tile")
+        if tid:
+            tile_ids.add(tid)
+
+    products: list[dict] = []
+    for tid in sorted(tile_ids, key=lambda x: int(x) if str(x).isdigit() else str(x)):
+        scope = card.locator(f"[data-tile='{tid}']")
+        link_el = scope.locator("a[href*='/pd/']").first
+        href = await link_el.get_attribute("href") if await link_el.count() > 0 else ""
+
+        title_text = ""
+        title_el = scope.locator("[data-selector='splp-prd-ttl']").first
+        if await title_el.count() > 0:
+            title_text = (await title_el.inner_text()).strip()
+        if not title_text:
+            aria = (await link_el.get_attribute("aria-label")) if await link_el.count() > 0 else ""
+            title_text = (aria or "").strip()
+
+        # Price via aria-label on splp-prd-act-$
+        price_text = ""
+        price_el = scope.locator("[data-selector='splp-prd-act-$']").first
+        if await price_el.count() > 0:
+            aria_label = await price_el.get_attribute("aria-label") or ""
+            if aria_label and "$" in aria_label:
+                match = re.search(r"\$[\d,]+(?:\.\d{2})?", aria_label)
+                if match:
+                    price_text = match.group(0)
+            if not price_text:
+                candidate = (await price_el.inner_text()).strip()
+                if "$" in candidate:
+                    price_text = candidate
+
+        # Was price via aria-label on splp-prd-promo-was-$
+        was_price = ""
+        was_el = scope.locator("[data-selector='splp-prd-promo-was-$']").first
+        if await was_el.count() > 0:
+            was_aria = await was_el.get_attribute("aria-label") or ""
+            if was_aria and "$" in was_aria:
+                match = re.search(r"\$[\d,]+(?:\.\d{2})?", was_aria)
+                if match:
+                    was_price = match.group(0)
+            if not was_price:
+                candidate = (await was_el.inner_text()).strip()
+                if "$" in candidate:
+                    was_price = candidate
+
+        image_url = None
+        try:
+            img = scope.locator("img").first
+            if await img.count() > 0:
+                src = (
+                    await img.get_attribute("src")
+                    or await img.get_attribute("data-src")
+                    or await img.get_attribute("data-lazy-src")
+                    or ""
+                )
+                if not src:
+                    srcset = (
+                        await img.get_attribute("srcset")
+                        or await img.get_attribute("data-srcset")
+                        or ""
+                    )
+                    first = srcset.split(",")[0].strip()
+                    src = first.split(" ")[0].strip() if first else ""
+                if src.startswith("//"):
+                    src = "https:" + src
+                if src.startswith("/"):
+                    src = "https://www.lowes.com" + src
+                if src.startswith("data:"):
+                    src = ""
+                image_url = src or None
+        except Exception:
+            image_url = None
+
+        if not href or not title_text or "$" in title_text or "%" in title_text:
+            continue
+
+        products.append(
+            {
+                "title": title_text.strip(),
+                "price": price_text.strip() if price_text else "N/A",
+                "was_price": was_price.strip() if was_price else "",
+                "image_url": image_url,
+                "has_markdown": bool(was_price),
+                "url": f"https://www.lowes.com{href}" if href.startswith("/") else href,
+            }
+        )
+
+    return products
 
 
 # ============================================================================
@@ -895,6 +996,35 @@ async def scrape_category_page(page: Page, url: str, store_info: dict, page_num:
     # Extract products with timeout per card
     for card_idx, card in enumerate(product_cards):
         try:
+            # If a tile_group contains multiple products, split by data-tile.
+            try:
+                if await card.locator("[data-tile]").count() > 0 and await card.locator("[data-selector='splp-prd-act-$']").count() > 1:
+                    tile_products = await extract_tile_group_products(card)
+                    if tile_products:
+                        now = datetime.utcnow().isoformat()
+                        for p in tile_products:
+                            if not p.get("title") or not p.get("url"):
+                                continue
+                            products.append(
+                                {
+                                    "title": p.get("title"),
+                                    "price": p.get("price", "N/A"),
+                                    "was_price": p.get("was_price", ""),
+                                    "image_url": p.get("image_url"),
+                                    "has_markdown": bool(p.get("was_price")),
+                                    "url": p.get("url"),
+                                    "category_url": url,
+                                    "store_id": store_info["store_id"],
+                                    "store_name": store_info["name"],
+                                    "store_city": store_info["city"],
+                                    "store_state": store_info["state"],
+                                    "scraped_at": now,
+                                }
+                            )
+                        continue
+            except Exception:
+                pass
+
             # Wrap entire card extraction in timeout
             async def extract_card():
                 link_el = card.locator(
