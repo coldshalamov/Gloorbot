@@ -39,6 +39,7 @@
 - [2026-01-06]: Codex: removed gemini-cli from unified proxy config so it remains a top-level MCP server.
 - [2026-01-06]: Codex: clarified proxy master tradeoffs and proposed tool-grouped proxy configs to reduce context/resource bloat.
 - [2026-01-06]: Codex: found Gemini CLI supports includeTools/excludeTools and hooks.BeforeToolSelection for dynamic tool filtering; MCP supports tools/list + list_changed but still needs schemas to call tools.
+- [2026-01-06]: Codex: removed zai-* MCP servers from Gemini CLI settings to reduce redundant tool exposure.
 - **Archive [2026-01-03]**: Unified MCP configs for all agents, established `AGENT_PROTOCOL.md`, and optimized dynamic project detection.
 - [2026-01-05]: Codex: quick repo survey; confirmed `AGENT_PROTOCOL.md` is referenced but not present in repo root; `README.md` documents coordinator/worker/PARALLEL layout.
 - [2026-01-05]: Clarified naming: this repo/service `gloorbot-coordinator` is referred to as **gloorbot**; the CheapSkater service `cheapskater` (service name “Gloorbot”) is referred to as **cheapskater**; deals flow gloorbot scraper → cheapskater website.
