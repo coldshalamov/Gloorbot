@@ -199,8 +199,23 @@ async def warmup_session(page: Page):
     await asyncio.sleep(1 + random.random())
     await human_scroll(page)
     await asyncio.sleep(1.5 + random.random() * 1.5)
-    await human_mouse_move(page)
-    await asyncio.sleep(0.5 + random.random() * 0.5)
+    
+    # 3. Perform a Search (Crucial for trust)
+    Actor.log.info("Searching for 'caulk' to establish trust...")
+    try:
+        search_input = page.locator('input[id*="search"], input[name*="search"], input[aria-label*="search"]').first
+        if await search_input.count() > 0:
+            await search_input.click()
+            await page.keyboard.type("caulk", delay=100)
+            await page.keyboard.press("Enter")
+            await page.wait_for_load_state('domcontentloaded', timeout=30000)
+            await asyncio.sleep(3 + random.random() * 2)
+            await human_mouse_move(page)
+            await human_scroll(page)
+        else:
+            Actor.log.warning("Search input not found during warmup")
+    except Exception as e:
+        Actor.log.warning(f"Search warmup failed: {e}")
 
     Actor.log.info("Warmup complete")
 
@@ -541,29 +556,47 @@ async def apply_pickup_filter(page: Page, category_name: str) -> bool:
                     // Method 2: Find by checkbox with "Pickup Today" text nearby
                     const checkboxes = document.querySelectorAll('input[type="checkbox"]');
                     for (const cb of checkboxes) {
-                        const parent = cb.closest('div, label, li, fieldset');
-                        if (parent && parent.textContent.includes('Pickup Today')) {
-                            // CRITICAL: Check if the checkbox is disabled
-                            if (cb.disabled || cb.hasAttribute('disabled')) {
-                                return {clicked: false, wasChecked: false, disabled: true, reason: 'method2-checkbox-disabled'};
-                            }
+                        // Check if the checkbox is disabled
+                        if (cb.disabled || cb.hasAttribute('disabled')) continue;
 
-                            // Check parent tree for disabled
-                            let current = parent;
+                        const label = cb.closest('label');
+                        if (label && /Pickup Today/i.test(label.innerText)) {
+                            // Verify label is not too large (avoids sidebar-wide labels)
+                            if (label.innerText.length > 100) continue;
+
+                            // Check parent tree for disabled state
+                            let current = label;
+                            let isDisabled = false;
                             while (current && current !== document.body) {
                                 if (current.hasAttribute('disabled') ||
                                     current.getAttribute('aria-disabled') === 'true' ||
-                                    current.classList.contains('disabled')) {
-                                    return {clicked: false, wasChecked: false, disabled: true, reason: 'method2-parent-disabled'};
+                                    current.classList.contains('disabled') ||
+                                    current.classList.contains('greyed')) {
+                                    isDisabled = true;
+                                    break;
                                 }
                                 current = current.parentElement;
                             }
+                            if (isDisabled) continue;
 
                             if (!cb.checked) {
                                 cb.click();
-                                return {clicked: true, wasChecked: false};
+                                return {clicked: true, wasChecked: false, method: 'label-wrap'};
                             } else {
                                 return {clicked: false, wasChecked: true};
+                            }
+                        }
+
+                        // Also check for label[for] associations
+                        if (cb.id) {
+                            const labelFor = document.querySelector(`label[for="${cb.id}"]`);
+                            if (labelFor && /Pickup Today/i.test(labelFor.innerText)) {
+                                if (!cb.checked) {
+                                    cb.click();
+                                    return {clicked: true, wasChecked: false, method: 'label-for'};
+                                } else {
+                                    return {clicked: false, wasChecked: true};
+                                }
                             }
                         }
                     }
@@ -804,7 +837,7 @@ async def scrape_category_page(page: Page, url: str, store_info: dict, page_num:
             return /0 Products/i.test(body) || /0 results/i.test(body) || /Please reduce your filters/i.test(body);
         }""")
         if empty_check:
-            Actor.log.warning(f"[{store_info['name']} - {category_url.split('/')[-1]}] Zero products detected - ABORTING CATEGORY")
+            Actor.log.warning(f"[{store_info['name']} - {url.split('/')[-1]}] Zero products detected - ABORTING CATEGORY")
             return []
             
     except asyncio.TimeoutError:
