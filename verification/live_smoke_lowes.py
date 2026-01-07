@@ -91,9 +91,23 @@ async def _warmup_lowes(page: Page) -> dict:
     return last
 
 
-async def _extract_plp_tile_prices(page: Page, plp_url: str, sku: str) -> dict:
+async def _extract_plp_tile_prices(page: Page, plp_url: str, sku: str) -> dict: 
     await page.goto(plp_url, wait_until="domcontentloaded")
     await page.wait_for_timeout(2500)
+    title = await page.title()
+    if "access denied" in title.lower():
+        raise RuntimeError("Blocked on PLP (Access Denied)")
+
+    # Give client-side rendering a chance and trigger lazy-load.
+    try:
+        await page.wait_for_selector("a[href*='/pd/']", timeout=10_000)
+    except Exception:
+        pass
+    try:
+        await page.evaluate("window.scrollTo(0, document.body.scrollHeight * 0.35)")
+    except Exception:
+        pass
+    await page.wait_for_timeout(1500)
 
     resolved_sku = sku.strip()
 
@@ -104,9 +118,9 @@ async def _extract_plp_tile_prices(page: Page, plp_url: str, sku: str) -> dict:
     if (link is None) or (await link.count() == 0):
         # Auto-pick a product tile if the requested SKU is absent (inventory changes frequently).
         # Prefer a tile that has the now-price selector so we can do a meaningful DOM truth check.
-        candidates = page.locator("[data-tile] a[href*='/pd/']")
+        candidates = page.locator("a[href*='/pd/']")
         if await candidates.count() == 0:
-            raise RuntimeError("Could not find any /pd/ links inside [data-tile] on PLP")
+            raise RuntimeError("Could not find any /pd/ links on PLP")
 
         picked = None
         for i in range(min(50, await candidates.count())):
@@ -121,7 +135,9 @@ async def _extract_plp_tile_prices(page: Page, plp_url: str, sku: str) -> dict:
             if not cand_tid:
                 continue
             scope = page.locator(f"[data-tile='{cand_tid}']")
-            if await scope.locator("[data-selector='splp-prd-act-$']").count() == 0:
+            has_now = await scope.locator("[data-selector='splp-prd-act-$']").count() > 0
+            has_now = has_now or (await scope.locator("[aria-label*='Actual Price']").count() > 0)
+            if not has_now:
                 continue
             picked = cand
             break
@@ -140,30 +156,18 @@ async def _extract_plp_tile_prices(page: Page, plp_url: str, sku: str) -> dict:
         }""",
         await link.element_handle(),
     )
-    if not tid:
-        raise RuntimeError("Could not locate data-tile for the SKU link")
-
-    tile_group = page.locator("xpath=ancestor::div[contains(@class,'tile_group')][1]").first
-    # The xpath above is relative only if used from element context; so compute in evaluate:
-    # As a fallback, just search up a few parents in JS and return an element handle.
-    tg_handle = await page.evaluate_handle(
-        """(el) => {
-          let n = el;
-          for (let i=0; i<12; i++) {
-            if (!n || !n.parentElement) break;
-            n = n.parentElement;
-            if ((n.getAttribute('class')||'').includes('tile_group')) return n;
-          }
-          return null;
-        }""",
-        await link.element_handle(),
-    )
-    if not tg_handle:
-        raise RuntimeError("Could not locate tile_group container for SKU")
-
-    # Create a locator for that tile_group by unique marker (outerHTML hash is too big).
-    # Use data-tile scoping within the entire document: [data-tile='{tid}'].
-    scope = page.locator(f"[data-tile='{tid}']")
+    scope = None
+    if tid:
+        scope = page.locator(f"[data-tile='{tid}']")
+    else:
+        # Fallback to a broader card container when data-tile isn't present.
+        scope = link.locator("xpath=ancestor::div[contains(@class,'tile_group')][1]").first
+        if await scope.count() == 0:
+            scope = link.locator("xpath=ancestor::article[1]").first
+        if await scope.count() == 0:
+            scope = link.locator("xpath=ancestor::div[1]").first
+        if await scope.count() == 0:
+            raise RuntimeError("Could not locate a card container for picked /pd/ link")
     prices = await scraper.extract_prices_from_card(scope)
 
     # Truth directly from DOM nodes inside the tile (best-effort).
@@ -177,6 +181,8 @@ async def _extract_plp_tile_prices(page: Page, plp_url: str, sku: str) -> dict:
         "data_tile": tid,
         "picked_href": (await link.get_attribute("href")) if link else "",
         "scraper": prices,
+        "plp_title": title,
+        "plp_url": page.url,
         "dom": {
             "now_aria": now_aria or "",
             "now_text": now_text or "",
@@ -263,8 +269,28 @@ async def main_async() -> int:
             return 2
 
         plp_url = cfg.plp_url + (f"&storeNumber={cfg.store_number}" if "storeNumber=" not in cfg.plp_url else "")
-        plp = await _extract_plp_tile_prices(page, plp_url, cfg.sku)
-        await page.screenshot(path=str(ARTIFACTS / f"{ts}_plp.png"), full_page=True)
+        try:
+            plp = await _extract_plp_tile_prices(page, plp_url, cfg.sku)
+            await page.screenshot(path=str(ARTIFACTS / f"{ts}_plp.png"), full_page=True)
+        except Exception as e:
+            await page.screenshot(path=str(ARTIFACTS / f"{ts}_plp_fail.png"), full_page=True)
+            out = {
+                "ok": False,
+                "stage": "plp",
+                "warmup": warm,
+                "plp_url": plp_url,
+                "page_url": page.url,
+                "title": await page.title(),
+                "error": repr(e),
+                "artifacts": {
+                    "warmup_screenshot": str((ARTIFACTS / f"{ts}_warmup.png").resolve()),
+                    "plp_fail_screenshot": str((ARTIFACTS / f"{ts}_plp_fail.png").resolve()),
+                },
+            }
+            (ARTIFACTS / f"{ts}_result.json").write_text(json.dumps(out, indent=2), encoding="utf-8")
+            print(json.dumps(out, indent=2))
+            await ctx.close()
+            return 2
 
         pdp_url = cfg.pdp_url
         if plp.get("picked_href"):
