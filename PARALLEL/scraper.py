@@ -610,7 +610,13 @@ async def apply_pickup_filter(page: Page, category_name: str) -> bool:
     # Try JS approach first (most reliable)
     js_result = await try_js_checkbox_click()
     if js_result is True:
-        return True  # Filter successfully applied
+        # Verify the filter actually shows products
+        await asyncio.sleep(2)
+        zero_products = await page.locator('text="0 Products"').count() > 0 or await page.locator('text="0 results"').count() > 0
+        if zero_products:
+            Actor.log.warning(f"[{category_name}] Pickup filter applied but shows 0 products - no pickup items available")
+            return False
+        return True  # Filter successfully applied with products
     elif js_result == 'disabled':
         return False  # Filter is disabled - skip this category entirely
     # If js_result is False, continue to fallback selector-based approach
@@ -640,6 +646,12 @@ async def apply_pickup_filter(page: Page, category_name: str) -> bool:
                         except Exception:
                             pass
 
+                        # STRICT VALIDATION: Must contain "Pickup" or "pickup" in the text
+                        # This prevents clicking other filters like "Interior paint"
+                        if "pickup" not in text.lower() and "pick up" not in text.lower():
+                            Actor.log.debug(f"[{category_name}] Skipping non-pickup filter: '{text[:30]}'")
+                            continue
+
                         # Skip if text is too long (probably wrong element)
                         if len(text) > 100:
                             continue
@@ -647,6 +659,12 @@ async def apply_pickup_filter(page: Page, category_name: str) -> bool:
                         # Check if already selected
                         if await is_filter_selected(element):
                             Actor.log.info(f"[{category_name}] Pickup filter already active")
+                            # Verify it shows products
+                            await asyncio.sleep(1)
+                            zero_products = await page.locator('text="0 Products"').count() > 0 or await page.locator('text="0 results"').count() > 0
+                            if zero_products:
+                                Actor.log.warning(f"[{category_name}] Pickup filter active but shows 0 products")
+                                return False
                             return True
 
                         # Click the filter
@@ -659,6 +677,12 @@ async def apply_pickup_filter(page: Page, category_name: str) -> bool:
                             await page.wait_for_load_state("networkidle", timeout=8000)
                         except Exception:
                             pass
+
+                        # Check if we got 0 products after clicking
+                        zero_products = await page.locator('text="0 Products"').count() > 0 or await page.locator('text="0 results"').count() > 0
+                        if zero_products:
+                            Actor.log.warning(f"[{category_name}] Filter click resulted in 0 products - no pickup items available")
+                            return False
 
                         # VERIFY the click worked
                         if await is_filter_selected(element):
@@ -1436,9 +1460,17 @@ async def scrape_category_all_pages(page: Page, category_url: str, store_info: d
         # Some categories legitimately have zero products (seasonal/legal/empty).
         # In that case, the pickup filter UI will not exist, and we should NOT retry forever.
         try:
-            if await page.locator("text=/could not find any products/i").first.is_visible(timeout=2000):
-                Actor.log.info(f"{store_info['name']} - {cat_name}: No products found; skipping category")
-                return []
+            # Match variations: "0 Products.", "could not find any products", "0 results"
+            empty_selectors = [
+                 'text=/0 Products/i',
+                 'text=/0 results/i',
+                 'text=/could not find any products/i',
+                 'text=/Please reduce your filters/i'
+            ]
+            for selector in empty_selectors:
+                if await page.locator(selector).first.is_visible(timeout=1000):
+                    Actor.log.info(f"{store_info['name']} - {cat_name}: Empty results page detected ({selector}); skipping category")
+                    return []
         except Exception:
             pass
 
