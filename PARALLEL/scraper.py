@@ -1422,6 +1422,106 @@ async def scrape_category_page(page: Page, url: str, store_info: dict, page_num:
                     debugInfo.push("Using main grid container");
                 }
 
+                // IMPORTANT: div.tile_group can contain MULTIPLE products. If we treat it as one
+                // card, we can mix href/title from one tile with prices from another tile.
+                // This is the root cause of "Product $1000 shows as $10/$125/$131" style bugs.
+                function extractTileGroupProducts(tileGroup) {
+                    const tileIds = Array.from(
+                        new Set(
+                            Array.from(tileGroup.querySelectorAll("[data-tile]"))
+                                .map((n) => n.getAttribute("data-tile"))
+                                .filter((v) => v && v !== "null")
+                        )
+                    );
+                    // Only fall back to the legacy extractor if there are NO data-tile
+                    // attributes at all. Even a single tile id can be split across many
+                    // nodes, and the data-tile scoped extraction avoids mixing.
+                    if (tileIds.length === 0) {
+                        const single = extractCard(tileGroup);
+                        return single ? [single] : [];
+                    }
+
+                    const out = [];
+                    for (const tid of tileIds) {
+                        const scopeSel = `[data-tile="${tid}"]`;
+                        const a = tileGroup.querySelector(`${scopeSel} a[href*="/pd/"]`);
+                        const href = normalizeHref(a && a.getAttribute("href"));
+                        if (!href) continue;
+
+                        const titleEl =
+                            tileGroup.querySelector(`${scopeSel} [data-selector="splp-prd-ttl"]`) ||
+                            tileGroup.querySelector(`${scopeSel} [data-testid="item-description"]`) ||
+                            tileGroup.querySelector(`${scopeSel} a[data-testid="item-description-link"]`) ||
+                            tileGroup.querySelector(`${scopeSel} h3`) ||
+                            tileGroup.querySelector(`${scopeSel} h2`) ||
+                            a;
+                        let title = normText(titleEl && titleEl.textContent);
+
+                        // Reject obvious non-product titles.
+                        const lowTitle = (title || "").toLowerCase();
+                        if (!title || title.length < 5) continue;
+                        if (lowTitle.includes("you may also like")) continue;
+                        if (lowTitle.includes("previously viewed")) continue;
+                        if (lowTitle.includes("related products")) continue;
+                        if (lowTitle.includes("related searches")) continue;
+                        if (lowTitle.includes("pickup today at")) continue;
+
+                        const nowEl = tileGroup.querySelector(`${scopeSel} [data-selector="splp-prd-act-$"]`);
+                        const wasEl = tileGroup.querySelector(`${scopeSel} [data-selector="splp-prd-promo-was-$"]`);
+                        const strike = tileGroup.querySelector(`${scopeSel} s, ${scopeSel} del`);
+
+                        // Build a tile-scoped text blob (avoid mixing across tiles).
+                        const tileText = normText(
+                            Array.from(tileGroup.querySelectorAll(scopeSel))
+                                .map((n) => n.textContent || "")
+                                .join(" ")
+                        );
+                        const pickupMatch = /pickup\b/i.test(tileText)
+                            ? (tileText.match(/pickup[^.]{0,80}/i) || [])[0]
+                            : null;
+
+                        let now = null;
+                        if (nowEl) {
+                            const ariaLabel = nowEl.getAttribute("aria-label") || "";
+                            now = firstMoney(ariaLabel) || firstMoney(nowEl.textContent);
+                        }
+
+                        let was = null;
+                        if (wasEl) {
+                            const wasAriaLabel = wasEl.getAttribute("aria-label") || "";
+                            was = firstMoney(wasAriaLabel) || firstMoney(wasEl.textContent);
+                        } else if (strike) {
+                            was = firstMoney(strike.textContent);
+                        }
+
+                        let imageUrl = null;
+                        const img = tileGroup.querySelector(`${scopeSel} img`);
+                        if (img) {
+                            let src = img.getAttribute("src") || img.getAttribute("data-src") || "";
+                            if (!src) {
+                                const srcset = img.getAttribute("srcset") || img.getAttribute("data-srcset") || "";
+                                const first = srcset.split(",")[0].trim();
+                                src = first ? first.split(" ")[0].trim() : "";
+                            }
+                            if (src.startsWith("//")) src = "https:" + src;
+                            if (src.startsWith("/")) src = "https://www.lowes.com" + src;
+                            if (src.startsWith("data:")) src = "";
+                            imageUrl = src || null;
+                        }
+
+                        out.push({
+                            href,
+                            title,
+                            now_price: now,
+                            was_price: was,
+                            pickup: pickupMatch,
+                            image_url: imageUrl,
+                        });
+                    }
+
+                    return out;
+                }
+
                 const cards = Array.from(searchScope.querySelectorAll("div.tile_group"));
                 debugInfo.push(`Found ${cards.length} tile_group elements`);
                 
@@ -1431,17 +1531,20 @@ async def scrape_category_page(page: Page, url: str, store_info: dict, page_num:
                 let duplicateCount = 0;
                 
                 for (const c of cards) {
-                    const p = extractCard(c);
-                    if (!p) {
+                    const ps = extractTileGroupProducts(c);
+                    if (!ps || ps.length === 0) {
                         rejectedCount++;
                         continue;
                     }
-                    if (seen.has(p.href)) {
-                        duplicateCount++;
-                        continue;
+                    for (const p of ps) {
+                        if (!p) continue;
+                        if (seen.has(p.href)) {
+                            duplicateCount++;
+                            continue;
+                        }
+                        seen.add(p.href);
+                        out.push(p);
                     }
-                    seen.add(p.href);
-                    out.push(p);
                 }
 
                 debugInfo.push(`Rejected: ${rejectedCount}, Duplicates: ${duplicateCount}, Final: ${out.length}`);
