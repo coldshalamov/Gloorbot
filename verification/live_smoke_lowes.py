@@ -1,0 +1,265 @@
+from __future__ import annotations
+
+import asyncio
+import json
+import os
+import re
+import sys
+from dataclasses import dataclass
+from datetime import datetime
+from pathlib import Path
+
+from playwright.async_api import async_playwright, Page
+
+import PARALLEL.scraper as scraper
+
+
+ROOT = Path(__file__).resolve().parents[1]
+ARTIFACTS = (ROOT / "verification" / ".artifacts").resolve()
+PROFILE_DIR = (ROOT / "verification" / ".pw_profile").resolve()
+
+
+MONEY_RE = re.compile(r"\$\s*\d{1,3}(?:,\d{3})*(?:\.\d{2})?")
+
+
+def _money_to_float(s: str) -> float | None:
+    if not s:
+        return None
+    m = MONEY_RE.search(s)
+    if not m:
+        return None
+    compact = m.group(0).replace(" ", "").replace(",", "")
+    try:
+        return float(compact.replace("$", ""))
+    except Exception:
+        return None
+
+
+def _slug(s: str) -> str:
+    s = re.sub(r"[^a-zA-Z0-9]+", "_", s).strip("_")
+    return s[:80] or "artifact"
+
+
+async def _warmup_lowes(page: Page) -> dict:
+    await page.goto("https://www.lowes.com/", wait_until="domcontentloaded")
+    await page.wait_for_timeout(1500)
+    title = await page.title()
+
+    cookies = await page.context.cookies()
+    abck = ""
+    for c in cookies:
+        if c.get("name") == "_abck":
+            abck = c.get("value") or ""
+            break
+
+    warmed = ("~0~" in abck) and ("access denied" not in title.lower())
+    return {"title": title, "_abck_has_0": "~0~" in abck, "warmed": warmed}
+
+
+async def _extract_plp_tile_prices(page: Page, plp_url: str, sku: str) -> dict:
+    await page.goto(plp_url, wait_until="domcontentloaded")
+    await page.wait_for_timeout(2500)
+
+    # Find link to the SKU.
+    link = page.locator(f"a[href*='{sku}']").first
+    if await link.count() == 0:
+        raise RuntimeError(f"Could not find SKU {sku} on PLP")
+
+    # Find the nearest data-tile ancestor, then the tile_group container.
+    tid = await page.evaluate(
+        """(el) => {
+          const t = el.closest('[data-tile]');
+          return t ? t.getAttribute('data-tile') : null;
+        }""",
+        await link.element_handle(),
+    )
+    if not tid:
+        raise RuntimeError("Could not locate data-tile for the SKU link")
+
+    tile_group = page.locator("xpath=ancestor::div[contains(@class,'tile_group')][1]").first
+    # The xpath above is relative only if used from element context; so compute in evaluate:
+    # As a fallback, just search up a few parents in JS and return an element handle.
+    tg_handle = await page.evaluate_handle(
+        """(el) => {
+          let n = el;
+          for (let i=0; i<12; i++) {
+            if (!n || !n.parentElement) break;
+            n = n.parentElement;
+            if ((n.getAttribute('class')||'').includes('tile_group')) return n;
+          }
+          return null;
+        }""",
+        await link.element_handle(),
+    )
+    if not tg_handle:
+        raise RuntimeError("Could not locate tile_group container for SKU")
+
+    # Create a locator for that tile_group by unique marker (outerHTML hash is too big).
+    # Use data-tile scoping within the entire document: [data-tile='{tid}'].
+    scope = page.locator(f"[data-tile='{tid}']")
+    prices = await scraper.extract_prices_from_card(scope)
+
+    # Truth directly from DOM nodes inside the tile (best-effort).
+    now_aria = await scope.locator("[data-selector='splp-prd-act-$']").first.get_attribute("aria-label")
+    now_text = await scope.locator("[data-selector='splp-prd-act-$']").first.inner_text()
+    was_aria = await scope.locator("[data-selector='splp-prd-promo-was-$']").first.get_attribute("aria-label")
+    was_text = await scope.locator("[data-selector='splp-prd-promo-was-$']").first.inner_text()
+
+    return {
+        "sku": sku,
+        "data_tile": tid,
+        "scraper": prices,
+        "dom": {
+            "now_aria": now_aria or "",
+            "now_text": now_text or "",
+            "was_aria": was_aria or "",
+            "was_text": was_text or "",
+        },
+    }
+
+
+async def _extract_pdp_prices(page: Page, pdp_url: str) -> dict:
+    await page.goto(pdp_url, wait_until="domcontentloaded")
+    await page.wait_for_timeout(2500)
+
+    # Lowe's commonly exposes the main price via data-testid="main-price".
+    txt = ""
+    loc = page.locator("[data-testid='main-price']").first
+    if await loc.count() > 0:
+        txt = (await loc.inner_text()) or ""
+
+    # Parse "Now" and "Actual price was" if present.
+    now = None
+    was = None
+
+    # Now: first money in the block.
+    m0 = MONEY_RE.search(txt)
+    if m0:
+        now = _money_to_float(m0.group(0))
+
+    # Was: look for phrase.
+    m_was = re.search(r"(?i)actual price was[^$]{0,30}(\$\s*\d[\d,]*(?:\.\d{2})?)", txt)
+    if m_was:
+        was = _money_to_float(m_was.group(1))
+
+    return {"pdp_url": pdp_url, "text": txt[:1200], "now": now, "was": was}
+
+
+@dataclass(frozen=True)
+class LiveConfig:
+    sku: str
+    store_number: str
+    plp_url: str
+    pdp_url: str
+
+
+async def main_async() -> int:
+    # Default target matches the historic bug report.
+    cfg = LiveConfig(
+        sku=os.getenv("GLOORBOT_LIVE_SKU", "1000212195"),
+        store_number=os.getenv("GLOORBOT_LIVE_STORE", "1631"),
+        plp_url=os.getenv(
+            "GLOORBOT_LIVE_PLP",
+            "https://www.lowes.com/pl/showers/shower-stalls-enclosures/4294648500?inStock=1&rollUpVariants=0",
+        ),
+        pdp_url=os.getenv(
+            "GLOORBOT_LIVE_PDP",
+            "https://www.lowes.com/pd/DreamLine-French-Corner-French-Black-Floor-Square-2-Piece-Corner-Shower-Kit-Actual-74-75-in-x-36-in-x-36-in/1000212195",
+        ),
+    )
+
+    ARTIFACTS.mkdir(parents=True, exist_ok=True)
+    ts = datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
+
+    async with async_playwright() as pw:
+        ctx = await pw.chromium.launch_persistent_context(
+            user_data_dir=str(PROFILE_DIR),
+            headless=os.getenv("GLOORBOT_LIVE_HEADLESS", "0").strip() in {"1", "true", "yes"},
+            channel="chrome" if os.getenv("GLOORBOT_BROWSER_CHANNEL", "chrome") == "chrome" else None,
+            viewport={"width": 1400, "height": 900},
+        )
+        page = await ctx.new_page()
+
+        warm = await _warmup_lowes(page)
+        await page.screenshot(path=str(ARTIFACTS / f"{ts}_warmup.png"), full_page=True)
+        if not warm.get("warmed"):
+            out = {"ok": False, "stage": "warmup", "warmup": warm}
+            (ARTIFACTS / f"{ts}_result.json").write_text(json.dumps(out, indent=2), encoding="utf-8")
+            print(json.dumps(out, indent=2))
+            print(
+                "\nBlocked or not warmed. Re-run until `_abck` contains `~0~`.\n"
+                "Tip: warm manually in the opened Chrome window, then re-run.",
+                file=sys.stderr,
+            )
+            await ctx.close()
+            return 2
+
+        plp_url = cfg.plp_url + (f"&storeNumber={cfg.store_number}" if "storeNumber=" not in cfg.plp_url else "")
+        plp = await _extract_plp_tile_prices(page, plp_url, cfg.sku)
+        await page.screenshot(path=str(ARTIFACTS / f"{ts}_plp.png"), full_page=True)
+
+        pdp_url = cfg.pdp_url + (f"?storeNumber={cfg.store_number}" if "storeNumber=" not in cfg.pdp_url else "")
+        pdp = await _extract_pdp_prices(page, pdp_url)
+        await page.screenshot(path=str(ARTIFACTS / f"{ts}_pdp.png"), full_page=True)
+
+        scraper_now = _money_to_float(plp["scraper"].get("price") or "")
+        scraper_was = _money_to_float(plp["scraper"].get("was_price") or "")
+        dom_now = _money_to_float(plp["dom"].get("now_aria") or plp["dom"].get("now_text") or "")
+        dom_was = _money_to_float(plp["dom"].get("was_aria") or plp["dom"].get("was_text") or "")
+
+        def close_enough(a: float | None, b: float | None) -> bool:
+            if a is None or b is None:
+                return False
+            return abs(a - b) <= 0.01
+
+        ok_now = close_enough(scraper_now, dom_now)
+        ok_was = (dom_was is None and (scraper_was is None)) or close_enough(scraper_was, dom_was)
+
+        out = {
+            "ok": bool(ok_now and ok_was),
+            "warmup": warm,
+            "plp_url": plp_url,
+            "pdp_url": pdp_url,
+            "sku": cfg.sku,
+            "store_number": cfg.store_number,
+            "values": {
+                "dom_now": dom_now,
+                "dom_was": dom_was,
+                "scraper_now": scraper_now,
+                "scraper_was": scraper_was,
+                "pdp_now": pdp.get("now"),
+                "pdp_was": pdp.get("was"),
+            },
+            "plp_detail": plp,
+            "pdp_detail": pdp,
+            "artifacts": {
+                "warmup_screenshot": str((ARTIFACTS / f"{ts}_warmup.png").resolve()),
+                "plp_screenshot": str((ARTIFACTS / f"{ts}_plp.png").resolve()),
+                "pdp_screenshot": str((ARTIFACTS / f"{ts}_pdp.png").resolve()),
+            },
+        }
+
+        (ARTIFACTS / f"{ts}_result.json").write_text(json.dumps(out, indent=2), encoding="utf-8")
+        print(json.dumps(out, indent=2))
+
+        await ctx.close()
+        return 0 if out["ok"] else 1
+
+
+def main() -> int:
+    if os.getenv("GLOORBOT_LIVE_TEST", "0").strip().lower() not in {"1", "true", "yes"}:
+        print(
+            "Live smoke test disabled. Set `GLOORBOT_LIVE_TEST=1` to run.\n"
+            "Outputs go to `verification/.artifacts/`.\n"
+            "Note: Lowe's may block headless automation; run headful if needed:\n"
+            "  set GLOORBOT_LIVE_HEADLESS=0",
+            flush=True,
+        )
+        return 0
+
+    return asyncio.run(main_async())
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
+

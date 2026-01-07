@@ -1,0 +1,41 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Mixed Tile Group Fixture</title>
+  </head>
+  <body>
+    <!--
+      Fixture reproducing the classic failure:
+      a single div.tile_group row contains multiple products (data-tile),
+      and naive DOM extraction can mix href/title from one tile with price/was from another.
+
+      This fixture is intentionally ordered so Tile 2's price nodes appear before its link,
+      and Tile 1's price nodes appear later, to mimic real Lowe's PLP rows.
+    -->
+    <div class="tile_group">
+      <!-- Tile 1: link comes first -->
+      <div data-tile="1">
+        <a href="/pd/Product-A/111">
+          <span data-selector="splp-prd-ttl">Product A Shower Kit</span>
+        </a>
+      </div>
+
+      <!-- Tile 2: price nodes come before its link -->
+      <div data-tile="2">
+        <div data-selector="splp-prd-act-$" aria-label="Actual Price $131.00">$131.00</div>
+        <span data-selector="splp-prd-promo-was-$" aria-label="Was Price $977.49">$977.49</span>
+        <a href="/pd/Product-B/222">
+          <span data-selector="splp-prd-ttl">Product B Faucet</span>
+        </a>
+      </div>
+
+      <!-- Tile 1 prices later in DOM -->
+      <div data-tile="1">
+        <div data-selector="splp-prd-act-$" aria-label="Actual Price $977.49">$977.49</div>
+        <span data-selector="splp-prd-promo-was-$" aria-label="Was Price $1,149.99">$1,149.99</span>
+      </div>
+    </div>
+  </body>
+</html>
+

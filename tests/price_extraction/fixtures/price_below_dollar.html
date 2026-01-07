@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Price Below Dollar Test Fixture</title>
+</head>
+<body>
+    <!-- Test fixture for price below $1 being filtered out -->
+    <div class="tile_group">
+        <div data-tile="1">
+            <a href="/pd/product-12345">
+                <h3>Clearance Item</h3>
+            </a>
+            <div data-selector="splp-prd-act-$" aria-label="Actual Price $0.99">$0.99</div>
+            <div data-selector="splp-prd-promo-was-$" aria-label="Was Price">$1.99</div>
+            <span class="pickup-text">Pickup Today at Smokey Point</span>
+        </div>
+        <div data-tile="2">
+            <a href="/pd/product-67890">
+                <h3>Another Clearance Item</h3>
+            </a>
+            <div data-selector="splp-prd-act-$" aria-label="Actual Price $4.99">$4.99</div>
+            <div data-selector="splp-prd-promo-was-$" aria-label="Was Price">$9.99</div>
+            <span class="pickup-text">Pickup Today at Smokey Point</span>
+        </div>
+    </div>
+</body>
+</html>

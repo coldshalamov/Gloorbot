@@ -1,0 +1,28 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Savings Percentage Fixture</title>
+  </head>
+  <body>
+    <!--
+      Fixture: a card can contain percent/marketing text like "Save 5%" that must NOT be
+      interpreted as "$5". When the real price is available via aria-label, we should use it.
+    -->
+    <div class="tile_group">
+      <div data-tile="1">
+        <a href="/pd/Example-Product/12345">
+          <span data-selector="splp-prd-ttl">Example Appliance</span>
+        </a>
+
+        <!-- Misleading visible node -->
+        <div data-testid="price">Save 5%</div>
+
+        <!-- Real now/was via aria-label -->
+        <div data-selector="splp-prd-act-$" aria-label="Actual Price $1,049.90">Save 5%</div>
+        <div data-selector="splp-prd-promo-was-$" aria-label="Was Price $1,399.99">$1,399.99</div>
+      </div>
+    </div>
+  </body>
+</html>
+
