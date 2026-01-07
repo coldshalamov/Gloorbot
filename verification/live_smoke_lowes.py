@@ -6,17 +6,27 @@ import os
 import re
 import sys
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 from playwright.async_api import async_playwright, Page
 
+ROOT = Path(__file__).resolve().parents[1]
+# When executing as `python verification/live_smoke_lowes.py`, Python's import
+# root becomes `verification/`, so ensure repo root is on sys.path.
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
 import PARALLEL.scraper as scraper
 
 
-ROOT = Path(__file__).resolve().parents[1]
 ARTIFACTS = (ROOT / "verification" / ".artifacts").resolve()
-PROFILE_DIR = (ROOT / "verification" / ".pw_profile").resolve()
+_profile_override = os.getenv("GLOORBOT_LIVE_PROFILE_DIR", "").strip()
+PROFILE_DIR = (
+    Path(_profile_override).resolve()
+    if _profile_override
+    else (ROOT / "verification" / ".pw_profile").resolve()
+)
 
 
 MONEY_RE = re.compile(r"\$\s*\d{1,3}(?:,\d{3})*(?:\.\d{2})?")
@@ -41,29 +51,86 @@ def _slug(s: str) -> str:
 
 
 async def _warmup_lowes(page: Page) -> dict:
-    await page.goto("https://www.lowes.com/", wait_until="domcontentloaded")
-    await page.wait_for_timeout(1500)
-    title = await page.title()
+    """
+    Best-effort Akamai warmup.
 
-    cookies = await page.context.cookies()
-    abck = ""
-    for c in cookies:
-        if c.get("name") == "_abck":
-            abck = c.get("value") or ""
-            break
+    Lowe's can return HTTP 200 while still being blocked ("Access Denied") and/or
+    issue a non-warmed `_abck` cookie. This routine does multiple lightweight
+    navigations + a small scroll to encourage a warm session before we attempt
+    SKU-level assertions.
+    """
 
-    warmed = ("~0~" in abck) and ("access denied" not in title.lower())
-    return {"title": title, "_abck_has_0": "~0~" in abck, "warmed": warmed}
+    last = {"title": "", "_abck_has_0": False, "warmed": False, "attempts": 0}
+    for attempt in range(1, 6):
+        await page.goto("https://www.lowes.com/", wait_until="domcontentloaded")
+        await page.wait_for_timeout(2500 + (attempt * 500))
+        try:
+            await page.evaluate("window.scrollTo(0, document.body.scrollHeight * 0.25)")
+        except Exception:
+            pass
+        await page.wait_for_timeout(1200)
+
+        title = await page.title()
+        cookies = await page.context.cookies()
+        abck = ""
+        for c in cookies:
+            if c.get("name") == "_abck":
+                abck = c.get("value") or ""
+                break
+
+        warmed = ("~0~" in abck) and ("access denied" not in title.lower())
+        last = {
+            "title": title,
+            "_abck_has_0": "~0~" in abck,
+            "warmed": warmed,
+            "attempts": attempt,
+        }
+        if warmed:
+            return last
+
+    return last
 
 
 async def _extract_plp_tile_prices(page: Page, plp_url: str, sku: str) -> dict:
     await page.goto(plp_url, wait_until="domcontentloaded")
     await page.wait_for_timeout(2500)
 
-    # Find link to the SKU.
-    link = page.locator(f"a[href*='{sku}']").first
-    if await link.count() == 0:
-        raise RuntimeError(f"Could not find SKU {sku} on PLP")
+    resolved_sku = sku.strip()
+
+    link = None
+    if resolved_sku:
+        link = page.locator(f"a[href*='{resolved_sku}']").first
+
+    if (link is None) or (await link.count() == 0):
+        # Auto-pick a product tile if the requested SKU is absent (inventory changes frequently).
+        # Prefer a tile that has the now-price selector so we can do a meaningful DOM truth check.
+        candidates = page.locator("[data-tile] a[href*='/pd/']")
+        if await candidates.count() == 0:
+            raise RuntimeError("Could not find any /pd/ links inside [data-tile] on PLP")
+
+        picked = None
+        for i in range(min(50, await candidates.count())):
+            cand = candidates.nth(i)
+            cand_tid = await page.evaluate(
+                """(el) => {
+                  const t = el.closest('[data-tile]');
+                  return t ? t.getAttribute('data-tile') : null;
+                }""",
+                await cand.element_handle(),
+            )
+            if not cand_tid:
+                continue
+            scope = page.locator(f"[data-tile='{cand_tid}']")
+            if await scope.locator("[data-selector='splp-prd-act-$']").count() == 0:
+                continue
+            picked = cand
+            break
+
+        link = picked or candidates.first
+        href = (await link.get_attribute("href")) or ""
+        m = re.search(r"/(\d{6,})", href)
+        if m:
+            resolved_sku = m.group(1)
 
     # Find the nearest data-tile ancestor, then the tile_group container.
     tid = await page.evaluate(
@@ -106,8 +173,9 @@ async def _extract_plp_tile_prices(page: Page, plp_url: str, sku: str) -> dict:
     was_text = await scope.locator("[data-selector='splp-prd-promo-was-$']").first.inner_text()
 
     return {
-        "sku": sku,
+        "sku": resolved_sku,
         "data_tile": tid,
+        "picked_href": (await link.get_attribute("href")) if link else "",
         "scraper": prices,
         "dom": {
             "now_aria": now_aria or "",
@@ -156,7 +224,7 @@ class LiveConfig:
 async def main_async() -> int:
     # Default target matches the historic bug report.
     cfg = LiveConfig(
-        sku=os.getenv("GLOORBOT_LIVE_SKU", "1000212195"),
+        sku=os.getenv("GLOORBOT_LIVE_SKU", "").strip(),
         store_number=os.getenv("GLOORBOT_LIVE_STORE", "1631"),
         plp_url=os.getenv(
             "GLOORBOT_LIVE_PLP",
@@ -169,7 +237,7 @@ async def main_async() -> int:
     )
 
     ARTIFACTS.mkdir(parents=True, exist_ok=True)
-    ts = datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
+    ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
 
     async with async_playwright() as pw:
         ctx = await pw.chromium.launch_persistent_context(
@@ -198,7 +266,12 @@ async def main_async() -> int:
         plp = await _extract_plp_tile_prices(page, plp_url, cfg.sku)
         await page.screenshot(path=str(ARTIFACTS / f"{ts}_plp.png"), full_page=True)
 
-        pdp_url = cfg.pdp_url + (f"?storeNumber={cfg.store_number}" if "storeNumber=" not in cfg.pdp_url else "")
+        pdp_url = cfg.pdp_url
+        if plp.get("picked_href"):
+            href = plp["picked_href"]
+            if isinstance(href, str) and href.startswith("/"):
+                pdp_url = "https://www.lowes.com" + href
+        pdp_url = pdp_url + (f"?storeNumber={cfg.store_number}" if "storeNumber=" not in pdp_url else "")
         pdp = await _extract_pdp_prices(page, pdp_url)
         await page.screenshot(path=str(ARTIFACTS / f"{ts}_pdp.png"), full_page=True)
 
@@ -262,4 +335,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
