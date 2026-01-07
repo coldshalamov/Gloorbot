@@ -28,6 +28,21 @@ PROFILE_DIR = (
     else (ROOT / "verification" / ".pw_profile").resolve()
 )
 
+# Mirror the production scraper’s browser settings as closely as possible.
+# This significantly reduces “Access Denied” vs a barebones Playwright context.
+DEFAULT_LAUNCH_ARGS = [
+    "--disable-blink-features=AutomationControlled",
+    "--disable-dev-shm-usage",
+    "--disable-infobars",
+    "--disable-gpu",
+    "--no-sandbox",
+    "--disable-background-networking",
+    "--disable-background-timer-throttling",
+    "--disable-backgrounding-occluded-windows",
+    "--disable-renderer-backgrounding",
+    "--memory-pressure-off",
+]
+
 
 MONEY_RE = re.compile(r"\$\s*\d{1,3}(?:,\d{3})*(?:\.\d{2})?")
 
@@ -272,6 +287,11 @@ async def main_async() -> int:
             "https://www.lowes.com/pd/DreamLine-French-Corner-French-Black-Floor-Square-2-Piece-Corner-Shower-Kit-Actual-74-75-in-x-36-in-x-36-in/1000212195",
         ),
     )
+    store_url = os.getenv(
+        "GLOORBOT_LIVE_STORE_URL",
+        f"https://www.lowes.com/store/WA-Bellingham/{cfg.store_number}",
+    )
+    store_name = os.getenv("GLOORBOT_LIVE_STORE_NAME", f"Store #{cfg.store_number}")
 
     ARTIFACTS.mkdir(parents=True, exist_ok=True)
     ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
@@ -282,8 +302,19 @@ async def main_async() -> int:
             headless=os.getenv("GLOORBOT_LIVE_HEADLESS", "0").strip() in {"1", "true", "yes"},
             channel="chrome" if os.getenv("GLOORBOT_BROWSER_CHANNEL", "chrome") == "chrome" else None,
             viewport={"width": 1400, "height": 900},
+            locale="en-US",
+            timezone_id="America/Los_Angeles",
+            args=DEFAULT_LAUNCH_ARGS,
         )
         page = await ctx.new_page()
+
+        # Use the production warmup & store selection routines first.
+        try:
+            await scraper.warmup_session(page)
+            await scraper.set_store_context(page, store_url, store_name)
+        except Exception:
+            # If these helpers fail (DOM drift), still proceed with a basic warmup.
+            pass
 
         warm = await _warmup_lowes(page)
         await page.screenshot(path=str(ARTIFACTS / f"{ts}_warmup.png"), full_page=True)
