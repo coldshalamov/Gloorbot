@@ -91,11 +91,42 @@ async def _warmup_lowes(page: Page) -> dict:
     return last
 
 
+async def _goto_with_block_retries(page: Page, url: str, *, max_attempts: int = 6) -> dict:
+    """
+    Navigate with retries for Lowe's Akamai flakiness.
+
+    Lowe's can intermittently return "Access Denied" even after a good warmup.
+    This helper retries with lightweight backoff + a short detour to homepage.
+    """
+    last_title = ""
+    for attempt in range(1, max_attempts + 1):
+        await page.goto(url, wait_until="domcontentloaded")
+        await page.wait_for_timeout(2000 + attempt * 400)
+        last_title = await page.title()
+        if "access denied" not in last_title.lower():
+            return {"ok": True, "attempts": attempt, "title": last_title, "url": page.url}
+
+        # Try a cheap recover: reload, then home, then back.
+        try:
+            await page.reload(wait_until="domcontentloaded")
+        except Exception:
+            pass
+        await page.wait_for_timeout(1500 + attempt * 400)
+        try:
+            await page.goto("https://www.lowes.com/", wait_until="domcontentloaded")
+            await page.wait_for_timeout(1500 + attempt * 400)
+            await page.evaluate("window.scrollTo(0, document.body.scrollHeight * 0.2)")
+        except Exception:
+            pass
+
+    return {"ok": False, "attempts": max_attempts, "title": last_title, "url": page.url}
+
+
 async def _extract_plp_tile_prices(page: Page, plp_url: str, sku: str) -> dict: 
-    await page.goto(plp_url, wait_until="domcontentloaded")
-    await page.wait_for_timeout(2500)
+    nav = await _goto_with_block_retries(page, plp_url, max_attempts=6)
+    await page.wait_for_timeout(1200)
     title = await page.title()
-    if "access denied" in title.lower():
+    if not nav.get("ok") or ("access denied" in title.lower()):
         raise RuntimeError("Blocked on PLP (Access Denied)")
 
     # Give client-side rendering a chance and trigger lazy-load.
