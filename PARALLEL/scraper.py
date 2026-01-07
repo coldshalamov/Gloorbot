@@ -376,24 +376,18 @@ async def apply_pickup_filter(page: Page, category_name: str) -> bool:
     pickup_selectors = [
         # THE ACTUAL LOWE'S CHECKBOX - most important
         'label:has-text("Pickup Today at")',
-        'input[type="checkbox"] + label:has-text("Pickup")',
-        'div:has-text("Pickup Today at") input[type="checkbox"]',
-        'div:has-text("Pickup Today at")',
-        'div:has-text("Free Store Pickup") input[type="checkbox"]',
+        'label:has-text("Pickup Today")',
+        'label:has-text("Pick Up Today")',
         'label:has-text("Free Store Pickup")',
-        # The checkbox itself near the Pickup text
+        # Specific selectors that MUST contain pickup in the name/id
         'input[type="checkbox"][id*="Pickup"]',
         'input[type="checkbox"][id*="pickup"]',
         'input[type="checkbox"][name*="pickup"]',
-        # Checkbox within Pickup & Delivery section
-        'div:has-text("Pickup & Delivery") input[type="checkbox"]:first-of-type',
-        # Fallback generic selectors
-        'label:has-text("Pickup Today")',
-        'label:has-text("Pick Up Today")',
-        'span:has-text("Pickup Today at")',
-        '[data-testid*="pickup"]',
-        '[data-test-id*="pickup"]',
-        '[aria-label*="Pickup"]',
+        # Aria labels are very reliable
+        '[aria-label*="Pickup" i]',
+        # Data test IDs
+        '[data-testid*="pickup" i]',
+        '[data-test-id*="pickup" i]',
     ]
 
     # Toggles that might need expanding first
@@ -612,14 +606,15 @@ async def apply_pickup_filter(page: Page, category_name: str) -> bool:
     if js_result is True:
         # Verify the filter actually shows products
         await asyncio.sleep(2)
-        zero_products = await page.locator('text="0 Products"').count() > 0 or await page.locator('text="0 results"').count() > 0
+        zero_products = await page.evaluate("() => document.body.innerText.match(/0 Products|0 results|Please reduce your filters/i) !== null")
         if zero_products:
             Actor.log.warning(f"[{category_name}] Pickup filter applied but shows 0 products - no pickup items available")
             return False
         return True  # Filter successfully applied with products
     elif js_result == 'disabled':
-        return False  # Filter is disabled - skip this category entirely
-    # If js_result is False, continue to fallback selector-based approach
+        Actor.log.info(f"[{category_name}] JS detection confirmed pickup filter is DISABLED - skipping category")
+        return False  # Filter is disabled - do NOT attempt fallback
+    # If js_result is False (not found), continue to fallback selector-based approach
 
     # APPROACH 2: Fallback to selector-based clicking
     for attempt in range(3):
@@ -640,17 +635,23 @@ async def apply_pickup_filter(page: Page, category_name: str) -> bool:
                             Actor.log.info(f"[{category_name}] Pickup filter is DISABLED (no pickup items available) - skipping category")
                             return False
 
-                        text = ""
-                        try:
-                            text = (await element.inner_text()) or ""
-                        except Exception:
-                            pass
+                        # STRICT VALIDATION: Element or its title/aria-label must contain "Pickup"
+                        text = (await element.inner_text()) or ""
+                        aria = (await element.get_attribute("aria-label")) or ""
+                        title_attr = (await element.get_attribute("title")) or ""
+                        combined_text = (text + " " + aria + " " + title_attr).lower()
 
-                        # STRICT VALIDATION: Must contain "Pickup" or "pickup" in the text
-                        # This prevents clicking other filters like "Interior paint"
-                        if "pickup" not in text.lower() and "pick up" not in text.lower():
-                            Actor.log.debug(f"[{category_name}] Skipping non-pickup filter: '{text[:30]}'")
-                            continue
+                        if "pickup" not in combined_text and "pick up" not in combined_text:
+                            # CRITICAL FIX: Check ONLY the immediate parent row, not the whole sidebar
+                            # Using specialized Lowe's filter row selectors
+                            container_text = await page.evaluate("""(el) => {
+                                const row = el.closest('div.filter-label, li.filter-item, div[class*="filter"]');
+                                return row ? row.innerText : '';
+                            }""", element)
+                            
+                            if "pickup" not in container_text.lower() and "pick up" not in container_text.lower():
+                                Actor.log.debug(f"[{category_name}] Skipping non-pickup filter: '{text[:20]}...' (Container: '{container_text[:30]}')")
+                                continue
 
                         # Skip if text is too long (probably wrong element)
                         if len(text) > 100:
@@ -795,6 +796,17 @@ async def scrape_category_page(page: Page, url: str, store_info: dict, page_num:
         if "Access Denied" in title or "Robot" in title or "Blocked" in title:
             Actor.log.error(f"BLOCKED on page {page_num}: {title}")
             raise Exception(f"Blocked by anti-bot: {title}")  # Raise to stop scraping
+        
+        # ABSOLUTE KILL-SWITCH: If page says 0 results, STOP IMMEDIATELY
+        # This prevents infinite loops on bad filter landing pages
+        empty_check = await page.evaluate("""() => {
+            const body = document.body.innerText;
+            return /0 Products/i.test(body) || /0 results/i.test(body) || /Please reduce your filters/i.test(body);
+        }""")
+        if empty_check:
+            Actor.log.warning(f"[{store_info['name']} - {category_url.split('/')[-1]}] Zero products detected - ABORTING CATEGORY")
+            return []
+            
     except asyncio.TimeoutError:
         Actor.log.error(f"Timeout getting page title on page {page_num} - browser may be hung")
         raise  # Re-raise - this indicates a serious problem
