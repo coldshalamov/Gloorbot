@@ -2,16 +2,27 @@
 
 You are part of a multi-agent fleet working on the Gloorbot project. To prevent conflicts and maintain shared memory, you MUST follow these rules:
 
-## 1. Interaction with Agent-MCP
-- **Before starting any task**: Use `agent-mcp_retrieve_memory` to check for recent status updates or coordination notes from other agents.
-- **Before editing a file**: Use `agent-mcp_check_file_lock` to ensure no other agent is currently modifying it.
-- **After completing a task**: ALWAYS use `agent-mcp_store_memory` to summarize what you did, which files you changed, and what the next agent should do.
+## 1. Interaction with Nucleus Brain MCP (Mandatory)
+Nucleus is the shared “brain” for this machine: task ledger + events + shared state under `.brain/`.
+
+- **Before starting any work**:
+  - Ensure Nucleus SSE is running (from repo root):
+    - `powershell -NoProfile -ExecutionPolicy Bypass -File tools/nucleus/status-nucleus-brain.ps1`
+    - If not listening: `powershell -NoProfile -ExecutionPolicy Bypass -File tools/nucleus/start-nucleus-brain.ps1`
+  - In your MCP client, call `brain_get_state` (and/or the `cold_start` prompt) so you have the latest shared context.
+- **Before editing files**:
+  - Claim exclusive ownership via the task ledger: `brain_get_next_task` → `brain_claim_task` (or create a task with `brain_add_task` and then claim it).
+  - Put the files/areas you’ll touch in the task description and set `claimed_by` to your agent/thread id.
+- **After completing work**:
+  - Update the task: `brain_update_task` → `DONE` (or `BLOCKED`/`ESCALATED` with a reason).
+  - Emit a milestone event with `brain_emit_event` so other agents can pick up cleanly.
 
 ## 2. Shared Memory Keys
 - Use the project-dir: `c:/Users/User/Documents/GitHub/Telomere/Gloorbot`
-- Key Statuses to track: `scraper-status`, `indexing-progress`, `architecture-decisions`.
+- Shared state lives in `.brain/ledger/state.json` and `.brain/ledger/tasks.json`.
+- Prefer Nucleus tasks/events over ad-hoc notes; only log high-level milestones to `agents.md`.
 
 ## 3. Communication
 If you see that another agent (e.g., Codex or Claude) has left a memory about a feature you are working on, you MUST acknowledge it and align your work with their path.
 
-FAILURE TO COORDINATE VIA AGENT-MCP WILL CAUSE PROJECT FRAGMENTATION.
+FAILURE TO COORDINATE VIA NUCLEUS TASK CLAIMING WILL CAUSE PROJECT FRAGMENTATION.

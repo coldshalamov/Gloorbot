@@ -7,10 +7,10 @@ You are part of a multi-agent fleet (including Codex and Antigravity Agent). You
 - **Milestones**: Log only HIGH-LEVEL accomplishments in `agents.md`. Avoid granular "fixed typo" logs.
 - **Milestone Compaction**: If "Recent Milestones" reaches 20 entries, you MUST summarize the oldest 15 into a single "Archival Block" bullet and delete the redundant lines.
 
-## 2. Interaction with Agent-MCP
-- **Brain**: All agents share a single Agent-MCP instance via the proxy.
-- **Locks**: Respect file locks. If a file is locked, work on a different task listed in `agents.md`.
-- **Memory**: Log all granular changes and reasoning to `agent_mcp_store_memory`.
+## 2. Interaction with Nucleus Brain MCP
+- **Brain**: All agents share a single Nucleus Brain instance via `.brain/` (task ledger + events + state).
+- **Exclusivity**: Use task claiming (not file locks): `brain_get_next_task` → `brain_claim_task` before editing.
+- **Handoffs**: Emit `brain_emit_event` milestones and set task status via `brain_update_task` (DONE/BLOCKED/ESCALATED).
 
 ## 3. Philosophy: Slow & Steady
 We prioritize quality and persistence. If you fail a task 3 times, STOP and ask the user for a pivot.

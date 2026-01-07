@@ -90,8 +90,14 @@ if ($Foreground) {
 $p = Start-Process -FilePath $fastmcpExe -ArgumentList $args -WindowStyle Minimized -PassThru -RedirectStandardOutput $stdoutLog -RedirectStandardError $stderrLog
 $p.Id | Out-File -FilePath $pidFile -Encoding ascii
 
-Start-Sleep -Milliseconds 350
-if (Test-PortListening -hostAddress $HostAddress -port $Port) {
+# Uvicorn/anyio can take a moment to bind; poll briefly.
+$bound = $false
+for ($i = 0; $i -lt 10; $i++) {
+  Start-Sleep -Milliseconds 300
+  if (Test-PortListening -hostAddress $HostAddress -port $Port) { $bound = $true; break }
+}
+
+if ($bound) {
   Write-Host "Started Nucleus SSE (pid=$($p.Id)) at http://$HostAddress`:$Port$Path"
   Write-Host "Logs: $stdoutLog ; $stderrLog"
   exit 0
