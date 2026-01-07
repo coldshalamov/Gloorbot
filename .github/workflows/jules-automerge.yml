@@ -1,0 +1,48 @@
+name: Jules Auto-Merge
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  schedule:
+    - cron: '*/15 * * * *' # Every 15 minutes as a fallback
+  workflow_dispatch: # Allow manual triggering
+
+jobs:
+  automerge:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Auto-merge Jules PRs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Checking for Jules PRs..."
+          
+          # Find PRs that match Jules criteria (Author, Title, or Branch name)
+          # We use a broad filter to be safe, then refine.
+          PRS=$(gh pr list --state open --json number,title,author,headRefName --jq '.[] | select((.author.login | contains("jules")) or (.title | contains("Jules")) or (.headRefName | contains("jules"))) | .number')
+          
+          if [ -z "$PRS" ]; then
+            echo "No matching Jules PRs found."
+            exit 0
+          fi
+          
+          for PR in $PRS; do
+            echo "Processing PR #$PR..."
+            
+            # 1. Mark as ready if it's a draft
+            IS_DRAFT=$(gh pr view $PR --json isDraft --jq '.isDraft')
+            if [ "$IS_DRAFT" = "true" ]; then
+              echo "PR #$PR is a draft. Marking as ready for review..."
+              gh pr ready $PR
+            fi
+            
+            # 2. Attempt to merge
+            # --merge: Standard merge (creates a merge commit)
+            # --delete-branch: Cleans up the branch after merge
+            # --auto: Enables auto-merge if checks are still running (requires repo setting)
+            echo "Merging PR #$PR..."
+            gh pr merge $PR --merge --delete-branch --auto || gh pr merge $PR --merge --delete-branch || echo "Failed to merge PR #$PR. It might have conflicts or require manual intervention."
+          done
