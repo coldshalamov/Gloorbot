@@ -64,7 +64,7 @@ async function main() {
     name: "ask-gemini",
     arguments: {
       prompt: "Reply with exactly: OK",
-      model: "gemini-2.5-flash",
+      model: "gemini-3-auto",
     },
   });
   console.log("tools/call:", call.result?.content?.[0]?.text?.slice(0, 300) || "");
@@ -76,4 +76,3 @@ main().catch((e) => {
   console.error(e);
   process.exit(1);
 });
-

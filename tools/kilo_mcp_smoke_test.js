@@ -65,7 +65,7 @@ async function main() {
     arguments: {
       prompt: "Print OK and exit.",
       mode: "ask",
-      timeoutSeconds: 5,
+      timeoutSeconds: 10,
       waitSeconds: 0,
       yolo: true,
     },
@@ -76,7 +76,15 @@ async function main() {
   try {
     const parsed = JSON.parse(call.result?.content?.[0]?.text || "{}");
     if (parsed.jobId) {
-      const cancel = await request(4, "tools/call", {
+      // Poll once to surface common auth/config errors in stderr.
+      await new Promise((r) => setTimeout(r, 3000));
+      const status = await request(4, "tools/call", {
+        name: "kilo_task_status",
+        arguments: { jobId: parsed.jobId, tailChars: 2000 },
+      });
+      console.log("status:", status.result?.content?.[0]?.text?.slice(0, 600) || "");
+
+      const cancel = await request(5, "tools/call", {
         name: "kilo_task_cancel",
         arguments: { jobId: parsed.jobId },
       });
