@@ -31,6 +31,33 @@ MAX_CATEGORY_SECONDS = int(os.getenv("MAX_CATEGORY_SECONDS", "1200"))
 
 _FALSE_VALUES = {"0", "false", "no", "off"}
 
+_DIAG_FALSE_VALUES = {"0", "false", "no", "off", ""}
+
+
+def _deal_diag_enabled() -> bool:
+    return os.getenv("GLOORBOT_DEAL_DIAGNOSTICS", "").strip().lower() not in _DIAG_FALSE_VALUES
+
+
+def _deal_diag_path(slot_id: int) -> Path:
+    out_dir = logs_dir() / "deal_diagnostics"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    return out_dir / f"slot_{slot_id}.jsonl"
+
+
+def _deal_diag_write(slot_id: int, event: dict[str, Any]) -> None:
+    if not _deal_diag_enabled():
+        return
+    try:
+        event = dict(event)
+        event.setdefault("ts", datetime.utcnow().isoformat())
+        event.setdefault("event", "deal_candidate")
+        event.setdefault("slot_id", slot_id)
+        path = _deal_diag_path(slot_id)
+        with open(path, "a", encoding="utf-8") as f:
+            f.write(json.dumps(event, ensure_ascii=False) + "\n")
+    except Exception:
+        return
+
 
 def _signal_block() -> None:
     """Signal to the supervisor that a block was detected."""
@@ -130,6 +157,23 @@ def _find_parallel_dir() -> Path:
     raise FileNotFoundError("Could not locate PARALLEL/ folder")
 
 
+def _enable_price_diagnostics_for_slot(slot_id: int) -> None:
+    """
+    Enable maximum-verbosity price diagnostics for the embedded PARALLEL scraper.
+    This writes JSONL to a per-slot file so multi-slot runs don't interleave.
+    """
+    if os.getenv("GLOORBOT_PRICE_DIAGNOSTICS", "0").strip().lower() in _FALSE_VALUES:
+        return
+    try:
+        out_dir = logs_dir() / "price_diagnostics"
+        out_dir.mkdir(parents=True, exist_ok=True)
+        os.environ["GLOORBOT_PRICE_DIAG_PATH"] = str(out_dir / f"slot_{slot_id}.jsonl")
+        # Keep lots of context by default, but allow override.
+        os.environ.setdefault("GLOORBOT_PRICE_DIAG_MAXLEN", "1200")
+    except Exception:
+        return
+
+
 def _load_parallel_scraper() -> Any:
     import importlib.util
 
@@ -161,6 +205,14 @@ def _to_float_price(text: str) -> float | None:
         or "suggested payments" in low
         or "special financing" in low
         or "pay later" in low
+        or "buy now" in low
+        or "learn how" in low
+        or "when you choose" in low
+        or "eligible purchases" in low
+        or "protection" in low
+        or "plan" in low
+        or "warranty" in low
+        or "accessory" in low
     ):
         return None
     # Normalize weird newlines like "$\n42\n.29"
@@ -195,32 +247,135 @@ def _to_float_price(text: str) -> float | None:
 
 
 def _deal_from_product(p: dict, category_url: str) -> dict | None:
+    slot_id = int(os.getenv("GLOORBOT_SLOT_ID", "0") or "0")
+    if _deal_diag_enabled():
+        _deal_diag_write(
+            slot_id,
+            {
+                "stage": "input",
+                "category_url": category_url,
+                "product_url": p.get("url"),
+                "title": (p.get("title") or "")[:200],
+                "price_raw": p.get("price"),
+                "was_price_raw": p.get("was_price"),
+            },
+        )
     price_now = _to_float_price(str(p.get("price", "")))
     was_price = _to_float_price(str(p.get("was_price", "")))
     if not price_now or not was_price or was_price <= 0:
+        if _deal_diag_enabled():
+            _deal_diag_write(
+                slot_id,
+                {
+                    "stage": "reject",
+                    "reason": "missing_or_invalid_price",
+                    "category_url": category_url,
+                    "product_url": p.get("url"),
+                    "price_now": price_now,
+                    "was_price": was_price,
+                    "price_raw": p.get("price"),
+                    "was_price_raw": p.get("was_price"),
+                },
+            )
         return None
     # Guard against obvious parse noise (e.g. "$4" captured from unrelated text
     # on a high-ticket item). We prefer dropping a rare true extreme deal over
     # spamming false positives.
     if was_price >= 200 and price_now <= 10:
+        if _deal_diag_enabled():
+            _deal_diag_write(
+                slot_id,
+                {
+                    "stage": "reject",
+                    "reason": "high_ticket_tiny_price",
+                    "category_url": category_url,
+                    "product_url": p.get("url"),
+                    "price_now": price_now,
+                    "was_price": was_price,
+                },
+            )
         return None
     # Ensure price is actually discounted (price < was_price)
     if price_now >= was_price:
+        if _deal_diag_enabled():
+            _deal_diag_write(
+                slot_id,
+                {
+                    "stage": "reject",
+                    "reason": "not_discounted",
+                    "category_url": category_url,
+                    "product_url": p.get("url"),
+                    "price_now": price_now,
+                    "was_price": was_price,
+                },
+            )
         return None
     pct_off = (was_price - price_now) / was_price
     # Additional sanity: extremely high discounts on expensive items are almost
     # always parse errors. Keep the general >=50% rule but reject the most
     # suspicious tail.
     if was_price >= 200 and pct_off > 0.97:
+        if _deal_diag_enabled():
+            _deal_diag_write(
+                slot_id,
+                {
+                    "stage": "reject",
+                    "reason": "suspicious_extreme_pct_off",
+                    "category_url": category_url,
+                    "product_url": p.get("url"),
+                    "price_now": price_now,
+                    "was_price": was_price,
+                    "pct_off": pct_off,
+                },
+            )
         return None
     # Reject absurdly high was_prices that are clearly parse errors.
     # No retail appliance, tool, or home item costs $10,000+ at Lowe's.
     if was_price >= 10000:
+        if _deal_diag_enabled():
+            _deal_diag_write(
+                slot_id,
+                {
+                    "stage": "reject",
+                    "reason": "absurd_was_price",
+                    "category_url": category_url,
+                    "product_url": p.get("url"),
+                    "price_now": price_now,
+                    "was_price": was_price,
+                },
+            )
         return None
     # Reject deals where the "savings" exceeds $5000 - these are malformed captures.
     if (was_price - price_now) > 5000:
+        if _deal_diag_enabled():
+            _deal_diag_write(
+                slot_id,
+                {
+                    "stage": "reject",
+                    "reason": "absurd_savings_delta",
+                    "category_url": category_url,
+                    "product_url": p.get("url"),
+                    "price_now": price_now,
+                    "was_price": was_price,
+                    "delta": was_price - price_now,
+                },
+            )
         return None
     if pct_off < DEAL_THRESHOLD:
+        if _deal_diag_enabled():
+            _deal_diag_write(
+                slot_id,
+                {
+                    "stage": "reject",
+                    "reason": "below_threshold",
+                    "category_url": category_url,
+                    "product_url": p.get("url"),
+                    "price_now": price_now,
+                    "was_price": was_price,
+                    "pct_off": pct_off,
+                    "threshold": DEAL_THRESHOLD,
+                },
+            )
         return None
     image_url = p.get("image_url")
     if isinstance(image_url, str):
@@ -231,7 +386,7 @@ def _deal_from_product(p: dict, category_url: str) -> dict | None:
             image_url = image_url[:2048]
     else:
         image_url = None
-    return {
+    deal = {
         "store_id": p.get("store_id"),
         "store_name": p.get("store_name"),
         "category_url": category_url,
@@ -243,6 +398,20 @@ def _deal_from_product(p: dict, category_url: str) -> dict | None:
         "pct_off": float(round(pct_off, 4)),
         "found_at": datetime.utcnow().isoformat(),
     }
+    if _deal_diag_enabled():
+        _deal_diag_write(
+            slot_id,
+            {
+                "stage": "accept",
+                "category_url": category_url,
+                "product_url": deal.get("product_url"),
+                "price_now": price_now,
+                "was_price": was_price,
+                "pct_off": deal.get("pct_off"),
+                "deal_threshold": DEAL_THRESHOLD,
+            },
+        )
+    return deal
 
 
 async def _run_slot(client_id: str, slot_id: int) -> None:
@@ -254,6 +423,8 @@ async def _run_slot(client_id: str, slot_id: int) -> None:
         pass
 
     eventlog = default_event_logger(slot_id=slot_id)
+    _enable_price_diagnostics_for_slot(slot_id=slot_id)
+    os.environ["GLOORBOT_SLOT_ID"] = str(slot_id)
 
     # If the installer ships Playwright Chromium alongside the EXE, use it.
     if "PLAYWRIGHT_BROWSERS_PATH" not in os.environ:
