@@ -23,6 +23,9 @@
 ---
 
 ### 📝 RECENT MILESTONES (LAST 24 HOURS)
+- [2026-01-07]: Codex: Fixed persistent wrong-price deals caused by financing/monthly-payment strings (e.g. “$125/mo”) being misread as the product price. Added `extract_prices_from_card()` (aria-label “Actual Price”/“Was Price” scan + financing noise filtering) and wired it into `PARALLEL/scraper.py`; added regression tests `test_price_extraction_financing_noise.py` + `test_worker_price_reject_financing.py`; worker `_to_float_price()` now rejects financing strings defensively.
+- [2026-01-07]: Codex: Confirmed Codex MCP servers are configured in `C:\Users\User\.codex\config.toml` (and `C:\Users\User\.codex\lazy-mcp\config.codex.json` for proxy setups); `C:\Users\User\.mcp.json` is empty. Note: `list_mcp_resources` may return empty even when servers are configured (many servers expose tools, not resources/templates).
+- [2026-01-07]: Antigravity: Configured Kilo Code with Z.AI MCPs (Web Search, Web Reader, Vision, ZRead) using Z.AI API key; fixed Nucleus 404 error by switching port 9090 proxy to v3 Master Proxy (mcp-proxy-new) which includes the Nucleus stdio server.
 - [2026-01-07]: Codex: Investigated Antigravity Browser CDP failure; found dev-browser server (node) listening on port 9222 (conflicts with Antigravity CDP default). Stopped dev-browser process to free 9222; recommended relaunching Antigravity Browser or moving dev-browser to a different port to avoid future conflicts.
 - [2026-01-06]: Codex: installed code-executor-mcp globally and wired gemini-cli MCP PATH env across agent configs; switched Gemini CLI settings to call code-executor-mcp directly (no npx).
 - [2026-01-06]: Codex: fixed price mixing by splitting `div.tile_group` rows into per-product records using `data-tile`; added regression test `test_tile_group_extraction.py` and updated main extractor to use the new helper.

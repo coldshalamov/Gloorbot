@@ -149,6 +149,20 @@ _PRICE_RE = re.compile(r"\$?\s*([0-9]{1,5})(?:[.,]\s*([0-9]{2}))?")
 def _to_float_price(text: str) -> float | None:
     if not text:
         return None
+    low = text.lower()
+    # Reject financing/monthly payment snippets (these are not the product price).
+    # Examples seen on Lowe's: "$125/mo Suggested payments...", "Buy Now, Pay Later ... monthly payments".
+    if (
+        "/mo" in low
+        or "per month" in low
+        or "monthly payment" in low
+        or "monthly payments" in low
+        or "suggested payment" in low
+        or "suggested payments" in low
+        or "special financing" in low
+        or "pay later" in low
+    ):
+        return None
     # Normalize weird newlines like "$\n42\n.29"
     compact = re.sub(r"\s+", "", text)
     # Remove thousand separators like "$1,049.90" -> "$1049.90"

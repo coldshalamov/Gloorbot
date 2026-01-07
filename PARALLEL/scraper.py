@@ -267,6 +267,186 @@ async def set_store_context(page: Page, store_url: str, store_name: str):
 # TILE GROUP EXTRACTION (ROW -> PER-PRODUCT)
 # ============================================================================
 
+_MONEY_STR_RE = re.compile(r"\$\s*\d{1,3}(?:,\d{3})*(?:\.\d{2})?")
+_FINANCING_NOISE_RE = re.compile(
+    r"(?i)(/mo\b|\bper\s+month\b|\bmonthly\b|\bmonth\b|suggested\s+payments?"
+    r"|special\s+financing|buy\s+now|pay\s+later|learn\s+how|when\s+you\s+choose|eligible\s+purchases)"
+)
+_LABEL_ACTUAL_RE = re.compile(r"(?i)\b(actual|now|sale|current)\s*price\b")
+_LABEL_WAS_RE = re.compile(r"(?i)\b(was|regular|original)\s*price\b")
+
+
+def _first_money_str(text: str) -> str:
+    if not text:
+        return ""
+    m = _MONEY_STR_RE.search(text)
+    if not m:
+        return ""
+    return re.sub(r"\s+", "", m.group(0))
+
+
+def _looks_like_financing_noise(text: str) -> bool:
+    if not text:
+        return False
+    return bool(_FINANCING_NOISE_RE.search(text))
+
+
+def _fmt_money(value: float) -> str:
+    return f"${value:,.2f}"
+
+
+def _money_values_from_text_blob(text: str) -> list[float]:
+    if not text:
+        return []
+
+    cleaned = text
+
+    # Remove common savings phrases that can masquerade as prices.
+    cleaned = re.sub(
+        r"(?i)(save|savings|saved)\s*:?\s*\$?\s*[0-9]+(?:\.[0-9]{1,2})?",
+        " ",
+        cleaned,
+    )
+    cleaned = re.sub(r"(?i)\$?\s*[0-9]+(?:\.[0-9]{1,2})?\s*(?:off|%)", " ", cleaned)
+
+    # Remove shipping/threshold phrases that look like prices.
+    cleaned = re.sub(
+        r"(?i)(orders?|shipping|spend)\s*(?:over)?\s*\$?\s*[0-9]+",
+        " ",
+        cleaned,
+    )
+
+    # Remove financing/monthly-payment dollar amounts (e.g. "$125/mo", "$167 per month").
+    cleaned = re.sub(
+        r"(?i)\$\s*\d{1,3}(?:,\d{3})*(?:\.\d{2})?\s*(?:/mo\b|per\s+month\b|a\s+month\b|monthly\b)",
+        " ",
+        cleaned,
+    )
+
+    # Remove "credit offer" prices like "$949.99 ... savings ... Learn How".
+    cleaned = re.sub(
+        r"(?is)\$\s*\d{1,3}(?:,\d{3})*(?:\.\d{2})?.{0,60}?(savings|financing|eligible purchases|learn how|pay later)",
+        " ",
+        cleaned,
+    )
+
+    # Extract money values, normalized.
+    compact = re.sub(r"\s+", "", cleaned)
+    compact = compact.replace(",", "")
+    vals: list[float] = []
+    for m in re.finditer(r"\$([0-9]{1,5})(?:\.([0-9]{2}))?", compact):
+        whole = m.group(1)
+        cents = m.group(2) or "00"
+        try:
+            v = float(f"{whole}.{cents}")
+        except Exception:
+            continue
+        if v >= 1.0:
+            vals.append(v)
+    return vals
+
+
+async def extract_prices_from_card(card: Locator) -> dict[str, str]:
+    """
+    Extract {price, was_price} from a product card while avoiding common
+    false positives like monthly-payment/financing snippets (e.g. "$125/mo").
+    """
+    price_text = ""
+    was_price = ""
+
+    # 1) Canonical Lowe's selectors (fast path).
+    try:
+        now_el = card.locator(":scope [data-selector='splp-prd-act-$']").first
+        if await now_el.count() > 0:
+            aria = (await now_el.get_attribute("aria-label")) or ""
+            candidate = _first_money_str(aria) or _first_money_str((await now_el.inner_text()) or "")
+            if candidate and not _looks_like_financing_noise(aria) and not _looks_like_financing_noise(candidate):
+                price_text = candidate
+    except Exception:
+        pass
+
+    try:
+        was_el = card.locator(":scope [data-selector='splp-prd-promo-was-$']").first
+        if await was_el.count() > 0:
+            aria = (await was_el.get_attribute("aria-label")) or ""
+            candidate = _first_money_str(aria) or _first_money_str((await was_el.inner_text()) or "")
+            if candidate and not _looks_like_financing_noise(aria) and not _looks_like_financing_noise(candidate):
+                was_price = candidate
+    except Exception:
+        pass
+
+    # 2) Aria-label scanning fallback (covers cards without splp-prd-* data-selectors).
+    # Limit work: only scan aria-labels if canonical selectors didn't succeed.
+    if (not price_text) or (not was_price):
+        try:
+            aria_nodes = card.locator(":scope [aria-label]")
+            n = min(await aria_nodes.count(), 80)
+            for i in range(n):
+                label = (await aria_nodes.nth(i).get_attribute("aria-label")) or ""
+                if not label or "$" not in label:
+                    continue
+                if _looks_like_financing_noise(label):
+                    continue
+                money = _first_money_str(label)
+                if not money:
+                    continue
+                if (not price_text) and _LABEL_ACTUAL_RE.search(label):
+                    price_text = money
+                if (not was_price) and _LABEL_WAS_RE.search(label):
+                    was_price = money
+                if price_text and was_price:
+                    break
+        except Exception:
+            pass
+
+    # 3) Strikethrough fallback for was-price.
+    if not was_price:
+        try:
+            strike = card.locator(":scope s, :scope del").first
+            if await strike.count() > 0:
+                candidate = _first_money_str((await strike.inner_text()) or "")
+                if candidate and not _looks_like_financing_noise(candidate):
+                    was_price = candidate
+        except Exception:
+            pass
+
+    # 4) Last resort: infer from blob, but aggressively remove common noise.
+    if (not price_text) or (not was_price):
+        try:
+            blob = (await card.inner_text()) or ""
+            vals = _money_values_from_text_blob(blob)
+            if vals:
+                candidates = sorted({v for v in vals if v >= 1.0})
+                inferred_was = max(candidates) if candidates else None
+                inferred_now = None
+                if inferred_was is not None:
+                    smaller = [v for v in candidates if v < inferred_was]
+                    inferred_now = max(smaller) if smaller else None
+
+                # Sanity: prevent impossible matches (e.g., $1000 item = $4)
+                if (
+                    inferred_was is not None
+                    and inferred_was >= 200
+                    and inferred_now is not None
+                    and inferred_now <= 10
+                ):
+                    inferred_now = None
+
+                # Only use inference when we can confidently form a pair.
+                if inferred_now is not None and inferred_was is not None:
+                    if not price_text:
+                        price_text = _fmt_money(inferred_now)
+                    if not was_price:
+                        was_price = _fmt_money(inferred_was)
+        except Exception:
+            pass
+
+    return {
+        "price": price_text.strip() if price_text else "N/A",
+        "was_price": was_price.strip() if was_price else "",
+    }
+
+
 async def extract_tile_group_products(card: Locator) -> list[dict]:
     # Lowe's tile_group rows contain multiple products grouped by data-tile.
     # Split each tile_group into per-product records to avoid mixing prices/titles.
@@ -291,33 +471,9 @@ async def extract_tile_group_products(card: Locator) -> list[dict]:
             aria = (await link_el.get_attribute("aria-label")) if await link_el.count() > 0 else ""
             title_text = (aria or "").strip()
 
-        # Price via aria-label on splp-prd-act-$
-        price_text = ""
-        price_el = scope.locator("[data-selector='splp-prd-act-$']").first
-        if await price_el.count() > 0:
-            aria_label = await price_el.get_attribute("aria-label") or ""
-            if aria_label and "$" in aria_label:
-                match = re.search(r"\$[\d,]+(?:\.\d{2})?", aria_label)
-                if match:
-                    price_text = match.group(0)
-            if not price_text:
-                candidate = (await price_el.inner_text()).strip()
-                if "$" in candidate:
-                    price_text = candidate
-
-        # Was price via aria-label on splp-prd-promo-was-$
-        was_price = ""
-        was_el = scope.locator("[data-selector='splp-prd-promo-was-$']").first
-        if await was_el.count() > 0:
-            was_aria = await was_el.get_attribute("aria-label") or ""
-            if was_aria and "$" in was_aria:
-                match = re.search(r"\$[\d,]+(?:\.\d{2})?", was_aria)
-                if match:
-                    was_price = match.group(0)
-            if not was_price:
-                candidate = (await was_el.inner_text()).strip()
-                if "$" in candidate:
-                    was_price = candidate
+        prices = await extract_prices_from_card(scope)
+        price_text = prices.get("price", "N/A")
+        was_price = prices.get("was_price", "")
 
         image_url = None
         try:
@@ -1177,41 +1333,6 @@ async def scrape_category_page(page: Page, url: str, store_info: dict, page_num:
         Actor.log.warning(f"No product cards found on page {page_num}")
         return []
 
-    money_re = re.compile(r"\$([0-9]{1,5})(?:\.\s*([0-9]{2}))?")
-
-    def clean_money_values(text: str) -> list[float]:
-        if not text:
-            return []
-            
-        # 1. Remove "Save $X", "Savings: $X", "$X Off" patterns to avoid capturing savings as price
-        # Capture standard savings phrases
-        cleaned = re.sub(r"(?i)(save|savings|saved)\s*:?\s*\$?\s*[0-9]+(?:\.[0-9]{1,2})?", " ", text)
-        # Capture suffix savings phrases ("$20 Off")
-        cleaned = re.sub(r"(?i)\$?\s*[0-9]+(?:\.[0-9]{1,2})?\s*(?:off|%)", " ", cleaned)
-        
-        # Remove common threshold phrases that look like prices
-        # "Free shipping on orders over $45" -> remove "$45"
-        cleaned = re.sub(r"(?i)(orders?|shipping|spend)\s*(?:over)?\s*\$?\s*[0-9]+", " ", cleaned)
-        
-        return money_values(cleaned)
-
-    def money_values(text: str) -> list[float]:
-        if not text:
-            return []
-        compact = re.sub(r"\s+", "", text).replace(",", "")
-        vals: list[float] = []
-        for m in money_re.finditer(compact):
-            whole = m.group(1)
-            cents = m.group(2) or "00"
-            try:
-                vals.append(float(f"{whole}.{cents}"))
-            except Exception:
-                continue
-        return vals
-
-    def fmt_money(value: float) -> str:
-        return f"${value:.2f}"
-
     # Extract products with timeout per card
     for card_idx, card in enumerate(product_cards):
         try:
@@ -1295,103 +1416,9 @@ async def scrape_category_page(page: Page, url: str, store_info: dict, page_num:
                     except Exception:
                         pass
 
-                # Price - Lowe's uses data-selector="splp-prd-act-$" for current price
-                # and "splp-prd-promo-was-$" for was price
-                # FIX: Prioritize aria-label which contains clean price like "Actual Price $1,597.99"
-                price_text = ""
-
-                # FIRST: Try the primary selector with aria-label (MOST RELIABLE)
-                # aria-label contains clean price like "Actual Price $1,597.99"
-                price_el = card.locator(":scope [data-selector='splp-prd-act-$']").first
-                if await price_el.count() > 0:
-                    aria_label = await price_el.get_attribute("aria-label") or ""
-                    if aria_label and "$" in aria_label:
-                        match = re.search(r'\$[\d,]+(?:\.\d{2})?', aria_label)
-                        if match:
-                            price_text = match.group(0)
-
-                # SECOND: Fallback to other selectors if primary failed
-                if not price_text:
-                    for sel in [
-                        ":scope [data-selector='splp-prd-act-$']",     # Current/actual price
-                        ":scope [data-selector='splp-prd-$']",          # Price element
-                        ":scope [data-selector='prd-price-holder']",    # Price container
-                        ":scope [data-testid='current-price']",
-                        ":scope [data-testid*='price']",
-                        ":scope div[class*='ProductCard_price']",
-                        ":scope [data-test*='current']",
-                        ":scope [data-test*='price']",
-                    ]:
-                        price_el = card.locator(sel).first
-                        if await price_el.count() > 0:
-                            candidate = (await price_el.inner_text()).strip()
-                            if not candidate:
-                                continue
-                            # Ignore savings/percent nodes
-                            if "%" in candidate or re.search(r"(?i)\b(save|savings|off)\b", candidate):
-                                continue
-                            if "$" in candidate:
-                                price_text = candidate
-                                break
-
-                # Was price (markdown indicator) - use aria-label first for reliability
-                was_price = ""
-                was_el = card.locator(":scope [data-selector='splp-prd-promo-was-$']").first
-                if await was_el.count() > 0:
-                    was_aria = await was_el.get_attribute("aria-label") or ""
-                    if was_aria and "$" in was_aria:
-                        match = re.search(r'\$[\d,]+(?:\.\d{2})?', was_aria)
-                        if match:
-                            was_price = match.group(0)
-
-                # Fallback to other was-price selectors
-                if not was_price:
-                    for sel in [
-                        ":scope [data-selector='splp-prd-promo-was-$']",  # Lowe's was price
-                        ":scope [data-testid='was-price']",
-                        ":scope [data-testid*='was']",
-                        ":scope [class*='was-price']",
-                        ":scope [data-test*='was']",
-                        ":scope s",  # Strikethrough
-                        ":scope del",
-                    ]:
-                        was_el = card.locator(sel).first
-                        if await was_el.count() > 0:
-                            candidate = (await was_el.inner_text()).strip()
-                            if not candidate:
-                                continue
-                            # Avoid interpreting "Save $X" / "% off" as was-price
-                            if "%" in candidate or re.search(r"(?i)\b(save|savings|off)\b", candidate):
-                                continue
-                            if "$" in candidate:
-                                was_price = candidate
-                                break
-
-                # Fallback: parse money from text blobs (covers "$\n42\n.29" style)
-                # NOTE: This is a last resort - aria-label extraction above is preferred
-                if (not price_text or price_text == "N/A") or (not was_price):
-                    try:
-                        blob = await card.inner_text()
-                        vals = clean_money_values(blob)
-                        if vals:
-                            candidates = sorted({v for v in vals if v >= 1.0})
-                            inferred_was = max(candidates) if candidates else None
-                            inferred_now = None
-                            if inferred_was is not None:
-                                smaller = [v for v in candidates if v < inferred_was]
-                                inferred_now = max(smaller) if smaller else None
-
-                            # Sanity: prevent impossible matches (e.g., $1000 item = $4)
-                            if inferred_was is not None and inferred_was >= 200 and inferred_now is not None and inferred_now <= 10:
-                                inferred_now = None
-
-                            # Only use blob inference if selector extraction failed completely
-                            if inferred_now is not None and (not price_text or price_text == "N/A" or "$" not in price_text):
-                                price_text = fmt_money(inferred_now)
-                            if inferred_was is not None and inferred_now is not None and (not was_price or "$" not in was_price):
-                                was_price = fmt_money(inferred_was)
-                    except Exception:
-                        pass
+                prices = await extract_prices_from_card(card)
+                price_text = prices.get("price", "N/A")
+                was_price = prices.get("was_price", "")
 
                 image_url = None
                 try:
