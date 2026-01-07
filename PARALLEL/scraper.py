@@ -498,22 +498,71 @@ async def apply_pickup_filter(page: Page, category_name: str) -> bool:
         try:
             result = await page.evaluate("""
                 () => {
-                    // Find all checkboxes
+                    // AGGRESSIVE: Check for disabled state FIRST before trying anything else
+                    // Look for the pickup label/checkbox elements
+
+                    // Method 1: Direct XPath search for "Pickup Today at" text
+                    const pickupElements = document.evaluate(
+                        "//*[contains(text(), 'Pickup Today')]",
+                        document, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null
+                    );
+
+                    for (let i = 0; i < pickupElements.snapshotLength; i++) {
+                        const el = pickupElements.snapshotItem(i);
+                        const container = el.closest('div, label, li, fieldset');
+
+                        if (!container) continue;
+
+                        // Check if parent container is disabled
+                        const computedStyle = window.getComputedStyle(container);
+                        const opacity = computedStyle.opacity;
+                        const color = computedStyle.color;
+
+                        // Check for disabled attributes/classes on container or parents
+                        let current = container;
+                        while (current && current !== document.body) {
+                            if (current.hasAttribute('disabled') ||
+                                current.getAttribute('aria-disabled') === 'true' ||
+                                current.classList.contains('disabled') ||
+                                current.classList.contains('greyed') ||
+                                current.classList.contains('is-disabled') ||
+                                current.getAttribute('data-disabled') === 'true') {
+                                return {clicked: false, wasChecked: false, disabled: true, reason: 'parent-disabled'};
+                            }
+                            current = current.parentElement;
+                        }
+
+                        // Check if visually greyed out (low opacity or grey color)
+                        if (opacity && parseFloat(opacity) < 0.5) {
+                            return {clicked: false, wasChecked: false, disabled: true, reason: 'low-opacity'};
+                        }
+
+                        // Look for checkbox in container
+                        const cb = container.querySelector('input[type="checkbox"]');
+                        if (cb && (cb.disabled || cb.hasAttribute('disabled'))) {
+                            return {clicked: false, wasChecked: false, disabled: true, reason: 'checkbox-disabled'};
+                        }
+                    }
+
+                    // Method 2: Find by checkbox with "Pickup Today" text nearby
                     const checkboxes = document.querySelectorAll('input[type="checkbox"]');
                     for (const cb of checkboxes) {
-                        // Check the parent/label for "Pickup Today" text
-                        const parent = cb.closest('div, label, li');
+                        const parent = cb.closest('div, label, li, fieldset');
                         if (parent && parent.textContent.includes('Pickup Today')) {
                             // CRITICAL: Check if the checkbox is disabled
                             if (cb.disabled || cb.hasAttribute('disabled')) {
-                                return {clicked: false, wasChecked: false, disabled: true};
+                                return {clicked: false, wasChecked: false, disabled: true, reason: 'method2-checkbox-disabled'};
                             }
-                            // Check parent for disabled classes
-                            if (parent.classList.contains('disabled') ||
-                                parent.classList.contains('greyed') ||
-                                parent.classList.contains('inactive') ||
-                                parent.getAttribute('aria-disabled') === 'true') {
-                                return {clicked: false, wasChecked: false, disabled: true};
+
+                            // Check parent tree for disabled
+                            let current = parent;
+                            while (current && current !== document.body) {
+                                if (current.hasAttribute('disabled') ||
+                                    current.getAttribute('aria-disabled') === 'true' ||
+                                    current.classList.contains('disabled')) {
+                                    return {clicked: false, wasChecked: false, disabled: true, reason: 'method2-parent-disabled'};
+                                }
+                                current = current.parentElement;
                             }
 
                             if (!cb.checked) {
@@ -525,49 +574,14 @@ async def apply_pickup_filter(page: Page, category_name: str) -> bool:
                         }
                     }
 
-                    // Fallback: look for any element with "Pickup Today at" and click it
-                    const pickupLabel = document.evaluate(
-                        "//*[contains(text(), 'Pickup Today at')]",
-                        document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null
-                    ).singleNodeValue;
-
-                    if (pickupLabel) {
-                        // Find checkbox nearby
-                        const container = pickupLabel.closest('div, label, li');
-                        if (container) {
-                            const cb = container.querySelector('input[type="checkbox"]');
-                            if (cb) {
-                                // Check if disabled
-                                if (cb.disabled || cb.hasAttribute('disabled') ||
-                                    container.classList.contains('disabled') ||
-                                    container.getAttribute('aria-disabled') === 'true') {
-                                    return {clicked: false, wasChecked: false, disabled: true};
-                                }
-
-                                if (!cb.checked) {
-                                    cb.click();
-                                    return {clicked: true, wasChecked: false, method: 'xpath'};
-                                } else {
-                                    return {clicked: false, wasChecked: true, method: 'xpath'};
-                                }
-                            }
-                        }
-                        // Click the label itself (if not disabled)
-                        if (!pickupLabel.classList.contains('disabled') &&
-                            pickupLabel.getAttribute('aria-disabled') !== 'true') {
-                            pickupLabel.click();
-                            return {clicked: true, wasChecked: false, method: 'label-click'};
-                        }
-                        return {clicked: false, wasChecked: false, disabled: true};
-                    }
-
                     return {clicked: false, wasChecked: false, notFound: true};
                 }
             """)
 
             # Check if the filter is disabled (no items available for pickup)
             if result.get('disabled'):
-                Actor.log.info(f"[{category_name}] Pickup filter is DISABLED (no pickup items available at this store) - skipping category")
+                reason = result.get('reason', 'unknown')
+                Actor.log.info(f"[{category_name}] Pickup filter is DISABLED (reason: {reason}) - no pickup items available at this store - SKIPPING CATEGORY")
                 return 'disabled'  # Special return value to indicate we should skip
 
             if result.get('wasChecked'):
@@ -839,9 +853,10 @@ async def scrape_category_page(page: Page, url: str, store_info: dict, page_num:
                     const text = normText(card.textContent);
                     const pickupMatch = /pickup\\b/i.test(text) ? (text.match(/pickup[^.]{0,80}/i) || [])[0] : null;
 
-                    // CRITICAL: only keep cards that show pickup availability.
-                    // This avoids capturing non-local promotional carousels.
-                    if (!pickupMatch) return null;
+                    // FIX: Make pickup text optional - we already filter by inStock=1 in URL
+                    // The pickup filter parameter ensures local inventory
+                    // Keeping this check would reject valid products that don't show "pickup" text
+                    // if (!pickupMatch) return null;  // REMOVED - too restrictive
 
                     // FIX: Use aria-label first (contains clean price like "Actual Price $1,597.99")
                     // Only fallback to textContent if aria-label fails
@@ -885,51 +900,102 @@ async def scrape_category_page(page: Page, url: str, store_info: dict, page_num:
                     };
                 }
 
-                // Find the local list section: from the "Near Me" heading to before "Save Now Storewide".
+                // FIX: Make "Near Me" heading optional - use main grid container as fallback
+                // The heading structure changes frequently, but the main grid is stable
                 const hCandidates = Array.from(document.querySelectorAll("h1,h2,h3"));
                 const nearMeHeading = hCandidates.find((h) => (h.textContent || "").toLowerCase().includes("near me"));
-                if (!nearMeHeading) return { ok: false, reason: "near_me_heading_not_found", products: [] };
+                
+                // Find the main product grid container (more reliable than heading)
+                const mainGrid = document.querySelector('[data-selector="splp-prd-lst"]') || 
+                                 document.querySelector('#listingPagesSearchResults') ||
+                                 document.querySelector('.search-results-wrapper') ||
+                                 document.querySelector('main');
+                
+                if (!nearMeHeading && !mainGrid) {
+                    return { ok: false, reason: "no_product_container_found", products: [] };
+                }
 
-                const allH = Array.from(document.querySelectorAll("h1,h2,h3,h4"));
-                const boundaryHeading =
-                    allH.find((h) => (h.textContent || "").toLowerCase().includes("save now storewide")) ||
-                    allH.find((h) => (h.textContent || "").toLowerCase().includes("you may also like")) ||
-                    allH.find((h) => (h.textContent || "").toLowerCase().includes("previously viewed")) ||
-                    null;
+                // Determine the search scope
+                let searchScope;
+                let debugInfo = [];
+                
+                if (nearMeHeading) {
+                    // Use heading-based scoping if available
+                    const allH = Array.from(document.querySelectorAll("h1,h2,h3,h4"));
+                    const boundaryHeading =
+                        allH.find((h) => (h.textContent || "").toLowerCase().includes("save now storewide")) ||
+                        allH.find((h) => (h.textContent || "").toLowerCase().includes("you may also like")) ||
+                        allH.find((h) => (h.textContent || "").toLowerCase().includes("previously viewed")) ||
+                        null;
 
-                const range = document.createRange();
-                range.setStartBefore(nearMeHeading);
-                if (boundaryHeading) range.setEndBefore(boundaryHeading);
-                else range.setEndAfter(document.body);
+                    const range = document.createRange();
+                    range.setStartBefore(nearMeHeading);
+                    if (boundaryHeading) range.setEndBefore(boundaryHeading);
+                    else range.setEndAfter(document.body);
 
-                const fragment = range.cloneContents();
-                const tmp = document.createElement("div");
-                tmp.appendChild(fragment);
+                    const fragment = range.cloneContents();
+                    const tmp = document.createElement("div");
+                    tmp.appendChild(fragment);
+                    searchScope = tmp;
+                    debugInfo.push("Using heading-based scope");
+                } else {
+                    // Use main grid container directly
+                    searchScope = mainGrid;
+                    debugInfo.push("Using main grid container");
+                }
 
-                const cards = Array.from(tmp.querySelectorAll("div.tile_group"));
+                const cards = Array.from(searchScope.querySelectorAll("div.tile_group"));
+                debugInfo.push(`Found ${cards.length} tile_group elements`);
+                
                 const out = [];
                 const seen = new Set();
+                let rejectedCount = 0;
+                let duplicateCount = 0;
+                
                 for (const c of cards) {
                     const p = extractCard(c);
-                    if (!p) continue;
-                    if (seen.has(p.href)) continue;
+                    if (!p) {
+                        rejectedCount++;
+                        continue;
+                    }
+                    if (seen.has(p.href)) {
+                        duplicateCount++;
+                        continue;
+                    }
                     seen.add(p.href);
                     out.push(p);
                 }
 
-                return { ok: true, products: out };
+                debugInfo.push(`Rejected: ${rejectedCount}, Duplicates: ${duplicateCount}, Final: ${out.length}`);
+                
+                return { 
+                    ok: true, 
+                    products: out, 
+                    method: nearMeHeading ? "heading" : "grid", 
+                    cardCount: cards.length,
+                    debug: debugInfo.join(" | ")
+                };
             }
             """
         )
 
+        # Log debug info from JavaScript extraction
+        if isinstance(near_me_payload, dict):
+            if not near_me_payload.get("ok"):
+                reason = near_me_payload.get("reason", "unknown")
+                Actor.log.warning(f"Near-me extraction failed: {reason}")
+
         if isinstance(near_me_payload, dict) and near_me_payload.get("ok") and near_me_payload.get("products"):
             now = datetime.utcnow().isoformat()
-            for p in near_me_payload["products"]:
+            js_products = near_me_payload.get("products", [])
+            
+            for idx, p in enumerate(js_products):
                 try:
                     product_url = p.get("href")
                     title_text = (p.get("title") or "").strip()
                     price_text = (p.get("now_price") or "").strip()
                     was_price_text = (p.get("was_price") or "").strip()
+                    
                     if not product_url or not title_text:
                         continue
 
@@ -944,12 +1010,13 @@ async def scrape_category_page(page: Page, url: str, store_info: dict, page_num:
                             "category_url": url,
                             "store_id": store_info["store_id"],
                             "store_name": store_info["name"],
-                            "store_city": store_info["city"],
-                            "store_state": store_info["state"],
+                            "store_city": store_info.get("city", ""),
+                            "store_state": store_info.get("state", ""),
                             "scraped_at": now,
                         }
                     )
-                except Exception:
+                except Exception as e:
+                    Actor.log.warning(f"Product {idx+1}: Exception during processing: {e}")
                     continue
 
             if expected_tiles and len(products) != expected_tiles:
@@ -1393,7 +1460,8 @@ async def scrape_category_all_pages(page: Page, category_url: str, store_info: d
         filter_applied = await apply_pickup_filter(page, f"{store_info['name']}-{cat_name}")
 
         if not filter_applied:
-            Actor.log.error(f"{store_info['name']} - {cat_name}: Pickup filter could not be applied - SKIPPING CATEGORY")
+            Actor.log.error(f"{store_info['name']} - {cat_name}: Pickup filter DISABLED or could not be applied - SKIPPING CATEGORY ENTIRELY")
+            Actor.log.error(f"This means no pickup items are available in this category at {store_info['name']}")
             return []  # Skip this category entirely instead of scraping wrong data
 
         # CRITICAL: Verify the URL actually has pickup filter parameters
