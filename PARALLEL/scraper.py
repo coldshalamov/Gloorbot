@@ -267,13 +267,67 @@ async def set_store_context(page: Page, store_url: str, store_name: str):
 # TILE GROUP EXTRACTION (ROW -> PER-PRODUCT)
 # ============================================================================
 
-_MONEY_STR_RE = re.compile(r"\$\s*\d{1,3}(?:,\d{3})*(?:\.\d{2})?")
+_MONEY_STR_RE = re.compile(r"\$\s*[0-9,]+(?:\.\d{2})?")
 _FINANCING_NOISE_RE = re.compile(
     r"(?i)(/mo\b|\bper\s+month\b|\bmonthly\b|\bmonth\b|suggested\s+payments?"
-    r"|special\s+financing|buy\s+now|pay\s+later|learn\s+how|when\s+you\s+choose|eligible\s+purchases)"
+    r"|special\s+financing|buy\s+now|pay\s+later|learn\s+how|when\s+you\s+choose|eligible\s+purchases|protection|plan|warranty|accessory)"
 )
 _LABEL_ACTUAL_RE = re.compile(r"(?i)\b(actual|now|sale|current)\s*price\b")
 _LABEL_WAS_RE = re.compile(r"(?i)\b(was|regular|original)\s*price\b")
+
+_PRICE_DIAG_FALSE_VALUES = {"0", "false", "no", "off", ""}
+
+
+def _price_diag_enabled() -> bool:
+    return os.getenv("GLOORBOT_PRICE_DIAGNOSTICS", "").strip().lower() not in _PRICE_DIAG_FALSE_VALUES
+
+
+def _price_diag_max_len() -> int:
+    try:
+        return max(0, min(int(os.getenv("GLOORBOT_PRICE_DIAG_MAXLEN", "800")), 10000))
+    except Exception:
+        return 800
+
+
+def _price_diag_path() -> str:
+    # Prefer explicit path if provided (worker can set per-slot).
+    p = (os.getenv("GLOORBOT_PRICE_DIAG_PATH") or "").strip()
+    if p:
+        return p
+    # Fallback: write next to navlog if configured (keeps artifacts together).
+    nav = (os.getenv("GLOORBOT_NAVLOG_PATH") or "").strip()
+    if nav:
+        try:
+            base = Path(nav)
+            return str(base.with_suffix(".price_diag.jsonl"))
+        except Exception:
+            pass
+    return ""
+
+
+def _truncate(s: str, max_len: int) -> str:
+    if not s:
+        return ""
+    if max_len <= 0:
+        return ""
+    if len(s) <= max_len:
+        return s
+    return s[: max_len - 3] + "..."
+
+
+def _price_diag_write(event: dict) -> None:
+    if not _price_diag_enabled():
+        return
+    try:
+        path = _price_diag_path()
+        if not path:
+            return
+        Path(path).parent.mkdir(parents=True, exist_ok=True)
+        with open(path, "a", encoding="utf-8") as f:
+            f.write(json.dumps(event, ensure_ascii=False) + "\n")
+    except Exception:
+        # Diagnostics must never crash scraping.
+        return
 
 
 def _first_money_str(text: str) -> str:
@@ -351,27 +405,145 @@ async def extract_prices_from_card(card: Locator) -> dict[str, str]:
     Extract {price, was_price} from a product card while avoiding common
     false positives like monthly-payment/financing snippets (e.g. "$125/mo").
     """
+    diag: dict = {
+        "ts": datetime.utcnow().isoformat(),
+        "event": "price_extract",
+        "price": None,
+        "was_price": None,
+        "steps": [],
+    }
+
+    # Best-effort card identity (forensics).
+    try:
+        a = card.locator(":scope a[href*='/pd/']").first
+        if await a.count() > 0:
+            href = (await a.get_attribute("href")) or ""
+            diag["product_href"] = href
+            if href.startswith("/"):
+                diag["product_url"] = "https://www.lowes.com" + href
+            elif href.startswith("http"):
+                diag["product_url"] = href
+    except Exception:
+        pass
+    try:
+        t = card.locator(":scope [data-selector='splp-prd-ttl'], :scope h2, :scope h3").first
+        if await t.count() > 0:
+            diag["title"] = _truncate((await t.inner_text()) or "", _price_diag_max_len())
+    except Exception:
+        pass
+
     price_text = ""
     was_price = ""
+
+    # 0) JSON-LD Strategy (New)
+    try:
+        # Check for script inside the card or immediately preceding/following
+        scripts = card.locator("script[type='application/ld+json']")
+        count = await scripts.count()
+        if count > 0:
+            for i in range(count):
+                try:
+                    content = await scripts.nth(i).inner_text()
+                    data = json.loads(content)
+                    offers = data.get("offers", {})
+                    if isinstance(offers, list): offers = offers[0] if offers else {}
+                    
+                    j_price = str(offers.get("price", ""))
+                    j_was = str(offers.get("priceWas", ""))
+                    
+                    if j_price:
+                        if "$" not in j_price: j_price = f"${j_price}"
+                        price_text = j_price
+                        diag["steps"].append({
+                            "source": "json_ld",
+                            "ok": True,
+                            "candidate": j_price,
+                            "raw": content[:100]
+                        })
+                        
+                        if j_was:
+                             if "$" not in j_was: j_was = f"${j_was}"
+                             was_price = j_was
+                        
+                        if price_text:
+                            break
+                except Exception:
+                    pass
+    except Exception:
+        pass
 
     # 1) Canonical Lowe's selectors (fast path).
     try:
         now_el = card.locator(":scope [data-selector='splp-prd-act-$']").first
+        diag["canonical_now_count"] = await card.locator(":scope [data-selector='splp-prd-act-$']").count()
         if await now_el.count() > 0:
             aria = (await now_el.get_attribute("aria-label")) or ""
-            candidate = _first_money_str(aria) or _first_money_str((await now_el.inner_text()) or "")
-            if candidate and not _looks_like_financing_noise(aria) and not _looks_like_financing_noise(candidate):
+            inner = (await now_el.inner_text()) or ""
+            candidate = _first_money_str(aria) or _first_money_str(inner)
+            rejected = []
+            if _looks_like_financing_noise(aria):
+                rejected.append("financing_noise_in_aria")
+            if _looks_like_financing_noise(inner):
+                rejected.append("financing_noise_in_text")
+            if candidate and not rejected:
                 price_text = candidate
+                diag["steps"].append(
+                    {
+                        "source": "canonical_now_selector",
+                        "ok": True,
+                        "candidate": candidate,
+                        "aria": _truncate(aria, _price_diag_max_len()),
+                        "text": _truncate(inner, _price_diag_max_len()),
+                    }
+                )
+            else:
+                diag["steps"].append(
+                    {
+                        "source": "canonical_now_selector",
+                        "ok": False,
+                        "candidate": candidate,
+                        "rejected": rejected,
+                        "aria": _truncate(aria, _price_diag_max_len()),
+                        "text": _truncate(inner, _price_diag_max_len()),
+                    }
+                )
     except Exception:
         pass
 
     try:
         was_el = card.locator(":scope [data-selector='splp-prd-promo-was-$']").first
+        diag["canonical_was_count"] = await card.locator(":scope [data-selector='splp-prd-promo-was-$']").count()
         if await was_el.count() > 0:
             aria = (await was_el.get_attribute("aria-label")) or ""
-            candidate = _first_money_str(aria) or _first_money_str((await was_el.inner_text()) or "")
-            if candidate and not _looks_like_financing_noise(aria) and not _looks_like_financing_noise(candidate):
+            inner = (await was_el.inner_text()) or ""
+            candidate = _first_money_str(aria) or _first_money_str(inner)
+            rejected = []
+            if _looks_like_financing_noise(aria):
+                rejected.append("financing_noise_in_aria")
+            if _looks_like_financing_noise(inner):
+                rejected.append("financing_noise_in_text")
+            if candidate and not rejected:
                 was_price = candidate
+                diag["steps"].append(
+                    {
+                        "source": "canonical_was_selector",
+                        "ok": True,
+                        "candidate": candidate,
+                        "aria": _truncate(aria, _price_diag_max_len()),
+                        "text": _truncate(inner, _price_diag_max_len()),
+                    }
+                )
+            else:
+                diag["steps"].append(
+                    {
+                        "source": "canonical_was_selector",
+                        "ok": False,
+                        "candidate": candidate,
+                        "rejected": rejected,
+                        "aria": _truncate(aria, _price_diag_max_len()),
+                        "text": _truncate(inner, _price_diag_max_len()),
+                    }
+                )
     except Exception:
         pass
 
@@ -380,20 +552,46 @@ async def extract_prices_from_card(card: Locator) -> dict[str, str]:
     if (not price_text) or (not was_price):
         try:
             aria_nodes = card.locator(":scope [aria-label]")
-            n = min(await aria_nodes.count(), 80)
+            aria_count = await aria_nodes.count()
+            diag["aria_label_count"] = aria_count
+            n = min(aria_count, 80)
             for i in range(n):
                 label = (await aria_nodes.nth(i).get_attribute("aria-label")) or ""
                 if not label or "$" not in label:
                     continue
                 if _looks_like_financing_noise(label):
+                    diag["steps"].append(
+                        {
+                            "source": "aria_scan",
+                            "ok": False,
+                            "rejected": ["financing_noise_in_aria"],
+                            "aria": _truncate(label, _price_diag_max_len()),
+                        }
+                    )
                     continue
                 money = _first_money_str(label)
                 if not money:
                     continue
                 if (not price_text) and _LABEL_ACTUAL_RE.search(label):
                     price_text = money
+                    diag["steps"].append(
+                        {
+                            "source": "aria_scan_actual",
+                            "ok": True,
+                            "candidate": money,
+                            "aria": _truncate(label, _price_diag_max_len()),
+                        }
+                    )
                 if (not was_price) and _LABEL_WAS_RE.search(label):
                     was_price = money
+                    diag["steps"].append(
+                        {
+                            "source": "aria_scan_was",
+                            "ok": True,
+                            "candidate": money,
+                            "aria": _truncate(label, _price_diag_max_len()),
+                        }
+                    )
                 if price_text and was_price:
                     break
         except Exception:
@@ -403,10 +601,33 @@ async def extract_prices_from_card(card: Locator) -> dict[str, str]:
     if not was_price:
         try:
             strike = card.locator(":scope s, :scope del").first
+            diag["strike_count"] = await card.locator(":scope s, :scope del").count()
             if await strike.count() > 0:
-                candidate = _first_money_str((await strike.inner_text()) or "")
-                if candidate and not _looks_like_financing_noise(candidate):
+                inner = (await strike.inner_text()) or ""
+                candidate = _first_money_str(inner)
+                rejected = []
+                if _looks_like_financing_noise(inner) or _looks_like_financing_noise(candidate):
+                    rejected.append("financing_noise_in_text")
+                if candidate and not rejected:
                     was_price = candidate
+                    diag["steps"].append(
+                        {
+                            "source": "strike_was",
+                            "ok": True,
+                            "candidate": candidate,
+                            "text": _truncate(inner, _price_diag_max_len()),
+                        }
+                    )
+                else:
+                    diag["steps"].append(
+                        {
+                            "source": "strike_was",
+                            "ok": False,
+                            "candidate": candidate,
+                            "rejected": rejected,
+                            "text": _truncate(inner, _price_diag_max_len()),
+                        }
+                    )
         except Exception:
             pass
 
@@ -438,13 +659,45 @@ async def extract_prices_from_card(card: Locator) -> dict[str, str]:
                         price_text = _fmt_money(inferred_now)
                     if not was_price:
                         was_price = _fmt_money(inferred_was)
+                    diag["steps"].append(
+                        {
+                            "source": "blob_infer_pair",
+                            "ok": True,
+                            "inferred_now": inferred_now,
+                            "inferred_was": inferred_was,
+                            "text": _truncate(blob, _price_diag_max_len()),
+                        }
+                    )
+            else:
+                diag["steps"].append(
+                    {
+                        "source": "blob_infer_pair",
+                        "ok": False,
+                        "reason": "no_money_values",
+                        "text": _truncate(blob, _price_diag_max_len()),
+                    }
+                )
         except Exception:
             pass
 
-    return {
+    out = {
         "price": price_text.strip() if price_text else "N/A",
         "was_price": was_price.strip() if was_price else "",
     }
+    diag["price"] = out["price"]
+    diag["was_price"] = out["was_price"]
+    try:
+        diag["card_text"] = _truncate((await card.inner_text()) or "", _price_diag_max_len())
+    except Exception:
+        pass
+    _price_diag_write(diag)
+    try:
+        # Emit a single-line marker into Actor logs too (cheap to grep in Render).
+        if _price_diag_enabled():
+            Actor.log.info(f"PRICE_DIAG now={out['price']} was={out['was_price']} steps={len(diag.get('steps') or [])}")
+    except Exception:
+        pass
+    return out
 
 
 async def extract_tile_group_products(card: Locator) -> list[dict]:

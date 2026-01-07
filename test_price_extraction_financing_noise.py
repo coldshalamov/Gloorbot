@@ -4,6 +4,10 @@ from playwright.async_api import async_playwright
 
 import PARALLEL.scraper as scraper
 
+from pathlib import Path
+import json
+import os
+
 
 # Regression: Lowe's cards can include financing/monthly-payment snippets like "$125/mo"
 # that must NOT be treated as the product's "now" price.
@@ -47,13 +51,28 @@ async def test_price_extraction_financing_noise() -> None:
         card = page.locator("div.tile_group").first
         assert await card.count() > 0, "expected at least one product card"
 
+        diag_path = Path(__file__).with_suffix(".price_diag.jsonl")
+        if diag_path.exists():
+            diag_path.unlink()
+        os.environ["GLOORBOT_PRICE_DIAGNOSTICS"] = "1"
+        os.environ["GLOORBOT_PRICE_DIAG_PATH"] = str(diag_path)
+        os.environ["GLOORBOT_PRICE_DIAG_MAXLEN"] = "500"
+
         prices = await scraper.extract_prices_from_card(card)
         assert prices["price"] == "$999.99", f"unexpected now price: {prices}"
         assert prices["was_price"] == "$1,266.73", f"unexpected was price: {prices}"
+
+        assert diag_path.exists(), "expected price diagnostics jsonl to be written"
+        lines = [ln.strip() for ln in diag_path.read_text(encoding="utf-8").splitlines() if ln.strip()]
+        assert len(lines) >= 1, "expected at least one diagnostics event"
+        evt = json.loads(lines[-1])
+        assert evt.get("event") == "price_extract"
+        assert evt.get("price") == "$999.99"
+        assert evt.get("was_price") == "$1,266.73"
+        assert isinstance(evt.get("steps"), list) and evt.get("steps"), "expected non-empty steps"
 
         await browser.close()
 
 
 if __name__ == "__main__":
     asyncio.run(test_price_extraction_financing_noise())
-
