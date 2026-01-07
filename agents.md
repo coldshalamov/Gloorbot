@@ -6,10 +6,10 @@
 ---
 
 ### 🎯 CURRENT OBJECTIVE
-*Primary Goal*: Resolve Agent-MCP Dashboard Issues & Complete Gloorbot Indexing.
+*Primary Goal*: Ensure Nucleus Brain MCP is reliable & Complete Gloorbot Indexing.
 *Protocol Version*: **v1.3 (Slow & Steady)**
 *Philosophy*: Quality over speed. Persistence over rapid iteration.
-*Next Milestone*: Verify cross-agent memory sharing.
+*Next Milestone*: Verify cross-agent coordination via Nucleus task claiming.
 
 ---
 
@@ -68,7 +68,7 @@
 - [2026-01-05]: Reverted canonical seed lists back to the verified 524 /pl/ URLs (restore from ackups/url_seeds_20260104_233349/), per user request to avoid expanding to the larger /c/Departments discovery list.
 - [2026-01-04]: Found coordinator 500s on `/api/v1/deals/bulk` (UNIQUE constraint) blocking forwarding; added in-batch de-dupe + 409 on integrity errors.
 - [2026-01-04]: Security: refused to exfiltrate handshake secret; rotate if exposed.
-- [2026-01-04]: Agent-MCP: verified stdio MCP handshake; stdio is newline-delimited JSON; use `--project-dir` to avoid DB locks.
+- [2026-01-04]: Nucleus MCP: verified stdio MCP handshake; stdio is newline-delimited JSON; use `--project-dir` to avoid DB locks.
 - [2026-01-04]: Coordinator: SQLite upsert for `/api/v1/deals/bulk` + `batch_id` tracing + debug tables (`ingest_events`, `deal_sources`) with ~3-day retention + debug endpoints.
 - [2026-01-04]: CheapSkater: ingest now honors `CHEAPSKATER_DB_PATH` (fixes “200 OK but not in UI” DB mismatch) + structured ingest logs + richer `/api/ingest/health`.
 - [2026-01-04]: URL audit (dev-browser): validated that `apps/coordinator/data/urls.txt` contains some `/pl/.../` entries that return **404** (e.g. `.../Tapes-Glues-tapes/`); fixed Akamai “Access Denied” by resetting the dev-browser persistent profile and warming up until `_abck` contains `~0~`.
@@ -84,7 +84,7 @@
 - [2026-01-04 14:30]: Claude Code: **Root cause analysis** of IntegrityError escaping try-except—identified 4 hypotheses: (1) **Race condition** between query & insert (most likely in WAL mode); (2) `seen_count += 1` mutation tracking; (3) Exception type mismatch in catch block; (4) Stale session. Code already has defensive de-dupe + IntegrityError catch, but it's still 500'ing → suggests exception escaping pre-commit. Drafting solutions: SQLite upsert (atomic), savepoint per deal, broader exception catch, session isolation.
 - [2026-01-04 16:45]: Claude Code: **FOUND THE BUG**: Deployed commit `8e59a497` has OLD vulnerable code (query+insert race pattern). The fix (atomic SQLite upsert + batch de-dupe + error handling) was implemented in commit `ad79ab5d` but NOT deployed to Render. Current HEAD `4b03db14` includes the fix. **ACTION**: Deploy HEAD to Render to stop the 500s.
 - [2026-01-05 03:35]: Claude Code: **ISSUE RESOLVED**: Verified Render coordinator is running commit `4b03db14` (deployed 2026-01-04 18:29 UTC). Atomic SQLite upsert fix is LIVE. Confirmed via `/api/v1/status`: latest ingest shows `forward_status_code=200` (not 500), `forward_error=null`. IntegrityError race condition eliminated. 500 errors on `/api/v1/deals/bulk` are gone.
-- [2026-01-04 16:00]: **CORE ARCHITECTURE UPGRADE**: Unified all agents (Native, Codex, Claude Code) under a single shared **SSE backend** (Ports 24281 & 8080). Flattened MCP Proxy hierarchy to eliminate "hidden tools" bug in Claude. Agent-MCP database locking issue resolved by moving to singleton process model. All agents now share the same "Brain."
+- [2026-01-04 16:00]: **CORE ARCHITECTURE UPGRADE**: Unified all agents (Native, Codex, Claude Code) around shared SSE servers for coordination (Serena + Nucleus). Flattened MCP Proxy hierarchy to eliminate "hidden tools" bug in Claude. Shared-brain locking issues resolved by using a singleton Nucleus process + task claiming. All agents now share the same "Brain."
 - [2026-01-04 11:15]: **CRITICAL BUG FIX + SYSTEMATIC DEBUG (Antigravity)**: Fixed `local_scraper.py` price parsing bug ($4 vs $998 issue). Changed `parse_price()` from `re.search()` to `re.findall()` + filter < $1 + return max. All 7 tests pass. Also improved page loading (domcontentloaded vs networkidle) and added diagnostic logging. **Identified**: Akamai is blocking scraper - needs warmup or persistent profile from dev-browser. Full report: `DEBUG_REPORT_2026-01-04.md`
 - [2026-01-04 11:30]: **URL LIST AUDIT (Antigravity)**: Investigated `/c/` category pages causing infinite loops. **Found**: Local files clean (0 `/c/` URLs), but remote Render coordinator has legacy `/c/` URLs in database. **Fix**: DELETE FROM tasks WHERE category_url LIKE '%/c/%'; Also identified 300 potential parent categories needing review. Full report: `URL_AUDIT_REPORT.md`
 - [2026-01-04 11:54]: **CRITICAL BUG FIX - Infinite Loop on /c/ Pages (Antigravity)**: **ROOT CAUSE FOUND**: After applying pickup filter, `scraper.py` line 745 blindly updates `category_url = page.url`. If Lowe's redirects to a `/c/` category page, scraper loops forever trying to paginate a non-product page. **FIX**: Added validation to detect `/c/` redirects and abort with clear error. Now prevents infinite loops and identifies problematic categories. File: `PARALLEL/scraper.py` lines 744-761.
@@ -101,7 +101,7 @@
 *Avoid these mistakes (Learned the hard way):*
 1. **Terminals**: Don't waste tokens trying to debug "SSE connection" issues if the agent is using `stdio`.
 2. **Paths**: Always use absolute paths on Windows to avoid "File not found" errors in the brain.
-3. **Database Consistency**: Use the project's root `.agent/mcp_state.db` to ensure all agents are reading the same memory.
+3. **Brain Consistency**: Use the project's root `.brain/` as the shared source-of-truth (tasks/events/state).
 
 ---
 
@@ -129,11 +129,10 @@
 - Coordinator `/api/v1/status` reports `cheapskater_ingest_url_configured=true` and `...api_key_configured=true`.
 - CheapSkater `/api/ingest/health` reports `db_path=/var/data/orwa_lowes.sqlite` and `db_exists=true`.
 
-**⚠️ AGENT-MCP MEMORY FUNCTIONS - STILL TODO**:
-- Agent-MCP is running (SSE on port 8080) but `store_memory` / `retrieve_memory` functions are **not yet implemented** in the tool registry
-- **Current workaround**: Using `agents.md` for Tier 1 coordination (working fine)
-- **Needed**: Implement memory tool handlers in Agent-MCP's tool registry + wire them to the project context database
-- **For now**: `agents.md` + manual file edits are sufficient for fleet coordination 
+**Nucleus coordination (source of truth)**:
+- Nucleus stores shared state under `.brain/ledger/` and supports atomic task claiming to prevent agents stepping on each other.
+- If Nucleus SSE isn’t reachable at `http://127.0.0.1:9090/nucleus/sse`, start it from repo root:
+  - `powershell -NoProfile -ExecutionPolicy Bypass -File tools/nucleus/start-nucleus-brain.ps1`
 
 ---
 

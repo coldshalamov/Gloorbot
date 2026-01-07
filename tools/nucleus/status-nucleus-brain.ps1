@@ -28,13 +28,13 @@ Write-Host "Endpoint: http://$HostAddress`:$Port$Path"
 Write-Host "Listening: $listening"
 
 if (Test-Path $PidFile) {
-  $pid = (Get-Content -Path $PidFile | Select-Object -First 1).Trim()
-  if ($pid) {
+  $procId = (Get-Content -Path $PidFile | Select-Object -First 1).Trim()
+  if ($procId) {
     try {
-      $p = Get-Process -Id ([int]$pid) -ErrorAction Stop
-      Write-Host "PID: $pid ($($p.ProcessName))"
+      $p = Get-Process -Id ([int]$procId) -ErrorAction Stop
+      Write-Host "PID: $procId ($($p.ProcessName))"
     } catch {
-      Write-Host "PID file exists but process not found: $pid"
+      Write-Host "PID file exists but process not found: $procId"
     }
   }
 } else {
@@ -42,4 +42,3 @@ if (Test-Path $PidFile) {
 }
 
 exit 0
-

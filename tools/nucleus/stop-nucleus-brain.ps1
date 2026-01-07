@@ -19,25 +19,24 @@ if ([string]::IsNullOrWhiteSpace($pidRaw)) {
   exit 1
 }
 
-$pid = [int]$pidRaw
+$processId = [int]$pidRaw
 
 try {
-  $p = Get-Process -Id $pid -ErrorAction Stop
+  $p = Get-Process -Id $processId -ErrorAction Stop
 } catch {
-  Write-Host "Process $pid not found; removing stale pid file."
+  Write-Host "Process $processId not found; removing stale pid file."
   Remove-Item -Force $PidFile
   exit 0
 }
 
 try {
   if ($Force) {
-    Stop-Process -Id $pid -Force
+    Stop-Process -Id $processId -Force
   } else {
-    Stop-Process -Id $pid
+    Stop-Process -Id $processId
   }
   Start-Sleep -Milliseconds 200
-  Write-Host "Stopped Nucleus SSE process pid=$pid"
+  Write-Host "Stopped Nucleus SSE process pid=$processId"
 } finally {
   if (Test-Path $PidFile) { Remove-Item -Force $PidFile }
 }
-
