@@ -19,7 +19,8 @@
       "Skill(dev-browser)",
       "Skill(dev-browser:*)",
       "Bash(npx tsx:*)",
-      "Bash(timeout:*)"
+      "Bash(timeout:*)",
+      "Bash(gh release list:*)"
     ],
     "deny": [],
     "ask": []
