@@ -435,50 +435,14 @@ async def extract_prices_from_card(card: Locator) -> dict[str, str]:
     price_text = ""
     was_price = ""
 
-    # 0) JSON-LD Strategy (New)
+    # 0) data-testid Strategy (PROVEN WORKING from CheapSkater)
+    # This is the most reliable selector set - use it first
     try:
-        # Check for script inside the card or immediately preceding/following
-        scripts = card.locator("script[type='application/ld+json']")
-        count = await scripts.count()
-        if count > 0:
-            for i in range(count):
-                try:
-                    content = await scripts.nth(i).inner_text()
-                    data = json.loads(content)
-                    offers = data.get("offers", {})
-                    if isinstance(offers, list): offers = offers[0] if offers else {}
-                    
-                    j_price = str(offers.get("price", ""))
-                    j_was = str(offers.get("priceWas", ""))
-                    
-                    if j_price:
-                        if "$" not in j_price: j_price = f"${j_price}"
-                        price_text = j_price
-                        diag["steps"].append({
-                            "source": "json_ld",
-                            "ok": True,
-                            "candidate": j_price,
-                            "raw": content[:100]
-                        })
-                        
-                        if j_was:
-                             if "$" not in j_was: j_was = f"${j_was}"
-                             was_price = j_was
-                        
-                        if price_text:
-                            break
-                except Exception:
-                    pass
-    except Exception:
-        pass
-
-    # 1) Canonical Lowe's selectors (fast path).
-    try:
-        now_el = card.locator(":scope [data-selector='splp-prd-act-$']").first
-        diag["canonical_now_count"] = await card.locator(":scope [data-selector='splp-prd-act-$']").count()
-        if await now_el.count() > 0:
-            aria = (await now_el.get_attribute("aria-label")) or ""
-            inner = (await now_el.inner_text()) or ""
+        # Try current-price first, then regular-price as fallback
+        current_price_el = card.locator(":scope [data-testid='current-price'], :scope [data-testid='regular-price']").first
+        if await current_price_el.count() > 0:
+            aria = (await current_price_el.get_attribute("aria-label")) or ""
+            inner = (await current_price_el.inner_text()) or ""
             candidate = _first_money_str(aria) or _first_money_str(inner)
             rejected = []
             if _looks_like_financing_noise(aria):
@@ -487,35 +451,30 @@ async def extract_prices_from_card(card: Locator) -> dict[str, str]:
                 rejected.append("financing_noise_in_text")
             if candidate and not rejected:
                 price_text = candidate
-                diag["steps"].append(
-                    {
-                        "source": "canonical_now_selector",
-                        "ok": True,
-                        "candidate": candidate,
-                        "aria": _truncate(aria, _price_diag_max_len()),
-                        "text": _truncate(inner, _price_diag_max_len()),
-                    }
-                )
+                diag["steps"].append({
+                    "source": "data_testid_current_price",
+                    "ok": True,
+                    "candidate": candidate,
+                    "aria": _truncate(aria, _price_diag_max_len()),
+                    "text": _truncate(inner, _price_diag_max_len()),
+                })
             else:
-                diag["steps"].append(
-                    {
-                        "source": "canonical_now_selector",
-                        "ok": False,
-                        "candidate": candidate,
-                        "rejected": rejected,
-                        "aria": _truncate(aria, _price_diag_max_len()),
-                        "text": _truncate(inner, _price_diag_max_len()),
-                    }
-                )
+                diag["steps"].append({
+                    "source": "data_testid_current_price",
+                    "ok": False,
+                    "candidate": candidate,
+                    "rejected": rejected,
+                    "aria": _truncate(aria, _price_diag_max_len()),
+                    "text": _truncate(inner, _price_diag_max_len()),
+                })
     except Exception:
         pass
 
     try:
-        was_el = card.locator(":scope [data-selector='splp-prd-promo-was-$']").first
-        diag["canonical_was_count"] = await card.locator(":scope [data-selector='splp-prd-promo-was-$']").count()
-        if await was_el.count() > 0:
-            aria = (await was_el.get_attribute("aria-label")) or ""
-            inner = (await was_el.inner_text()) or ""
+        was_price_el = card.locator(":scope [data-testid='was-price']").first
+        if await was_price_el.count() > 0:
+            aria = (await was_price_el.get_attribute("aria-label")) or ""
+            inner = (await was_price_el.inner_text()) or ""
             candidate = _first_money_str(aria) or _first_money_str(inner)
             rejected = []
             if _looks_like_financing_noise(aria):
@@ -524,28 +483,101 @@ async def extract_prices_from_card(card: Locator) -> dict[str, str]:
                 rejected.append("financing_noise_in_text")
             if candidate and not rejected:
                 was_price = candidate
-                diag["steps"].append(
-                    {
-                        "source": "canonical_was_selector",
-                        "ok": True,
-                        "candidate": candidate,
-                        "aria": _truncate(aria, _price_diag_max_len()),
-                        "text": _truncate(inner, _price_diag_max_len()),
-                    }
-                )
+                diag["steps"].append({
+                    "source": "data_testid_was_price",
+                    "ok": True,
+                    "candidate": candidate,
+                    "aria": _truncate(aria, _price_diag_max_len()),
+                    "text": _truncate(inner, _price_diag_max_len()),
+                })
             else:
-                diag["steps"].append(
-                    {
-                        "source": "canonical_was_selector",
-                        "ok": False,
-                        "candidate": candidate,
-                        "rejected": rejected,
-                        "aria": _truncate(aria, _price_diag_max_len()),
-                        "text": _truncate(inner, _price_diag_max_len()),
-                    }
-                )
+                diag["steps"].append({
+                    "source": "data_testid_was_price",
+                    "ok": False,
+                    "candidate": candidate,
+                    "rejected": rejected,
+                    "aria": _truncate(aria, _price_diag_max_len()),
+                    "text": _truncate(inner, _price_diag_max_len()),
+                })
     except Exception:
         pass
+
+    # 1) Canonical Lowe's data-selector attributes (fallback - only if data-testid didn't work).
+    if not price_text:
+        try:
+            now_el = card.locator(":scope [data-selector='splp-prd-act-$']").first
+            diag["canonical_now_count"] = await card.locator(":scope [data-selector='splp-prd-act-$']").count()
+            if await now_el.count() > 0:
+                aria = (await now_el.get_attribute("aria-label")) or ""
+                inner = (await now_el.inner_text()) or ""
+                candidate = _first_money_str(aria) or _first_money_str(inner)
+                rejected = []
+                if _looks_like_financing_noise(aria):
+                    rejected.append("financing_noise_in_aria")
+                if _looks_like_financing_noise(inner):
+                    rejected.append("financing_noise_in_text")
+                if candidate and not rejected:
+                    price_text = candidate
+                    diag["steps"].append(
+                        {
+                            "source": "canonical_now_selector",
+                            "ok": True,
+                            "candidate": candidate,
+                            "aria": _truncate(aria, _price_diag_max_len()),
+                            "text": _truncate(inner, _price_diag_max_len()),
+                        }
+                    )
+                else:
+                    diag["steps"].append(
+                        {
+                            "source": "canonical_now_selector",
+                            "ok": False,
+                            "candidate": candidate,
+                            "rejected": rejected,
+                            "aria": _truncate(aria, _price_diag_max_len()),
+                            "text": _truncate(inner, _price_diag_max_len()),
+                        }
+                    )
+        except Exception:
+            pass
+
+    if not was_price:
+        try:
+            was_el = card.locator(":scope [data-selector='splp-prd-promo-was-$']").first
+            diag["canonical_was_count"] = await card.locator(":scope [data-selector='splp-prd-promo-was-$']").count()
+            if await was_el.count() > 0:
+                aria = (await was_el.get_attribute("aria-label")) or ""
+                inner = (await was_el.inner_text()) or ""
+                candidate = _first_money_str(aria) or _first_money_str(inner)
+                rejected = []
+                if _looks_like_financing_noise(aria):
+                    rejected.append("financing_noise_in_aria")
+                if _looks_like_financing_noise(inner):
+                    rejected.append("financing_noise_in_text")
+                if candidate and not rejected:
+                    was_price = candidate
+                    diag["steps"].append(
+                        {
+                            "source": "canonical_was_selector",
+                            "ok": True,
+                            "candidate": candidate,
+                            "aria": _truncate(aria, _price_diag_max_len()),
+                            "text": _truncate(inner, _price_diag_max_len()),
+                        }
+                    )
+                else:
+                    diag["steps"].append(
+                        {
+                            "source": "canonical_was_selector",
+                            "ok": False,
+                            "candidate": candidate,
+                            "rejected": rejected,
+                            "aria": _truncate(aria, _price_diag_max_len()),
+                            "text": _truncate(inner, _price_diag_max_len()),
+                        }
+                    )
+        except Exception:
+            pass
 
     # 2) Aria-label scanning fallback (covers cards without splp-prd-* data-selectors).
     # Limit work: only scan aria-labels if canonical selectors didn't succeed.
