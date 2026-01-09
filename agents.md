@@ -23,6 +23,7 @@
 ---
 
 ### 📝 RECENT MILESTONES (LAST 24 HOURS)
+- [2026-01-09]: Codex: Fixed Gemini MCP tool to behave like local `gemini --yolo`: pipe prompts via stdin (avoids hangs/argv limits), default `--approval-mode yolo`, default `--output-format json`, strip ANSI/OSC, parse JSON `response`; updated Codex `C:\\Users\\User\\.codex\\config.toml` env (HOME/USERPROFILE + GEMINI_MCP_*). Verified via `mcp__gemini-cli__ask-gemini` and confirmed Gemini can call MCP tools (e.g., nucleus tools/list).
 - [2026-01-07]: Codex: Confirmed Gemini MCP is reachable and returns responses (test call via `mcp__gemini-cli__ask-gemini` → “Received context via MCP. OK.”).
 - [2026-01-07]: Codex: Root-caused “no deals showing” reports to **Render coordinator still using default `DEAL_THRESHOLD=0.50`** (homepage banner shows “Deals shown are ≥ 50% off.”). Note: setting `DEAL_THRESHOLD` only in a local worker/scraper does **not** change what the website shows; the coordinator enforces the threshold server-side and will drop/stop-forward deals below it until the Render env var is updated.
 - [2026-01-07]: Codex: Added maximum-verbosity diagnostics for price/deal forensics. `PARALLEL/scraper.py` now writes per-card JSONL traces when `GLOORBOT_PRICE_DIAGNOSTICS=1` (sources attempted + accepted/rejected candidates + selector counts + truncated raw aria/text). Worker adds `GLOORBOT_DEAL_DIAGNOSTICS=1` JSONL logging to explain why each candidate is accepted/rejected and writes per-slot logs under `logs/deal_diagnostics/` and `logs/price_diagnostics/`.

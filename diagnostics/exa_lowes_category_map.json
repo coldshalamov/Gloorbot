@@ -1,0 +1,154 @@
+{
+  "discovery_date": "2026-01-09T01:57:00Z",
+  "source": "Exa web search",
+  "categories": [
+    {
+      "url": "https://www.lowes.com/pl/dishwashers/built-in-dishwashers/4294857924",
+      "name": "Built-In Dishwashers",
+      "department": "Appliances",
+      "cluster": "appliance_plp",
+      "url_pattern": "/pl/{category}/{subcategory}/{id}",
+      "expected_selector": "data-selector='splp-prd-act-$'",
+      "notes": "High-value appliance category, likely has financing strings"
+    },
+    {
+      "url": "https://www.lowes.com/pl/washers-dryers/washing-machines/4294857977",
+      "name": "Washing Machines",
+      "department": "Appliances",
+      "cluster": "appliance_plp",
+      "url_pattern": "/pl/{category}/{subcategory}/{id}",
+      "expected_selector": "data-selector='splp-prd-act-$'",
+      "notes": "Large appliances, may have tile group rows"
+    },
+    {
+      "url": "https://www.lowes.com/pl/concrete-cement-masonry/concrete-cement-tools/3268988959",
+      "name": "Concrete & Cement Tools",
+      "department": "Building Supplies",
+      "cluster": "building_plp",
+      "url_pattern": "/pl/{category}/{subcategory}/{id}",
+      "expected_selector": "data-selector='splp-prd-act-$'",
+      "notes": "Lower price range, good for testing normal pricing"
+    },
+    {
+      "url": "https://www.lowes.com/pl/lumber-composites/plywood-sheathing/3221732066751",
+      "name": "Plywood & Sheathing",
+      "department": "Building Supplies",
+      "cluster": "building_plp",
+      "url_pattern": "/pl/{category}/{subcategory}/{id}",
+      "expected_selector": "data-selector='splp-prd-act-$'",
+      "notes": "Simple products, likely straightforward pricing"
+    },
+    {
+      "url": "https://www.lowes.com/pl/hand-tools/tool-sets/4294607612",
+      "name": "Tool Sets",
+      "department": "Tools",
+      "cluster": "tools_plp",
+      "url_pattern": "/pl/{category}/{subcategory}/{id}",
+      "expected_selector": "data-selector='splp-prd-act-$'",
+      "notes": "Mixed price ranges, good for testing price validation"
+    },
+    {
+      "url": "https://www.lowes.com/pl/lumber-composites/hardwood/4294934154-4294402332",
+      "name": "Hardwood Lumber",
+      "department": "Building Supplies",
+      "cluster": "building_plp",
+      "url_pattern": "/pl/{category}/{subcategory}/{id1}-{id2}",
+      "expected_selector": "data-selector='splp-prd-act-$'",
+      "notes": "Multi-ID URL pattern, may have different markup"
+    },
+    {
+      "url": "https://www.lowes.com/pl/dishwashers/lg/4294857925-4294801527",
+      "name": "LG Dishwashers",
+      "department": "Appliances",
+      "cluster": "appliance_plp",
+      "url_pattern": "/pl/{category}/{brand}/{id1}-{id2}",
+      "notes": "Brand-filtered category, may have promotional sections"
+    },
+    {
+      "url": "https://www.lowes.com/pl/kitchen-appliance-packages/2020942007672",
+      "name": "Kitchen Appliance Packages",
+      "department": "Appliances",
+      "cluster": "appliance_plp",
+      "url_pattern": "/pl/{category}/{id}",
+      "expected_selector": "data-selector='splp-prd-act-$'",
+      "notes": "Bundle pricing, may have complex price structures"
+    },
+    {
+      "url": "https://www.lowes.com/pl/Shop-appliance-special-values/1015369011",
+      "name": "Shop Appliance Special Values",
+      "department": "Appliances",
+      "cluster": "promotional_plp",
+      "url_pattern": "/pl/{category}/{id}",
+      "expected_selector": "data-selector='splp-prd-act-$'",
+      "notes": "Promotional page, likely has savings percentages as prices"
+    },
+    {
+      "url": "https://www.lowes.com/pl/December-deal-drops/2522135712468",
+      "name": "December Deal Drops",
+      "department": "Promotions",
+      "cluster": "promotional_plp",
+      "url_pattern": "/pl/{category}/{id}",
+      "expected_selector": "data-selector='splp-prd-act-$'",
+      "notes": "Deal promotion page, may mix nationwide and local deals"
+    }
+  ],
+  "clusters": {
+    "appliance_plp": {
+      "description": "Large appliance product listing pages",
+      "common_issues": [
+        "Financing strings ($125/mo) being read as prices",
+        "Tile group mixing across multi-tile rows",
+        "Promotional carousel pollution"
+      ],
+      "representative_urls": [
+        "https://www.lowes.com/pl/dishwashers/built-in-dishwashers/4294857924",
+        "https://www.lowes.com/pl/washers-dryers/washing-machines/4294857977"
+      ]
+    },
+    "building_plp": {
+      "description": "Building supplies and materials",
+      "common_issues": [
+        "Standard pricing patterns",
+        "Less promotional pollution"
+      ],
+      "representative_urls": [
+        "https://www.lowes.com/pl/concrete-cement-masonry/concrete-cement-tools/3268988959",
+        "https://www.lowes.com/pl/lumber-composites/plywood-sheathing/3221732066751"
+      ]
+    },
+    "tools_plp": {
+      "description": "Tools and equipment",
+      "common_issues": [
+        "Mixed price ranges",
+        "Possible promotional sections"
+      ],
+      "representative_urls": [
+        "https://www.lowes.com/pl/hand-tools/tool-sets/4294607612"
+      ]
+    },
+    "promotional_plp": {
+      "description": "Promotional and deal pages",
+      "common_issues": [
+        "Savings percentages misread as dollar amounts",
+        "Nationwide promos mixed with local deals",
+        "Storewide promotions causing wrong store association"
+      ],
+      "representative_urls": [
+        "https://www.lowes.com/pl/Shop-appliance-special-values/1015369011",
+        "https://www.lowes.com/pl/December-deal-drops/2522135712468"
+      ]
+    }
+  },
+  "selector_patterns": {
+    "primary": "data-selector='splp-prd-act-$'",
+    "was_price": "data-selector='splp-prd-promo-was-$'",
+    "savings": "data-selector='splp-prd-promo-savings-$'",
+    "tile_group": "div.tile_group[data-tile]",
+    "pickup_text": "Pickup Today"
+  },
+  "diagnostic_targets": [
+    "https://www.lowes.com/pl/dishwashers/built-in-dishwashers/4294857924",
+    "https://www.lowes.com/pl/washers-dryers/washing-machines/4294857977",
+    "https://www.lowes.com/pl/hand-tools/tool-sets/4294607612"
+  ]
+}
