@@ -1,0 +1,229 @@
+﻿### Categories in PARALLEL scraper ###
+
+- air-conditioners-fans > air-conditioner-parts-accessories
+- air-conditioners-fans > blower-fans
+- air-conditioners-fans > central-air-conditioners
+- air-conditioners-fans > evaporative-coolers
+- air-conditioners-fans > portable-fans
+- air-conditioners-fans > room-air-conditioners > portable-air-conditioners
+- air-conditioners-fans > room-air-conditioners > wall-air-conditioners
+- air-conditioners-fans > room-air-conditioners > window-air-conditioners
+- air-conditioners-fans > wall-mounted-fans
+- air-conditioners-fans > whole-house-fans
+- air-filters-accessories > air-filter-accessories
+- air-filters-accessories > air-filters
+- air-filters-accessories > air-filters
+- air-filters-accessories > air-filters
+- air-filters-accessories > air-filters
+- air-tools-compressors > air-compressor-parts-hoses
+- air-tools-compressors > air-compressors
+- air-tools-compressors > nailers > pneumatic
+- appliance-parts-accessories > appliance-power-cords
+- appliance-parts-accessories > cooktop-range-parts
+- appliance-parts-accessories > dishwasher-parts
+- appliance-parts-accessories > dryer-parts
+- appliance-parts-accessories > ice-maker-parts
+- appliance-parts-accessories > microwave-parts
+- appliance-parts-accessories > range-hood-parts
+- appliance-parts-accessories > refrigerator-parts
+- appliance-parts-accessories > wall-oven-parts
+- appliance-parts-accessories > washer-parts
+- area-rugs-mats > mats
+- baskets-storage-containers > holiday-storage
+- bathroom-faucets-shower-heads > bathroom-sink-faucets
+- bathroom-faucets-shower-heads > bathroom-sink-faucets
+- bathroom-faucets-shower-heads > bathtub-faucets
+- bathroom-faucets-shower-heads > bathtub-shower-faucet-combinations
+- bathroom-faucets-shower-heads > shower-faucets
+- bathroom-faucets-shower-heads > shower-faucets > bathtub-and-shower
+- bathroom-faucets-shower-heads > shower-faucets > shower
+- bathroom-faucets-shower-heads > shower-heads
+- bathroom-faucets-shower-heads > shower-systems
+- bathroom-safety > bathroom-safety-accessories
+- bathroom-safety > bathroom-safety-accessories > toilet-seat-riser
+- bathroom-safety > grab-bars
+- bathroom-safety > shower-seats
+- bathroom-vanities-vanity-tops > bathroom-vanities
+- bathtubs-whirlpool-tubs > bathtub-doors
+- bathtubs-whirlpool-tubs > bathtub-shower-combination
+- bathtubs-whirlpool-tubs > bathtub-walls-surrounds
+- bathtubs-whirlpool-tubs > bathtubs
+- bed-bath > bathroom-rugs-mats > non-slip-grip
+- carpet-carpet-tile > carpet-padding
+- carpet-carpet-tile > carpet-samples
+- carpet-carpet-tile > carpet-tile
+- carpet-carpet-tile > carpet
+- caulking > caulk
+- caulking > caulk > exterior-specialty
+- caulking > caulk > interior-paint-trim
+- caulking > caulk > kitchen-bath
+- caulking > caulk > window-door
+- ceilings > ceiling-tiles
+- christmas-decorations > animatronic
+- closet-organization
+- concrete-cement-masonry > concrete-blocks
+- concrete-cement-masonry > masonry-tools
+- electrical-outlets-plugs > usb-outlets
+- electrical-testers-tools > circuit-testers
+- electrical-testers-tools > multimeters
+- electrical-testers-tools > voltage-testers
+- electrical-testers-tools > wire-strippers
+- electronics > audio
+- electronics > computers-peripherals
+- exterior-doors > front-doors
+- exterior-shutters-accessories > exterior-shutters
+- exterior-shutters-accessories > exterior-shutters > polystyrene
+- fencing-gates
+- fencing-gates > rolled-fencing
+- fencing-gates > rolled-fencing
+- fencing-gates > rolled-fencing
+- fencing-gates > rolled-fencing
+- fencing-gates > rolled-fencing
+- fencing-gates > rolled-fencing
+- fencing-gates > rolled-fencing > barbed-wire
+- fire-pits-patio-heaters > fire-pits-accessories
+- fire-pits-patio-heaters > patio-heaters-accessories
+- fireplaces-stoves > fireplace-logs
+- fireplaces-stoves > fireplace-tools-accessories
+- fireplaces-stoves > fireplaces
+- fireplaces-stoves > freestanding-stoves-accessories
+- floor-wall-tile > tile
+- flooring-tools-supplies > carpet-tools-supplies
+- flooring-tools-supplies > tile-tools-supplies
+- garage-doors-openers > garage-door-openers
+- garage-doors-openers > garage-doors
+- garage-organization > garage-cabinets-storage-systems
+- generators > generator-accessories
+- grills-outdoor-cooking
+- grills-outdoor-cooking > grilling-fuels
+- gutters-accessories > gutters
+- hand-tools > pliers-plier-sets
+- hand-tools > ratchets-breaker-bars > ratchets-ratchet-sets
+- hand-tools > sockets-socket-adapters
+- hand-tools > wrenches-wrench-sets
+- hardwood > hardwood-flooring
+- home-accents > candles-home-fragrance
+- home-accents > decorative-objects
+- home-accents > decorative-pillows
+- home-accents > mirrors
+- home-accents > picture-frames
+- home-accents > throw-blankets
+- home-accents > vases
+- home-accents > wall-art
+- hot-tubs-spas-components > hot-tub-spa-chemicals
+- humidifiers-dehumidifiers > dehumidifiers
+- humidifiers-dehumidifiers > humidifiers
+- interior-doors > barn-doors
+- irrigation > irrigation-timers-accessories
+- kitchen-cabinetry > kitchen-cabinet-samples
+- kitchen-countertops-accessories > kitchen-countertop-samples
+- kitchen-countertops-accessories > kitchen-countertops
+- kitchen-countertops-accessories > kitchen-countertops > butcher-block
+- kitchen-countertops-accessories > laminate-sheets
+- kitchen-faucets-water-dispensers > kitchen-faucets
+- kitchenware > bakeware
+- kitchenware > barware-accessories
+- kitchenware > cooking-apparel
+- kitchenware > cookware
+- kitchenware > cutlery > knife-set
+- kitchenware > dinnerware
+- kitchenware > drinkware
+- kitchenware > flatware
+- kitchenware > kitchen-gadgets-utensils
+- kitchenware > kitchen-towels
+- kitchenware > serveware
+- ladders-scaffolding > aluminum
+- ladders-scaffolding > extension-ladders > aluminum
+- ladders-scaffolding > extension-ladders > fiberglass
+- ladders-scaffolding > fiberglass
+- ladders-scaffolding > ladder-scaffolding-accessories
+- ladders-scaffolding > multi-position-ladders > aluminum
+- ladders-scaffolding > multi-position-ladders > fiberglass
+- ladders-scaffolding > step-ladders > aluminum
+- ladders-scaffolding > step-ladders > fiberglass
+- laminate > laminate-flooring
+- lawn-care > natural
+- light-switches-dimmers > dimmer-switches
+- light-switches-dimmers > light-switches
+- microwaves > countertop-microwaves
+- mirrors-mirror-accessories > mirrors
+- moulding > wall-panel-moulding
+- moving-boxes-supplies > furniture-sliders
+- moving-boxes-supplies > hand-trucks-dollies
+- moving-boxes-supplies > moving-boxes
+- moving-boxes-supplies > moving-boxes
+- moving-boxes-supplies > moving-straps
+- moving-boxes-supplies > packing-supplies
+- moving-boxes-supplies > packing-supplies > moving-blanket
+- moving-boxes-supplies > packing-supplies > packing-paper
+- moving-boxes-supplies > packing-supplies > stretch-wrap
+- outdoor-drainage > outdoor-drainage-accessories
+- outdoor-lighting > solar
+- outdoor-tools-equipment > lawn-mowers > lawn-mower-parts-accessories
+- paint-supplies > paint-applicators > paint-brushes
+- patching-repair > sandpaper-steel-wool
+- playsets > playsets-swing-sets
+- plumbing-parts-repair > bathtub-shower-parts > bathtub-drains
+- plumbing-parts-repair > toilet-parts-repair
+- pools > pool-maintenance
+- power-tool-accessories > abrasive-wheels
+- power-tool-accessories > drill-bits
+- power-tool-accessories > on-sale
+- power-tool-accessories > power-tool-sandpaper
+- power-tool-accessories > saw-blades
+- power-tool-accessories > saw-parts-attachments
+- power-tools > rotary-tools-oscillating-tools
+- sheds-outdoor-storage > sheds
+- sheds-outdoor-storage > storage-shed-accessories
+- shelves-shelving > freestanding-shelving-units
+- showers > shower-doors
+- showers > shower-pans-parts
+- showers > shower-parts-accessories
+- showers > shower-stalls-enclosures
+- showers > shower-walls-surrounds
+- showers > steam-showers
+- small-appliances > blenders-juicers
+- small-appliances > cookers-steamers
+- small-appliances > espresso-tea-coffee-machines
+- small-appliances > food-processors-grinders
+- small-appliances > fryers-accessories
+- small-appliances > indoor-grills-skillets-waffle-makers
+- small-appliances > mixers
+- small-appliances > specialty-appliances
+- small-appliances > specialty-appliances > food-dehydrators
+- small-appliances > toasters-toaster-ovens
+- spray-paint-accessories > spray-paint
+- supply-lines > appliance-supply-lines-drain-hoses
+- tapes > packing-tape
+- toilets-toilet-seats > bidets-bidet-parts
+- toilets-toilet-seats > toilet-seats
+- toilets-toilet-seats > toilets
+- tool-storage-work-benches > portable-tool-boxes > stackable
+- valves-valve-repair > tub-shower-valves
+- wall-panels-planks > acoustic-panels-rolls
+- wall-panels-planks > composite
+- wall-panels-planks > hardboard
+- wall-panels-planks > mdf
+- wall-panels-planks > polyurethane
+- wall-panels-planks > pvc
+- wall-panels-planks > shiplap
+- wall-panels-planks > tongue-and-groove
+- wall-panels-planks > wall-panels
+- wall-panels-planks > wall-planks
+- wall-panels-planks > wood
+- wall-plates-inserts > wall-plates
+- wallpaper-accessories > wallpaper
+- washers-dryers > all-in-one-washer-dryers
+- washers-dryers > dryers
+- washers-dryers > stacked-laundry-centers
+- washers-dryers > washer-dryer-sets
+- washers-dryers > washing-machines > front-load-washers
+- washers-dryers > washing-machines > top-load-washers
+- water-pumps-tanks > pressure-tanks
+- water-pumps-tanks > water-pump-accessories
+- water-pumps-tanks > water-pumps
+- water-pumps-tanks > water-pumps
+- water-pumps-tanks > water-pumps
+
+Total Categories: 224
+Primary Departments involved: Air Conditioners Fans, Air Filters Accessories, Air Tools Compressors, Appliance Parts Accessories, Area Rugs Mats, Baskets Storage Containers, Bathroom Faucets Shower Heads, Bathroom Safety, Bathroom Vanities Vanity Tops, Bathtubs Whirlpool Tubs, Bed Bath, Carpet Carpet Tile, Caulking, Ceilings, Christmas Decorations, Closet Organization, Concrete Cement Masonry, Electrical Outlets Plugs, Electrical Testers Tools, Electronics, Exterior Doors, Exterior Shutters Accessories, Fencing Gates, Fire Pits Patio Heaters, Fireplaces Stoves, Floor Wall Tile, Flooring Tools Supplies, Garage Doors Openers, Garage Organization, Generators, Grills Outdoor Cooking, Gutters Accessories, Hand Tools, Hardwood, Home Accents, Hot Tubs Spas Components, Humidifiers Dehumidifiers, Interior Doors, Irrigation, Kitchen Cabinetry, Kitchen Countertops Accessories, Kitchen Faucets Water Dispensers, Kitchenware, Ladders Scaffolding, Laminate, Lawn Care, Light Switches Dimmers, Microwaves, Mirrors Mirror Accessories, Moulding, Moving Boxes Supplies, Outdoor Drainage, Outdoor Lighting, Outdoor Tools Equipment, Paint Supplies, Patching Repair, Playsets, Plumbing Parts Repair, Pools, Power Tool Accessories, Power Tools, Sheds Outdoor Storage, Shelves Shelving, Showers, Small Appliances, Spray Paint Accessories, Supply Lines, Tapes, Toilets Toilet Seats, Tool Storage Work Benches, Valves Valve Repair, Wall Panels Planks, Wall Plates Inserts, Wallpaper Accessories, Washers Dryers, Water Pumps Tanks

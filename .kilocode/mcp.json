@@ -1,0 +1,1 @@
+{"mcpServers":{"context7":{"command":"npx","args":["-y","@upstash/context7-mcp"],"env":{"DEFAULT_MINIMUM_TOKENS":""},"disabled":true,"alwaysAllow":[]},"serena":{"url":"http://localhost:24281/sse"},"nucleus":{"url":"http://localhost:9090/nucleus/sse"},"playwright":{"command":"npx","args":["-y","@playwright/mcp@0.0.38"],"disabled":true,"alwaysAllow":[]}}
