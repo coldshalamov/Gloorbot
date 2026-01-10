@@ -7,6 +7,7 @@ import statistics
 import os
 import secrets
 import json
+import time
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import AsyncIterator
@@ -51,8 +52,11 @@ DEBUG_RETENTION_DAYS = int(os.getenv("DEBUG_RETENTION_DAYS", "3"))
 
 logger = logging.getLogger(__name__)
 
-# HTTP client for forwarding to Cheapskater (reused for connection pooling)
+# HTTP client for forwarding to Cheapskater (reused for connection pooling)     
 _http_client: httpx.Client | None = None
+
+_worker_download_url_cache: str | None = None
+_worker_download_url_cache_at: float | None = None
 
 _last_debug_cleanup_at: datetime | None = None
 
@@ -210,7 +214,70 @@ bus = EventBus()
 
 
 def _download_url() -> str | None:
-    return os.getenv("WORKER_DOWNLOAD_URL")
+    value = (os.getenv("WORKER_DOWNLOAD_URL", "") or "").strip()
+    if not value:
+        return None
+    # Allow opting into GitHub "latest" resolution without changing code.
+    if value.lower() in {"latest", "github:latest", "github-latest"}:
+        return None
+    return value
+
+def _github_worker_repo() -> str:
+    # Format: "owner/repo"
+    return os.getenv("WORKER_GITHUB_REPO", "coldshalamov/Gloorbot").strip()
+
+
+def _resolve_worker_download_url() -> str | None:
+    """
+    Resolve the URL for the current WorkerSetup.exe installer.
+
+    Priority:
+    1) WORKER_DOWNLOAD_URL (explicit override; recommended for production)
+    2) GitHub Releases latest asset lookup (best-effort fallback)
+    """
+
+    explicit = _download_url()
+    if explicit:
+        return explicit
+
+    global _worker_download_url_cache, _worker_download_url_cache_at
+    now = time.time()
+    if _worker_download_url_cache and _worker_download_url_cache_at and (now - _worker_download_url_cache_at) < 15 * 60:
+        return _worker_download_url_cache
+
+    repo = _github_worker_repo()
+    if not repo or "/" not in repo:
+        return None
+
+    try:
+        client = _get_http_client()
+        headers = {
+            "Accept": "application/vnd.github+json",
+            "User-Agent": "gloorbot-coordinator",
+        }
+        resp = client.get(f"https://api.github.com/repos/{repo}/releases/latest", headers=headers)
+        if resp.status_code != 200:
+            return None
+        data = resp.json()
+        assets = data.get("assets") if isinstance(data, dict) else None
+        if not isinstance(assets, list):
+            return None
+
+        for asset in assets:
+            if not isinstance(asset, dict):
+                continue
+            name = (asset.get("name") or "").strip()
+            if name.lower() != "workersetup.exe":
+                continue
+            url = (asset.get("browser_download_url") or "").strip()
+            if not url:
+                continue
+            _worker_download_url_cache = url
+            _worker_download_url_cache_at = now
+            return url
+        return None
+    except Exception:
+        return None
 
 
 def create_app() -> FastAPI:
@@ -250,9 +317,12 @@ def create_app() -> FastAPI:
 
     @app.get("/download", response_model=None)
     def download() -> Response:
-        url = _download_url()
+        url = _resolve_worker_download_url()
         if not url:
-            return PlainTextResponse("WORKER_DOWNLOAD_URL not configured on server.", status_code=404)
+            return PlainTextResponse(
+                "Worker download not configured. Set WORKER_DOWNLOAD_URL, or set WORKER_GITHUB_REPO to enable GitHub fallback.",
+                status_code=404,
+            )
         return RedirectResponse(url=url, status_code=302)
 
     @app.get("/api/v1/status")
