@@ -23,6 +23,7 @@
 ---
 
 ### 📝 RECENT MILESTONES (LAST 24 HOURS)
+- [2026-01-10]: Swarm: Kilo Code CLI is working again → reinstated `kilo-cli` subagent access across agents (Codex `C:\\Users\\User\\.codex\\config.toml`, Antigravity/Claude `C:\\Users\\User\\.claude\\mcp_settings.json`, Gemini `C:\\Users\\User\\.gemini\\settings.json`). Restarted/validated lazy-MCP proxies: **Swarm Senses** (9091) + **Opaque Hands** (9092). Updated Gemini instructions to match `opaque-hands` + Kilo usage.
 - [2026-01-10]: Codex: Published worker installer **v0.11.8** (GitHub Release asset `WorkerSetup.exe`). Coordinator `/download` now supports GitHub “latest release” resolution when `WORKER_DOWNLOAD_URL` is unset or set to `latest`/`github:latest` (fallback repo `coldshalamov/Gloorbot`).
 - [2026-01-10]: Kilo Code: Reverted serena configuration to port 9090 (http://127.0.0.1:9090/serena/sse) - correct port matching nucleus configuration. Issue: serena is not running on port 9090 (returns HTTP 404). This is a known issue requiring investigation into why serena isn't mounted on the unified proxy at port 9090.
 - [2026-01-10]: Codex: Added breadcrumb-based category override support without touching scraper/worker: dev-browser extraction proves Lowe’s `nav[aria-label=\"breadcrumb\"]` exposes a reliable hierarchy; coordinator now has `category_meta` table + debug bulk upsert endpoint and uses it to override `category_name` during ingest for numeric/opaque category URLs. Docs: `docs/BREADCRUMB_CATEGORY_MAPPING.md`.
