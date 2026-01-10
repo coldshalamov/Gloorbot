@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import DateTime, Float, Index, Integer, String, UniqueConstraint
+from sqlalchemy import DateTime, Float, Index, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from .db import Base
@@ -57,12 +57,14 @@ class Deal(Base):
     __table_args__ = (
         UniqueConstraint("store_id", "product_url", name="uq_deal_store_product"),
         Index("idx_deals_last_seen", "last_seen_at"),
+        Index("idx_deals_category_name", "category_name"),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     store_id: Mapped[str] = mapped_column(String(16), nullable=False)
     store_name: Mapped[str] = mapped_column(String(256), nullable=False)
     category_url: Mapped[str] = mapped_column(String(2048), nullable=True)
+    category_name: Mapped[str | None] = mapped_column(String(256), nullable=True)
 
     product_url: Mapped[str] = mapped_column(String(2048), nullable=False)
     title: Mapped[str] = mapped_column(String(2048), nullable=False)
@@ -76,6 +78,24 @@ class Deal(Base):
     last_seen_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
     seen_count: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
     last_client_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+
+
+class CategoryMeta(Base):
+    __tablename__ = "category_meta"
+    __table_args__ = (
+        UniqueConstraint("category_url", name="uq_category_meta_url"),
+        Index("idx_category_meta_url", "category_url"),
+        Index("idx_category_meta_name", "category_name"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    category_url: Mapped[str] = mapped_column(String(2048), nullable=False)
+    category_name: Mapped[str] = mapped_column(String(256), nullable=False)
+    category_path: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    breadcrumbs_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
 
 
 class DealSource(Base):

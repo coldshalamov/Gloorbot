@@ -28,6 +28,17 @@ def create_tables() -> None:
         if "image_url" not in deal_cols:
             with engine.begin() as conn:
                 conn.execute(text("ALTER TABLE deals ADD COLUMN image_url VARCHAR(2048)"))
+        if "category_name" not in deal_cols:
+            with engine.begin() as conn:
+                conn.execute(text("ALTER TABLE deals ADD COLUMN category_name VARCHAR(256)"))
+        # Keep indexes best-effort as well (CREATE INDEX is idempotent in SQLite
+        # when using IF NOT EXISTS).
+        with engine.begin() as conn:
+            conn.execute(text("CREATE INDEX IF NOT EXISTS idx_deals_category_name ON deals(category_name)"))
+
+        # category_meta table was added later; ensure it exists on older persistent DBs.
+        if not inspector.has_table("category_meta"):
+            Base.metadata.create_all(bind=engine)
     except Exception:
         # Never crash startup due to a best-effort migration.
         return

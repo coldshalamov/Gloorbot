@@ -6,6 +6,7 @@ import threading
 import statistics
 import os
 import secrets
+import json
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import AsyncIterator
@@ -20,7 +21,9 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 
 from .db import db_session
-from .models import Client, Task, Deal, DealSource, IngestEvent
+from .category_breadcrumbs import Breadcrumb, breadcrumb_leaf_name, breadcrumb_path
+from .category_name import extract_category_name
+from .models import Client, Task, Deal, DealSource, IngestEvent, CategoryMeta
 from .schemas import (
     RegisterRequest,
     RegisterResponse,
@@ -29,6 +32,7 @@ from .schemas import (
     LeaseResponse,
     LeaseCompleteRequest,
     DealsBulkRequest,
+    CategoryMetaBulkRequest,
 )
 from .seed import seed_tasks_from_parallel_urls, create_tables
 
@@ -428,7 +432,56 @@ def create_app() -> FastAPI:
             ],
         }
 
-    @app.post("/api/v1/client/register", response_model=RegisterResponse)
+    @app.post("/api/v1/debug/category-meta/bulk")
+    def debug_category_meta_bulk(request: Request, req: CategoryMetaBulkRequest) -> dict:
+        """
+        Upsert category metadata derived from Lowe's breadcrumbs.
+
+        Token-gated via DEBUG_API_TOKEN (same as other debug endpoints).
+        Intended workflow:
+        - Use dev-browser (warmed profile) to visit a /pl/ category URL
+        - Extract breadcrumbs
+        - POST them here to persist a robust (text-based) category_name
+        """
+
+        _require_debug_token(request)
+        now = datetime.utcnow()
+        upserted = 0
+        with db_session() as db:
+            for item in req.items:
+                url = (item.category_url or "").strip()
+                if not url:
+                    continue
+                crumbs = [Breadcrumb(text=c.text, href=c.href) for c in item.breadcrumbs]
+                leaf = breadcrumb_leaf_name(crumbs)
+                path = breadcrumb_path(crumbs)
+                breadcrumbs_json = json.dumps(
+                    [{"text": c.text, "href": c.href} for c in crumbs],
+                    ensure_ascii=False,
+                )
+                base = sqlite_insert(CategoryMeta).values(
+                    category_url=url,
+                    category_name=leaf,
+                    category_path=path,
+                    breadcrumbs_json=breadcrumbs_json,
+                    created_at=now,
+                    updated_at=now,
+                )
+                stmt = base.on_conflict_do_update(
+                    index_elements=[CategoryMeta.category_url],
+                    set_={
+                        CategoryMeta.category_name.key: base.excluded.category_name,
+                        CategoryMeta.category_path.key: base.excluded.category_path,
+                        CategoryMeta.breadcrumbs_json.key: base.excluded.breadcrumbs_json,
+                        CategoryMeta.updated_at.key: now,
+                    },
+                )
+                db.execute(stmt)
+                upserted += 1
+            db.commit()
+        return {"ok": True, "upserted": upserted}
+
+    @app.post("/api/v1/client/register", response_model=RegisterResponse)       
     def register(req: RegisterRequest, request: Request) -> RegisterResponse:
         client_id = secrets.token_urlsafe(16)
         now = datetime.utcnow()
@@ -596,44 +649,31 @@ def create_app() -> FastAPI:
 
         with db_session() as db:
             try:
+                category_urls = {
+                    d.category_url
+                    for d in unique_deals.values()
+                    if getattr(d, "category_url", None)
+                }
+                category_name_overrides: dict[str, str] = {}
+                if category_urls:
+                    rows = db.execute(
+                        select(CategoryMeta.category_url, CategoryMeta.category_name).where(
+                            CategoryMeta.category_url.in_(list(category_urls))
+                        )
+                    ).all()
+                    category_name_overrides = {row[0]: row[1] for row in rows if row and row[0] and row[1]}
+
                 for d in unique_deals.values():
-                    # Server-side sanity checks (defense-in-depth):
-                    # Reject obviously bad price parses even if older clients submit them.
-                    if d.was_price >= 200 and d.price <= 10:
-                        rejected_suspicious += 1
-                        continue
-                    if d.was_price >= 200 and d.pct_off > 0.97:
-                        rejected_suspicious += 1
-                        continue
-                    # Reject absurdly high was_prices that are clearly parse errors.
-                    # No retail appliance, tool, or home item costs $10,000+ at Lowe's.
-                    # These are malformed captures from promotional sections or concatenated strings.
-                    if d.was_price >= 10000:
-                        rejected_suspicious += 1
-                        logger.warning(
-                            "[DEALS] batch_id=%s rejecting absurd was_price=%s for product=%s",
-                            batch_id, d.was_price, d.product_url[:100] if d.product_url else "?"
-                        )
-                        continue
-                    # Reject deals where the "savings" ($was - $now) exceeds $5000.
-                    # This catches the "$11,068 was, $848 now" type of parse errors where
-                    # both prices look reasonable individually but the delta is impossible.
-                    if (d.was_price - d.price) > 5000:
-                        rejected_suspicious += 1
-                        logger.warning(
-                            "[DEALS] batch_id=%s rejecting implausible savings=%s for product=%s (was=%s, now=%s)",
-                            batch_id, d.was_price - d.price, d.product_url[:100] if d.product_url else "?",
-                            d.was_price, d.price
-                        )
-                        continue
+                    # Track deals below threshold for metrics (no longer reject them)
                     if d.pct_off < DEAL_THRESHOLD:
                         below_threshold += 1
-                        continue
 
+                    category_name = category_name_overrides.get(d.category_url or "") or extract_category_name(d.category_url)
                     base = sqlite_insert(Deal).values(
                         store_id=d.store_id,
                         store_name=d.store_name,
                         category_url=d.category_url,
+                        category_name=category_name,
                         product_url=d.product_url,
                         title=d.title,
                         image_url=getattr(d, "image_url", None),
@@ -650,6 +690,7 @@ def create_app() -> FastAPI:
                         set_={
                             Deal.store_name.key: base.excluded.store_name,
                             Deal.category_url.key: base.excluded.category_url,
+                            Deal.category_name.key: base.excluded.category_name,
                             Deal.title.key: base.excluded.title,
                             Deal.image_url.key: func.coalesce(base.excluded.image_url, Deal.image_url),
                             Deal.price.key: base.excluded.price,
@@ -693,6 +734,7 @@ def create_app() -> FastAPI:
                             "store_id": d.store_id,
                             "store_name": d.store_name,
                             "category_url": d.category_url,
+                            "category_name": category_name,
                             "product_url": d.product_url,
                             "title": d.title,
                             "image_url": getattr(d, "image_url", None),

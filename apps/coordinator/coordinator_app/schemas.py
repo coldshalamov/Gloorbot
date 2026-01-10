@@ -64,3 +64,17 @@ class DealsBulkRequest(BaseModel):
     batch_id: str | None = None
     task_id: int | None = None
     deals: list[DealItem]
+
+
+class BreadcrumbItem(BaseModel):
+    text: str
+    href: str | None = None
+
+
+class CategoryMetaUpsertItem(BaseModel):
+    category_url: str
+    breadcrumbs: list[BreadcrumbItem] = Field(default_factory=list)
+
+
+class CategoryMetaBulkRequest(BaseModel):
+    items: list[CategoryMetaUpsertItem]
