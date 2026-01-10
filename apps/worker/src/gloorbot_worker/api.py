@@ -7,6 +7,8 @@ from dataclasses import dataclass
 
 import requests
 
+from . import __version__
+
 
 def coordinator_url() -> str:
     url = os.getenv("GLOORBOT_COORDINATOR_URL", "").strip()
@@ -28,7 +30,7 @@ class Lease:
 def register() -> str:
     res = requests.post(
         f"{coordinator_url()}/api/v1/client/register",
-        json={"hostname": socket.gethostname(), "version": "0.1.0"},
+        json={"hostname": socket.gethostname(), "version": __version__},
         timeout=15,
     )
     res.raise_for_status()
@@ -42,7 +44,7 @@ def heartbeat(client_id: str, cpu_percent: float | None, mem_percent: float | No
             json={
                 "client_id": client_id,
                 "hostname": socket.gethostname(),
-                "version": "0.1.0",
+                "version": __version__,
                 "cpu_percent": cpu_percent,
                 "mem_percent": mem_percent,
                 "slots": slots,

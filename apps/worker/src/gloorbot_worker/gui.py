@@ -10,22 +10,28 @@ if getattr(sys, 'frozen', False):
     from gloorbot_worker import api
     from gloorbot_worker.supervisor import Supervisor
     from gloorbot_worker.paths import status_dir
+    from gloorbot_worker import __version__
 else:
     from . import api
     from .supervisor import Supervisor
     from .paths import status_dir
+    from . import __version__
 
 
 class App:
     def __init__(self, root: tk.Tk) -> None:
         self.root = root
-        self.root.title("Gloorbot Worker")
-        self.root.geometry("760x440")
+        self.root.title(f"Gloorbot Worker v{__version__}")
+        self.root.geometry("760x460")
         self.root.resizable(False, False)
 
         self.supervisor = Supervisor()
         self._thread: threading.Thread | None = None
         self._running = False
+
+        # Version label at bottom-right
+        v_label = ttk.Label(root, text=f"v{__version__}", foreground="gray")
+        v_label.place(relx=1.0, rely=1.0, anchor="se", x=-10, y=-5)
 
         self.join_btn = ttk.Button(root, text="Join", command=self.join)
         self.kill_btn = ttk.Button(root, text="Kill", command=self.kill, state="disabled")
