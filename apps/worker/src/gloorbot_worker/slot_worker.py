@@ -279,6 +279,23 @@ def _deal_from_product(p: dict, category_url: str) -> dict | None:
             )
         return None
     pct_off = (was_price - price_now) / was_price
+    # Filter deals that don't meet the minimum discount threshold
+    if pct_off < DEAL_THRESHOLD:
+        if _deal_diag_enabled():
+            _deal_diag_write(
+                slot_id,
+                {
+                    "stage": "reject",
+                    "reason": "below_threshold",
+                    "category_url": category_url,
+                    "product_url": p.get("url"),
+                    "price_now": price_now,
+                    "was_price": was_price,
+                    "pct_off": pct_off,
+                    "deal_threshold": DEAL_THRESHOLD,
+                },
+            )
+        return None
     image_url = p.get("image_url")
     if isinstance(image_url, str):
         image_url = image_url.strip() or None
