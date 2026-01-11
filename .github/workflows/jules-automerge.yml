@@ -4,7 +4,7 @@ on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
   schedule:
-    - cron: '*/15 * * * *' # Every 15 minutes as a fallback
+    - cron: '0 8 * * *' # Every day at 8 AM
   workflow_dispatch: # Allow manual triggering
 
 jobs:
