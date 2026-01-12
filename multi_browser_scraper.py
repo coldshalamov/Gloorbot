@@ -132,6 +132,9 @@ async def extract_products_json_ld(page, store_id, store_name, category):
                     image = image[0] if image else None
                 if image and image.startswith("//"):
                     image = f"https:{image}"
+                # Skip badge SVGs (e.g., clearance.svg) - only accept product images
+                if image and ('/badges/' in image or image.endswith('.svg')):
+                    image = None
 
                 product_url = offers.get("url") or product.get("url")
                 sku = product.get("sku") or product.get("productID")
@@ -185,14 +188,33 @@ async def extract_products_dom(page, store_id, store_name, category):
                         const titleEl = card.querySelector('a[href*="/pd/"], h3, h2');
                         const priceEl = card.querySelector('[data-test*="price"], [aria-label*="$"]');
                         const linkEl = card.querySelector('a[href*="/pd/"]');
-                        const imgEl = card.querySelector('img');
+                        
+                        // Find the actual product image, NOT badge/clearance SVGs
+                        let productImg = null;
+                        const allImgs = card.querySelectorAll('img');
+                        for (const img of allImgs) {
+                            const src = img.getAttribute('src') || img.getAttribute('data-src') || '';
+                            // Skip badges/SVGs
+                            if (src.includes('/badges/') || src.endsWith('.svg')) {
+                                continue;
+                            }
+                            // Prefer product images from mobileimages.lowes.com/productimages/
+                            if (src.includes('productimages/') || src.includes('mobileimages.lowes.com')) {
+                                productImg = src;
+                                break;
+                            }
+                            // Fallback: any non-badge image with jpg/png extension
+                            if (!productImg && (src.includes('.jpg') || src.includes('.png') || src.includes('.jpeg'))) {
+                                productImg = src;
+                            }
+                        }
 
                         if (titleEl && priceEl) {
                             products.push({
                                 title: titleEl.innerText?.trim() || '',
                                 price: priceEl.innerText?.trim() || '',
                                 href: linkEl?.getAttribute('href') || '',
-                                img: imgEl?.getAttribute('src') || imgEl?.getAttribute('data-src') || ''
+                                img: productImg || ''
                             });
                         }
                     } catch {}

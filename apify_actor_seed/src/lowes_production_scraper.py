@@ -382,6 +382,66 @@ def is_clearance(text: str, price: Optional[float], was: Optional[float]) -> boo
     return False
 
 
+def is_valid_product_image(url: Optional[str]) -> bool:
+    """Check if a URL is a valid product image (not a badge/SVG)."""
+    if not url or not isinstance(url, str):
+        return False
+    url_lower = url.strip().lower()
+    if not url_lower:
+        return False
+    # Reject badge SVGs and common badge patterns
+    if '/badges/' in url_lower or url_lower.endswith('.svg'):
+        return False
+    if 'clearance.svg' in url_lower or 'badge' in url_lower:
+        return False
+    return True
+
+
+def normalize_img_url(img) -> Optional[str]:
+    """Normalize image URL and filter out invalid/badge images.
+    
+    Handles both single URLs and lists of URLs, returning the first valid product image.
+    """
+    # Handle list of images - find the first valid product image
+    if isinstance(img, list):
+        # First pass: look for productimages URLs (these are always valid product images)
+        for url in img:
+            if isinstance(url, str):
+                normalized = url.strip()
+                if normalized.startswith("//"):
+                    normalized = f"https:{normalized}"
+                if 'productimages/' in normalized.lower() or 'mobileimages.lowes.com' in normalized.lower():
+                    if is_valid_product_image(normalized):
+                        return normalized
+        # Second pass: any valid non-badge image
+        for url in img:
+            if isinstance(url, str):
+                normalized = url.strip()
+                if normalized.startswith("//"):
+                    normalized = f"https:{normalized}"
+                if is_valid_product_image(normalized):
+                    if normalized.startswith("http://") or normalized.startswith("https://"):
+                        return normalized
+        return None
+    
+    # Handle single string URL
+    if not img or not isinstance(img, str):
+        return None
+    img = img.strip()
+    if not img:
+        return None
+    # Skip badge SVGs
+    if not is_valid_product_image(img):
+        return None
+    # Fix protocol-relative URLs
+    if img.startswith("//"):
+        img = f"https:{img}"
+    # Only accept http/https URLs
+    if not (img.startswith("http://") or img.startswith("https://")):
+        return None
+    return img
+
+
 async def extract_products(page: Page, store_id: str, store_name: str, category_name: str) -> list[dict[str, Any]]:
     """
     Extract products from page using JSON-LD (fast) with DOM fallback.
@@ -427,12 +487,8 @@ async def extract_products(page: Page, store_id: str, store_name: str, category_
                 price_was = parse_price(str(offers.get("priceWas", "")))
                 product_url = offers.get("url") or product.get("url")
 
-                # Normalize image URL
-                image = product.get("image")
-                if isinstance(image, list):
-                    image = image[0] if image else None
-                if image and image.startswith("//"):
-                    image = f"https:{image}"
+                # Use normalize_img_url which handles lists and filters badge SVGs
+                image = normalize_img_url(product.get("image"))
 
                 products.append({
                     "store_id": store_id,
@@ -474,7 +530,26 @@ async def extract_from_dom(page: Page, store_id: str, store_name: str, category_
                         const priceEl = card.querySelector('[data-test*="price"], [aria-label*="$"]');
                         const wasEl = card.querySelector('[data-test*="was"], [class*="was-price"]');
                         const linkEl = card.querySelector('a[href*="/pd/"]');
-                        const imgEl = card.querySelector('img');
+                        
+                        // Find the actual product image, NOT badge/clearance SVGs
+                        let productImg = null;
+                        const allImgs = card.querySelectorAll('img');
+                        for (const img of allImgs) {
+                            const src = img.getAttribute('src') || img.getAttribute('data-src') || '';
+                            // Skip badges/SVGs
+                            if (src.includes('/badges/') || src.endsWith('.svg')) {
+                                continue;
+                            }
+                            // Prefer product images from mobileimages.lowes.com/productimages/
+                            if (src.includes('productimages/') || src.includes('mobileimages.lowes.com')) {
+                                productImg = src;
+                                break;
+                            }
+                            // Fallback: any non-badge image with jpg/png extension
+                            if (!productImg && (src.includes('.jpg') || src.includes('.png') || src.includes('.jpeg'))) {
+                                productImg = src;
+                            }
+                        }
 
                         if (titleEl && priceEl) {
                             products.push({
@@ -482,7 +557,7 @@ async def extract_from_dom(page: Page, store_id: str, store_name: str, category_
                                 price: priceEl.innerText?.trim() || '',
                                 was: wasEl?.innerText?.trim() || '',
                                 href: linkEl?.getAttribute('href') || '',
-                                img: imgEl?.getAttribute('src') || imgEl?.getAttribute('data-src') || ''
+                                img: productImg || ''
                             });
                         }
                     } catch {}
@@ -502,9 +577,8 @@ async def extract_from_dom(page: Page, store_id: str, store_name: str, category_
             href = raw.get("href", "")
             product_url = f"{BASE_URL}{href}" if href.startswith("/") else href
 
-            img = raw.get("img", "")
-            if img.startswith("//"):
-                img = f"https:{img}"
+            # Use normalize_img_url to filter badge SVGs
+            img = normalize_img_url(raw.get("img", ""))
 
             products.append({
                 "store_id": store_id,
@@ -518,7 +592,7 @@ async def extract_from_dom(page: Page, store_id: str, store_name: str, category_
                 "availability": "In Stock",
                 "clearance": is_clearance(str(raw), price, price_was),
                 "product_url": product_url,
-                "image_url": img if img else None,
+                "image_url": img,
                 "timestamp": timestamp,
             })
 

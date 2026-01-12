@@ -360,6 +360,68 @@ def is_clearance(text: str, price: Optional[float], was: Optional[float]) -> boo
     return False
 
 
+def is_valid_product_image(url: Optional[str]) -> bool:
+    """Check if a URL is a valid product image (not a badge/SVG)."""
+    if not url or not isinstance(url, str):
+        return False
+    url = url.strip().lower()
+    if not url:
+        return False
+    # Reject badge SVGs and common badge patterns
+    if '/badges/' in url or url.endswith('.svg'):
+        return False
+    if 'clearance.svg' in url or 'badge' in url:
+        return False
+    # Prefer URLs with productimages in the path (actual product images)
+    # but also accept jpg/jpeg/png/webp images
+    return True
+
+
+def normalize_img_url(img) -> Optional[str]:
+    """Normalize image URL and filter out invalid/badge images.
+    
+    Handles both single URLs and lists of URLs, returning the first valid product image.
+    """
+    # Handle list of images - find the first valid product image
+    if isinstance(img, list):
+        # First pass: look for productimages URLs (these are always valid product images)
+        for url in img:
+            if isinstance(url, str):
+                normalized = url.strip()
+                if normalized.startswith("//"):
+                    normalized = f"https:{normalized}"
+                if 'productimages/' in normalized.lower() or 'mobileimages.lowes.com' in normalized.lower():
+                    if is_valid_product_image(normalized):
+                        return normalized
+        # Second pass: any valid non-badge image
+        for url in img:
+            if isinstance(url, str):
+                normalized = url.strip()
+                if normalized.startswith("//"):
+                    normalized = f"https:{normalized}"
+                if is_valid_product_image(normalized):
+                    if normalized.startswith("http://") or normalized.startswith("https://"):
+                        return normalized
+        return None
+    
+    # Handle single string URL
+    if not img or not isinstance(img, str):
+        return None
+    img = img.strip()
+    if not img:
+        return None
+    # Skip badge SVGs
+    if not is_valid_product_image(img):
+        return None
+    # Fix protocol-relative URLs
+    if img.startswith("//"):
+        img = f"https:{img}"
+    # Only accept http/https URLs
+    if not (img.startswith("http://") or img.startswith("https://")):
+        return None
+    return img
+
+
 # ============================================================================
 # PRODUCT EXTRACTION
 # ============================================================================
@@ -405,11 +467,8 @@ async def extract_products(page: Page, store_id: str, store_name: str, category:
                 price_was = parse_price(str(offers.get("priceWas", "")))
                 url = offers.get("url") or prod.get("url")
 
-                img = prod.get("image")
-                if isinstance(img, list):
-                    img = img[0] if img else None
-                if img and img.startswith("//"):
-                    img = f"https:{img}"
+                # Use normalize_img_url which handles lists and filters badge SVGs
+                img = normalize_img_url(prod.get("image"))
 
                 products.append({
                     "store_id": store_id,
@@ -473,8 +532,28 @@ async def extract_products(page: Page, store_id: str, store_name: str, category:
                                 let href = card.querySelector('a[href*="/pd/"]')?.getAttribute('href') ||
                                           card.querySelector('a')?.getAttribute('href');
 
+                                // Extract product image - skip badge/clearance SVGs
+                                let productImg = null;
+                                const allImgs = card.querySelectorAll('img');
+                                for (const img of allImgs) {
+                                    const src = img.getAttribute('src') || img.getAttribute('data-src') || '';
+                                    // Skip badges/SVGs
+                                    if (src.includes('/badges/') || src.endsWith('.svg')) {
+                                        continue;
+                                    }
+                                    // Prefer product images from mobileimages.lowes.com/productimages/
+                                    if (src.includes('productimages/') || src.includes('mobileimages.lowes.com')) {
+                                        productImg = src;
+                                        break;
+                                    }
+                                    // Fallback: any non-badge image with jpg/png extension
+                                    if (!productImg && (src.includes('.jpg') || src.includes('.png') || src.includes('.jpeg'))) {
+                                        productImg = src;
+                                    }
+                                }
+
                                 if (title && title.length > 3 && price && href) {
-                                    items.push({title: title.substring(0, 200), price, href});
+                                    items.push({title: title.substring(0, 200), price, href, img: productImg || ''});
                                 }
                             } catch {}
                         });
@@ -504,7 +583,7 @@ async def extract_products(page: Page, store_id: str, store_name: str, category:
                 "availability": "In Stock",
                 "clearance": False,
                 "product_url": url,
-                "image_url": None,
+                "image_url": normalize_img_url(r.get("img", "")),
                 "timestamp": timestamp,
             })
 

@@ -762,8 +762,9 @@ async def extract_tile_group_products(card: Locator) -> list[dict]:
 
         image_url = None
         try:
-            img = scope.locator("img").first
-            if await img.count() > 0:
+            # Find the actual product image, NOT badge/clearance SVGs
+            all_imgs = await scope.locator("img").all()
+            for img in all_imgs:
                 src = (
                     await img.get_attribute("src")
                     or await img.get_attribute("data-src")
@@ -778,13 +779,27 @@ async def extract_tile_group_products(card: Locator) -> list[dict]:
                     )
                     first = srcset.split(",")[0].strip()
                     src = first.split(" ")[0].strip() if first else ""
+                
+                # Skip badge/clearance SVGs
+                if "/badges/" in src or src.endswith(".svg"):
+                    continue
+                # Skip data: URIs
+                if src.startswith("data:"):
+                    continue
+                
                 if src.startswith("//"):
                     src = "https:" + src
                 if src.startswith("/"):
                     src = "https://www.lowes.com" + src
-                if src.startswith("data:"):
-                    src = ""
-                image_url = src or None
+                
+                # Prefer product images from mobileimages.lowes.com/productimages/
+                if "productimages/" in src or "mobileimages.lowes.com" in src:
+                    image_url = src
+                    break  # Found the best match
+                
+                # Fallback: any non-badge image with jpg/png extension
+                if not image_url and (".jpg" in src.lower() or ".png" in src.lower() or ".jpeg" in src.lower()):
+                    image_url = src
         except Exception:
             image_url = None
 
@@ -1810,8 +1825,9 @@ async def scrape_category_page(page: Page, url: str, store_info: dict, page_num:
 
                 image_url = None
                 try:
-                    img = card.locator(":scope img").first
-                    if await img.count() > 0:
+                    # Find the actual product image, NOT badge/clearance SVGs
+                    all_imgs = await card.locator(":scope img").all()
+                    for img in all_imgs:
                         src = (
                             await img.get_attribute("src")
                             or await img.get_attribute("data-src")
@@ -1826,13 +1842,27 @@ async def scrape_category_page(page: Page, url: str, store_info: dict, page_num:
                             )
                             first = srcset.split(",")[0].strip()
                             src = first.split(" ")[0].strip() if first else ""
+                        
+                        # Skip badge/clearance SVGs
+                        if "/badges/" in src or src.endswith(".svg"):
+                            continue
+                        # Skip data: URIs
+                        if src.startswith("data:"):
+                            continue
+                        
                         if src.startswith("//"):
                             src = "https:" + src
                         if src.startswith("/"):
                             src = "https://www.lowes.com" + src
-                        if src.startswith("data:"):
-                            src = ""
-                        image_url = src or None
+                        
+                        # Prefer product images from mobileimages.lowes.com/productimages/
+                        if "productimages/" in src or "mobileimages.lowes.com" in src:
+                            image_url = src
+                            break  # Found the best match
+                        
+                        # Fallback: any non-badge image with jpg/png extension
+                        if not image_url and (".jpg" in src.lower() or ".png" in src.lower() or ".jpeg" in src.lower()):
+                            image_url = src
                 except Exception:
                     image_url = None
 
