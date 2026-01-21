@@ -263,25 +263,45 @@ class StoreConfigManager:
     
     def _load_categories(self) -> List[str]:
         """Load category URLs from the PARALLEL/urls.txt file."""
-        # Try to find the PARALLEL/urls.txt file
-        base_dir = Path(__file__).resolve().parents[1]
-        parallel_urls = base_dir.parents[1] / "PARALLEL" / "urls.txt"
+        # Try multiple possible locations for the PARALLEL/urls.txt file
+        base_dir = Path(__file__).resolve().parent
         
-        if not parallel_urls.exists():
+        # Possible locations (in order of preference)
+        possible_paths = [
+            # Local dev: apps/coordinator/coordinator_app -> repo_root/PARALLEL/urls.txt
+            base_dir.parent.parent / "PARALLEL" / "urls.txt",
+            # Render: /app/coordinator_app -> /app/PARALLEL/urls.txt
+            base_dir.parent / "PARALLEL" / "urls.txt",
+            # Fallback: check if PARALLEL is a sibling
+            base_dir / "PARALLEL" / "urls.txt",
+        ]
+        
+        parallel_urls = None
+        for path in possible_paths:
+            if path.exists():
+                parallel_urls = path
+                break
+        
+        if not parallel_urls:
+            # No PARALLEL/urls.txt found, return empty (will use default categories)
             return []
         
         categories = []
         in_categories = False
         
-        with open(parallel_urls, 'r') as f:
-            for line in f:
-                line = line.strip()
-                if line.startswith("## CATEGORIES"):
-                    in_categories = True
-                    continue
-                if in_categories and line and not line.startswith("#"):
-                    if "/pl/" in line:
-                        categories.append(line)
+        try:
+            with open(parallel_urls, 'r', encoding='utf-8') as f:
+                for line in f:
+                    line = line.strip()
+                    if line.startswith("## CATEGORIES"):
+                        in_categories = True
+                        continue
+                    if in_categories and line and not line.startswith("#"):
+                        if "/pl/" in line:
+                            categories.append(line)
+        except Exception:
+            # If we can't read the file, return empty
+            return []
         
         return categories
 
