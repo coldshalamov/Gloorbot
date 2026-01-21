@@ -95,19 +95,28 @@ This document lists all 18 Lowe's stores from Stuart to Miami, organized by coun
 
 ## Quick Selection in Admin Interface
 
-### To scrape only these 18 stores:
+### Use the Preset Button (Easiest Method)
 
 1. Login to admin at `http://localhost:8000/admin/login`
-2. Click on **Florida** (🌴) state card
-3. Scroll down to the store list
-4. Uncheck "Select All"
-5. Check only these store IDs:
+2. Click the **Southeast (FL)** tab
+3. Click the **🌴 Stuart to Miami (18)** preset button
+4. Click **Save Configuration**
+
+✅ This automatically selects exactly the 18 stores listed above!
+
+### Manual Selection (Alternative)
+
+If you want to manually select them:
+1. Login to admin
+2. Click **Southeast (FL)** tab
+3. Uncheck "Select All"
+4. Check only these store IDs:
    ```
    1109, 1962, 1720, 0654, 1111, 1069,
    1792, 0704, 0754, 1113, 1681, 0725, 3315,
    1841, 2254, 3413, 2904, 2707
    ```
-6. Click "Save Configuration"
+5. Click "Save Configuration"
 
 ### Store IDs for Quick Reference
 ```
