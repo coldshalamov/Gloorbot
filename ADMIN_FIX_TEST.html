@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Admin Dashboard Fix Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #667eea;
+        }
+
+        h2 {
+            color: #333;
+        }
+
+        .pass {
+            color: #10b981;
+            font-weight: bold;
+        }
+
+        .fail {
+            color: #ef4444;
+            font-weight: bold;
+        }
+
+        code {
+            background: #f1f5f9;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+
+        .step {
+            margin: 10px 0;
+            padding: 10px;
+            background: #f8fafc;
+            border-left: 3px solid #667eea;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🔧 Admin Dashboard Fix Verification</h1>
+
+    <div class="test-section">
+        <h2>What Was Fixed</h2>
+        <p>The issue was a <strong>type mismatch</strong> between store IDs:</p>
+        <ul>
+            <li>Store IDs from the backend: <code>"1109"</code> (strings)</li>
+            <li>Store IDs in the UI: sometimes strings, sometimes numbers</li>
+            <li>JavaScript's <code>includes()</code> uses strict equality (<code>===</code>)</li>
+            <li><code>"1109" === 1109</code> is <code>false</code> ❌</li>
+            <li><code>"1109" === "1109"</code> is <code>true</code> ✅</li>
+        </ul>
+        <p><strong>Result:</strong> Checkboxes weren't being checked because the comparison failed.</p>
+    </div>
+
+    <div class="test-section">
+        <h2>Testing Steps</h2>
+
+        <div class="step">
+            <strong>Step 1:</strong> Clear your browser cache or do a hard refresh (Ctrl+Shift+R)
+        </div>
+
+        <div class="step">
+            <strong>Step 2:</strong> Log into the Admin Dashboard
+        </div>
+
+        <div class="step">
+            <strong>Step 3:</strong> Open browser console (F12) and check for this log:
+            <pre>Loaded config: {states: ['FL'], stores: ['1109', '1962', ...], storeCount: 18}</pre>
+        </div>
+
+        <div class="step">
+            <strong>Step 4:</strong> Click the "Southeast (FL)" tab
+        </div>
+
+        <div class="step">
+            <strong>Step 5:</strong> Verify that:
+            <ul>
+                <li>The Florida 🌴 card is highlighted (selected)</li>
+                <li>The store list shows all 73 Florida stores</li>
+                <li><strong>18 stores are checked</strong> (Stuart to Miami preset)</li>
+                <li>The stats show "18 Stores Active"</li>
+            </ul>
+        </div>
+
+        <div class="step">
+            <strong>Step 6:</strong> Click "Save Configuration" and verify the toast shows:
+            <pre>✅ Configuration saved!
+🗑️ Cleared X old tasks
+✨ Created Y new tasks
+Workers will now scrape: FL</pre>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>If It Still Doesn't Work</h2>
+        <p>Check the browser console for the debug logs:</p>
+        <ol>
+            <li>Press F12 to open DevTools</li>
+            <li>Go to the "Console" tab</li>
+            <li>Look for <code>Loaded config:</code> - this shows what the backend sent</li>
+            <li>Look for <code>Applied preset:</code> - this shows what the preset button did</li>
+        </ol>
+        <p>Copy the console output and share it for further debugging.</p>
+    </div>
+
+    <div class="test-section">
+        <h2>Quick Verification Command</h2>
+        <p>Run this in PowerShell to see what's actually saved:</p>
+        <pre>python check_coordinator_tasks.py</pre>
+        <p>This will show you:</p>
+        <ul>
+            <li>How many tasks are in the database</li>
+            <li>Which states they're for (should be FL)</li>
+            <li>Which stores have the most tasks (should be your 18 selected stores)</li>
+        </ul>
+    </div>
+</body>
+
+</html>

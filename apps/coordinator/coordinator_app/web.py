@@ -954,6 +954,9 @@ def create_app() -> FastAPI:
             config_manager = get_store_config_manager()
             config_manager.set_enabled_states(enabled_states)
             
+            # Generate new urls.txt file
+            urls_content = config_manager.generate_urls_txt()
+            
             # Save to PARALLEL/urls.txt (Works on local dev, might fail on Render)
             try:
                 parallel_urls_path = repo_root / "PARALLEL" / "urls.txt"
@@ -973,20 +976,36 @@ def create_app() -> FastAPI:
             
             logger.info(f"Admin config saved: {len(enabled_states)} states, {len(enabled_stores)} specific stores")
             
+            # CRITICAL: Clear ALL existing tasks so workers immediately get the new configuration
+            # Without this, workers would continue processing old WA/OR tasks even after switching to FL
+            with db_session() as db:
+                old_task_count = db.scalar(select(func.count(Task.id))) or 0
+                if old_task_count > 0:
+                    logger.info(f"Clearing {old_task_count} old tasks to apply new configuration")
+                    db.execute(delete(Task))
+                    db.commit()
+                    logger.info("Old tasks cleared successfully")
+            
             # Re-seed tasks from the new configuration
             try:
                 # Tell seeder to look in our persistent directory first
                 os.environ["LOCAL_URLS_PATH"] = str(data_urls_path)
                 inserted = seed_tasks_from_parallel_urls(repo_root)
                 logger.info(f"Re-seeded {inserted} tasks from new configuration")
+                
+                # Notify all connected workers via event bus
+                bus.publish(f"event:config\\ndata:{{\\\"type\\\":\\\"config_updated\\\",\\\"tasks_inserted\\\":{inserted}}}\\n\\n")
             except Exception as e:
-                logger.warning(f"Failed to re-seed tasks: {e}")
+                logger.error(f"Failed to re-seed tasks: {e}")
+                raise HTTPException(status_code=500, detail=f"Config saved but failed to update tasks: {str(e)}")
             
             return {
                 "ok": True,
                 "enabled_states": enabled_states,
                 "enabled_stores": enabled_stores,
                 "urls_generated": True,
+                "tasks_cleared": old_task_count,
+                "tasks_inserted": inserted,
             }
         except Exception as e:
             logger.exception("Config save error")

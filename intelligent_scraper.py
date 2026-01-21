@@ -237,8 +237,10 @@ class IntelligentOrchestrator:
 
     def load_stores(self):
         """Load stores from LowesMap_Final_Pruned.txt (or LowesMap.txt as fallback)"""
-        # Try finding the map in various locations
+        # Try finding the map in various locations (prioritize dynamic config)
         possible_paths = [
+            Path("apps/coordinator/data/urls.txt"),
+            Path("PARALLEL/urls.txt"),
             Path("LowesMap_Final_Pruned.txt"),
             Path("LowesMap.txt")
         ]
@@ -250,7 +252,7 @@ class IntelligentOrchestrator:
                 break
         
         if not lowes_map:
-            log.error("LowesMap not found!")
+            log.error("LowesMap (or urls.txt) not found!")
             return
 
         # Support comma-separated states (e.g., "WA,OR")
@@ -498,19 +500,41 @@ Respond with JSON only:
 
 async def main():
     parser = argparse.ArgumentParser(description='Intelligent Self-Scaling Lowe\'s Scraper')
-    parser.add_argument('--state', default='WA', choices=['WA', 'OR'], help='State to scrape')
+    parser.add_argument('--state', help='State to scrape (e.g. WA,OR). If not provided, loads from config.')
     parser.add_argument('--max-workers', type=int, default=10, help='Maximum parallel workers')
     parser.add_argument('--use-ai', action='store_true', help='Use OpenAI for scaling decisions')
     parser.add_argument('--openai-key', help='OpenAI API key (or set OPENAI_API_KEY env var)')
 
     args = parser.parse_args()
 
+    # Determine states to scrape
+    states_str = args.state
+    
+    if not states_str:
+        # Try loading from store_config.json
+        try:
+            config_path = Path("apps/coordinator/data/store_config.json")
+            if config_path.exists():
+                with open(config_path) as f:
+                    config = json.load(f)
+                    states = config.get("enabled_states", [])
+                    if states:
+                        states_str = ",".join(states)
+                        print(f"Loaded configuration: Scraping {states_str}")
+        except Exception as e:
+            print(f"Error loading config: {e}")
+
+    # Default fallback
+    if not states_str:
+        states_str = "WA"
+        print("Defaulting to state: WA")
+
     # Get OpenAI key from args or environment
     import os
     openai_key = args.openai_key or os.getenv('OPENAI_API_KEY')
 
     orchestrator = IntelligentOrchestrator(
-        state=args.state,
+        state=states_str,
         max_workers=args.max_workers,
         use_ai=args.use_ai,
         openai_api_key=openai_key

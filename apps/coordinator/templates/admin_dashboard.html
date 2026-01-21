@@ -297,12 +297,15 @@
             bottom: 32px;
             right: 32px;
             background: white;
-            padding: 16px 24px;
+            padding: 20px 28px;
             border-radius: 12px;
             box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
             display: none;
             animation: slideIn 0.3s ease-out;
             z-index: 1000;
+            max-width: 400px;
+            white-space: pre-line;
+            line-height: 1.6;
         }
 
         .toast.show {
@@ -462,6 +465,13 @@
                 selectedStates = data.enabled_states || [];
                 selectedStores = data.enabled_stores || [];
 
+                // Debug logging
+                console.log('Loaded config:', {
+                    states: selectedStates,
+                    stores: selectedStores,
+                    storeCount: selectedStores.length
+                });
+
                 // Determine which tab to show based on selected states
                 // If FL is selected, switch to SE tab, otherwise default to NW
                 if (selectedStates.includes('FL') && !selectedStates.includes('WA')) {
@@ -564,18 +574,21 @@
             // Or just append? User said "I mainly want ones near me", implying exclusively these.
             // Let's filter out FL stores that aren't in the preset, then add these.
 
-            // 1. Find all FL store IDs
-            const flStores = (allStores['FL'] || []).map(s => s.id);
+            // 1. Find all FL store IDs (convert to strings)
+            const flStores = (allStores['FL'] || []).map(s => String(s.id));
 
             // 2. Remove all FL stores from current selection
-            selectedStores = selectedStores.filter(id => !flStores.includes(id));
+            selectedStores = selectedStores.filter(id => !flStores.includes(String(id)));
 
-            // 3. Add the preset IDs
+            // 3. Add the preset IDs (ensure they're strings)
             for (const id of presetIds) {
-                if (!selectedStores.includes(id)) {
-                    selectedStores.push(id);
+                const idStr = String(id);
+                if (!selectedStores.includes(idStr)) {
+                    selectedStores.push(idStr);
                 }
             }
+
+            console.log('Applied preset:', name, 'Selected stores:', selectedStores);
 
             renderStores();
             updateStats();
@@ -609,8 +622,9 @@
                     const checkbox = document.createElement('input');
                     checkbox.type = 'checkbox';
                     checkbox.id = `store-${store.id}`;
-                    checkbox.checked = selectedStores.includes(store.id);
-                    checkbox.onchange = () => toggleStore(store.id);
+                    // Ensure both are strings for comparison
+                    checkbox.checked = selectedStores.includes(String(store.id));
+                    checkbox.onchange = () => toggleStore(String(store.id));
 
                     const label = document.createElement('label');
                     label.htmlFor = `store-${store.id}`;
@@ -640,7 +654,7 @@
             const visibleStoreIds = [];
             for (const state of visibleStates) {
                 const stores = allStores[state] || [];
-                visibleStoreIds.push(...stores.map(s => s.id));
+                visibleStoreIds.push(...stores.map(s => String(s.id)));
             }
 
             if (checkbox.checked) {
@@ -704,9 +718,20 @@
                 });
 
                 if (response.ok) {
-                    showToast('Configuration saved successfully!', 'success');
+                    const result = await response.json();
+                    const tasksCleared = result.tasks_cleared || 0;
+                    const tasksInserted = result.tasks_inserted || 0;
+
+                    showToast(
+                        `✅ Configuration saved!\n` +
+                        `🗑️ Cleared ${tasksCleared} old tasks\n` +
+                        `✨ Created ${tasksInserted} new tasks\n` +
+                        `Workers will now scrape: ${selectedStates.join(', ')}`,
+                        'success'
+                    );
                 } else {
-                    showToast('Failed to save configuration', 'error');
+                    const error = await response.text();
+                    showToast(`Failed to save: ${error}`, 'error');
                 }
             } catch (error) {
                 showToast('An error occurred while saving', 'error');
