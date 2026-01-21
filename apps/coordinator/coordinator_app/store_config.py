@@ -4,6 +4,7 @@ Allows admins to configure which stores to scrape by region/state.
 """
 from __future__ import annotations
 
+import os
 import json
 from pathlib import Path
 from typing import List, Dict
@@ -150,8 +151,12 @@ class StoreConfigManager:
         """Initialize the store config manager."""
         if config_file is None:
             # Default to coordinator app data directory
-            base_dir = Path(__file__).resolve().parents[1]
-            config_file = base_dir / "data" / "store_config.json"
+            data_dir = os.getenv("DATA_DIR", "").strip()
+            if data_dir:
+                config_file = Path(data_dir).expanduser() / "store_config.json"
+            else:
+                base_dir = Path(__file__).resolve().parents[1]
+                config_file = base_dir / "data" / "store_config.json"
         
         self.config_file = Path(config_file)
         self.config_file.parent.mkdir(parents=True, exist_ok=True)

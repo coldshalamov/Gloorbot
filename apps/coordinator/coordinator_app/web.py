@@ -171,6 +171,18 @@ try:
 except IndexError:
     repo_root = base_dir
 
+# Persistent data directory (for Render/Docker)
+DATA_DIR = os.getenv("DATA_DIR", "").strip()
+if DATA_DIR:
+    persistent_data_dir = Path(DATA_DIR).expanduser()
+else:
+    persistent_data_dir = base_dir / "data"
+
+try:
+    persistent_data_dir.mkdir(parents=True, exist_ok=True)
+except Exception as e:
+    logger.warning(f"Could not create persistent data dir {persistent_data_dir}: {e}")
+
 templates = Jinja2Templates(directory=str(base_dir / "templates"))
 
 
@@ -889,12 +901,10 @@ def create_app() -> FastAPI:
         return templates.TemplateResponse("admin_dashboard.html", {"request": request})
 
     @app.post("/admin/api/login")
-    def admin_login(request: Request) -> dict:
+    async def admin_login(request: Request) -> dict:
         """Admin login endpoint."""
-        import json
         try:
-            body = asyncio.run(request.body())
-            data = json.loads(body)
+            data = await request.json()
             email = data.get("email", "")
             password = data.get("password", "")
             
@@ -903,8 +913,9 @@ def create_app() -> FastAPI:
                 return {"ok": True, "token": token}
             else:
                 raise HTTPException(status_code=401, detail="Invalid credentials")
-        except json.JSONDecodeError:
-            raise HTTPException(status_code=400, detail="Invalid JSON")
+        except Exception as e:
+            logger.error(f"Login error: {e}")
+            raise HTTPException(status_code=400, detail="Invalid request")
 
     def _require_admin_auth(request: Request) -> None:
         """Verify admin authentication token."""
@@ -930,14 +941,12 @@ def create_app() -> FastAPI:
         }
 
     @app.post("/admin/api/config")
-    def admin_save_config(request: Request) -> dict:
+    async def admin_save_config(request: Request) -> dict:
         """Save store configuration."""
         _require_admin_auth(request)
         
-        import json
         try:
-            body = asyncio.run(request.body())
-            data = json.loads(body)
+            data = await request.json()
             
             enabled_states = data.get("enabled_states", [])
             enabled_stores = data.get("enabled_stores", [])
@@ -945,28 +954,29 @@ def create_app() -> FastAPI:
             config_manager = get_store_config_manager()
             config_manager.set_enabled_states(enabled_states)
             
-            if enabled_stores:
-                config_manager.set_enabled_stores(enabled_stores)
+            # Save to PARALLEL/urls.txt (Works on local dev, might fail on Render)
+            try:
+                parallel_urls_path = repo_root / "PARALLEL" / "urls.txt"
+                parallel_urls_path.parent.mkdir(parents=True, exist_ok=True)
+                with open(parallel_urls_path, 'w') as f:
+                    f.write(urls_content)
+            except Exception as e:
+                logger.warning(f"Could not write to PARALLEL/urls.txt (expected on Render): {e}")
             
-            # Generate new urls.txt file
-            urls_content = config_manager.generate_urls_txt()
-            
-            # Save to PARALLEL/urls.txt
-            parallel_urls_path = base_dir.parents[1] / "PARALLEL" / "urls.txt"
-            parallel_urls_path.parent.mkdir(parents=True, exist_ok=True)
-            with open(parallel_urls_path, 'w') as f:
-                f.write(urls_content)
-            
-            # Also save to coordinator data directory for reference
-            data_urls_path = base_dir / "data" / "urls.txt"
-            data_urls_path.parent.mkdir(parents=True, exist_ok=True)
-            with open(data_urls_path, 'w') as f:
-                f.write(urls_content)
+            # Save to persistent data directory (Crucial for state persistence)
+            try:
+                data_urls_path = persistent_data_dir / "urls.txt"
+                with open(data_urls_path, 'w') as f:
+                    f.write(urls_content)
+            except Exception as e:
+                logger.error(f"Failed to write to persistent data directory: {e}")
             
             logger.info(f"Admin config saved: {len(enabled_states)} states, {len(enabled_stores)} specific stores")
             
             # Re-seed tasks from the new configuration
             try:
+                # Tell seeder to look in our persistent directory first
+                os.environ["LOCAL_URLS_PATH"] = str(data_urls_path)
                 inserted = seed_tasks_from_parallel_urls(repo_root)
                 logger.info(f"Re-seeded {inserted} tasks from new configuration")
             except Exception as e:
@@ -978,11 +988,12 @@ def create_app() -> FastAPI:
                 "enabled_stores": enabled_stores,
                 "urls_generated": True,
             }
-        except json.JSONDecodeError:
-            raise HTTPException(status_code=400, detail="Invalid JSON")
+        except Exception as e:
+            logger.exception("Config save error")
+            raise HTTPException(status_code=400, detail=f"Error: {str(e)}")
 
     @app.post("/admin/api/config/reset")
-    def admin_reset_config(request: Request) -> dict:
+    async def admin_reset_config(request: Request) -> dict:
         """Reset configuration to default (WA/OR)."""
         _require_admin_auth(request)
         
@@ -994,9 +1005,21 @@ def create_app() -> FastAPI:
         urls_content = config_manager.generate_urls_txt()
         
         # Save to PARALLEL/urls.txt
-        parallel_urls_path = base_dir.parents[1] / "PARALLEL" / "urls.txt"
-        with open(parallel_urls_path, 'w') as f:
-            f.write(urls_content)
+        try:
+            parallel_urls_path = repo_root / "PARALLEL" / "urls.txt"
+            parallel_urls_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(parallel_urls_path, 'w') as f:
+                f.write(urls_content)
+        except Exception as e:
+            logger.warning(f"Could not reset PARALLEL/urls.txt: {e}")
+            
+        # Save to persistent data directory
+        try:
+            data_urls_path = persistent_data_dir / "urls.txt"
+            with open(data_urls_path, 'w') as f:
+                f.write(urls_content)
+        except Exception as e:
+            logger.error(f"Failed to write to persistent data directory during reset: {e}")
         
         logger.info("Admin config reset to default (WA/OR)")
         

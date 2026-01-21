@@ -71,17 +71,25 @@ def _load_urls_file(path: Path) -> tuple[list[dict], list[str]]:
 
 def seed_tasks_from_parallel_urls(repo_root: Path) -> int:
     """
-    Seed tasks for WA/OR stores x category URLs.
+    Seed tasks for stores x category URLs.
     Idempotent: only inserts missing (store_id, category_url) pairs.
     """
-    # Render builds often use `apps/coordinator` as the build context, so ship a copy here.
-    local_urls = Path(__file__).resolve().parents[1] / "data" / "urls.txt"
-    urls_path = local_urls if local_urls.exists() else (repo_root / "PARALLEL" / "urls.txt")
+    # 1. Check for explicit path override (set by admin config saver)
+    env_path = os.environ.get("LOCAL_URLS_PATH")
+    if env_path and Path(env_path).exists():
+        urls_path = Path(env_path)
+    else:
+        # 2. Fallback to standard locations
+        # Render builds often use `apps/coordinator` as the build context, so ship a copy here.
+        local_urls = Path(__file__).resolve().parents[1] / "data" / "urls.txt"
+        urls_path = local_urls if local_urls.exists() else (repo_root / "PARALLEL" / "urls.txt")
+    
     if not urls_path.exists():
-        raise FileNotFoundError(f"Expected urls.txt at {local_urls} or {repo_root / 'PARALLEL' / 'urls.txt'}")
+        raise FileNotFoundError(f"Expected urls.txt at {urls_path} or {repo_root / 'PARALLEL' / 'urls.txt'}")
 
     stores, categories = _load_urls_file(urls_path)
-    stores = [s for s in stores if s["state"] in {"WA", "OR"}]
+    # The list is now filtered by the Admin store selector before being written to urls.txt,
+    # so we can accept whatever is in the file.
 
     create_tables()
 
@@ -120,8 +128,9 @@ def seed_tasks_from_parallel_urls(repo_root: Path) -> int:
         prune_flag = os.getenv("PRUNE_TASKS_NOT_IN_SEED", "true").strip().lower() not in {"0", "false", "no", "off"}
         if prune_flag and categories:
             keep = set(categories)
+            # Prune tasks that are no longer in our seed list (helps if category URLs change)
             pruned = db.execute(
-                delete(Task).where(Task.state.in_(("WA", "OR"))).where(~Task.category_url.in_(keep))
+                delete(Task).where(~Task.category_url.in_(keep))
             ).rowcount
             if pruned:
                 # Prints are OK here; Render captures stdout and this is a rare, high-signal event.
