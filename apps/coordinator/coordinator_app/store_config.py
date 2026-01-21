@@ -190,12 +190,18 @@ class StoreConfigManager:
         """Get list of enabled states."""
         return self.config.get("enabled_states", [])
     
-    def set_enabled_states(self, states: List[str]) -> None:
-        """Set which states are enabled for scraping."""
+    def set_enabled_states(self, states: List[str], enabled_stores: List[str] | None = None) -> None:
+        """Set which states are enabled for scraping.
+        
+        Args:
+            states: List of state codes (e.g., ['FL', 'WA'])
+            enabled_stores: Optional list of specific store IDs to enable.
+                           If empty/None, all stores in enabled_states are used.
+        """
         # Validate states
         valid_states = [s for s in states if s in ALL_STORES]
         self.config["enabled_states"] = valid_states
-        self.config["enabled_stores"] = []  # Reset specific store selection
+        self.config["enabled_stores"] = enabled_stores if enabled_stores else []
         self._save_config()
     
     def get_enabled_stores(self) -> List[dict]:

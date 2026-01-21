@@ -952,7 +952,7 @@ def create_app() -> FastAPI:
             enabled_stores = data.get("enabled_stores", [])
             
             config_manager = get_store_config_manager()
-            config_manager.set_enabled_states(enabled_states)
+            config_manager.set_enabled_states(enabled_states, enabled_stores)
             
             # Generate new urls.txt file
             urls_content = config_manager.generate_urls_txt()
