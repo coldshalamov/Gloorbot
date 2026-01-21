@@ -762,8 +762,16 @@ async def extract_tile_group_products(card: Locator) -> list[dict]:
 
         image_url = None
         try:
-            # Find the actual product image, NOT badge/clearance SVGs
+            # Strategy: Find the actual product image, NOT badge/clearance SVGs
+            # Priority order:
+            # 1. Images from productimages/ or mobileimages.lowes.com (product photos)
+            # 2. Any .jpg/.png/.jpeg that's not a badge
+            # 3. None if only badges found
+            
             all_imgs = await scope.locator("img").all()
+            product_images = []  # High priority: actual product photos
+            fallback_images = []  # Low priority: other images
+            
             for img in all_imgs:
                 src = (
                     await img.get_attribute("src")
@@ -780,26 +788,31 @@ async def extract_tile_group_products(card: Locator) -> list[dict]:
                     first = srcset.split(",")[0].strip()
                     src = first.split(" ")[0].strip() if first else ""
                 
-                # Skip badge/clearance SVGs (including the specific clearance.svg badge)
-                if "/badges/" in src or src.endswith(".svg") or "clearance.svg" in src:
+                # Skip invalid/badge images
+                if not src or src.startswith("data:"):
                     continue
-                # Skip data: URIs
-                if src.startswith("data:"):
+                if "/badges/" in src or "clearance.svg" in src or src.endswith(".svg"):
                     continue
                 
+                # Normalize URL
                 if src.startswith("//"):
                     src = "https:" + src
-                if src.startswith("/"):
+                elif src.startswith("/"):
                     src = "https://www.lowes.com" + src
                 
-                # Prefer product images from mobileimages.lowes.com/productimages/
+                # Categorize by quality
                 if "productimages/" in src or "mobileimages.lowes.com" in src:
-                    image_url = src
-                    break  # Found the best match
-                
-                # Fallback: any non-badge image with jpg/png extension
-                if not image_url and (".jpg" in src.lower() or ".png" in src.lower() or ".jpeg" in src.lower()):
-                    image_url = src
+                    product_images.append(src)
+                elif ".jpg" in src.lower() or ".png" in src.lower() or ".jpeg" in src.lower():
+                    fallback_images.append(src)
+            
+            # Use best available image
+            if product_images:
+                image_url = product_images[0]  # Prefer product photos
+            elif fallback_images:
+                image_url = fallback_images[0]  # Fallback to any valid image
+            # else: image_url stays None (no valid image found)
+            
         except Exception:
             image_url = None
 
