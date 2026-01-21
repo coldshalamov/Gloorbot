@@ -73,10 +73,52 @@
             background: rgba(255, 255, 255, 0.3);
         }
 
+        .btn-preset {
+            background: #e0e7ff;
+            color: #4338ca;
+            border: 1px solid #c7d2fe;
+            font-size: 13px;
+        }
+
+        .btn-preset:hover {
+            background: #c7d2fe;
+        }
+
         .container {
             max-width: 1400px;
             margin: 32px auto;
             padding: 0 32px;
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 24px;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 2px;
+        }
+
+        .tab-btn {
+            padding: 12px 24px;
+            background: none;
+            border: none;
+            border-bottom: 3px solid transparent;
+            font-size: 16px;
+            font-weight: 600;
+            color: #64748b;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: -4px;
+        }
+
+        .tab-btn:hover {
+            color: #667eea;
+        }
+
+        .tab-btn.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
         }
 
         .card {
@@ -91,6 +133,9 @@
             font-size: 22px;
             margin-bottom: 24px;
             color: #1e293b;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
         .state-selector {
@@ -128,6 +173,30 @@
         .state-card p {
             color: #64748b;
             font-size: 14px;
+        }
+
+        /* Store List */
+        .store-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #f1f5f9;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+        }
+
+        .preset-group {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .preset-label {
+            font-size: 13px;
+            font-weight: 600;
+            color: #64748b;
+            margin-right: 4px;
         }
 
         .store-list {
@@ -170,6 +239,7 @@
             font-size: 14px;
         }
 
+        /* Stats */
         .stats {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -259,45 +329,10 @@
             }
         }
 
-        .loading {
-            text-align: center;
-            padding: 48px;
-            color: #64748b;
-        }
-
-        .spinner {
-            border: 3px solid #e2e8f0;
-            border-top: 3px solid #667eea;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 16px;
-        }
-
-        @keyframes spin {
-            0% {
-                transform: rotate(0deg);
-            }
-
-            100% {
-                transform: rotate(360deg);
-            }
-        }
-
-        .select-all {
-            margin-bottom: 16px;
-            padding: 12px;
-            background: #f1f5f9;
-            border-radius: 8px;
+        .select-all-wrap {
             display: flex;
             align-items: center;
-            gap: 12px;
-        }
-
-        .select-all input[type="checkbox"] {
-            width: 18px;
-            height: 18px;
+            gap: 8px;
         }
     </style>
 </head>
@@ -314,14 +349,15 @@
     </div>
 
     <div class="container">
+        <!-- Stats Row -->
         <div class="stats" id="stats">
             <div class="stat-card">
                 <h3 id="stateCount">0</h3>
-                <p>States Selected</p>
+                <p>States Active</p>
             </div>
             <div class="stat-card">
                 <h3 id="storeCount">0</h3>
-                <p>Stores Selected</p>
+                <p>Stores Active</p>
             </div>
             <div class="stat-card">
                 <h3 id="categoryCount">0</h3>
@@ -329,21 +365,38 @@
             </div>
         </div>
 
+        <!-- Region Tabs -->
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('nw')">Northwest (WA/OR)</button>
+            <button class="tab-btn" onclick="switchTab('se')">Southeast (FL)</button>
+        </div>
+
+        <!-- Main Configuration Area -->
         <div class="card">
-            <h2>Select Regions to Scrape</h2>
+            <h2>Select Regions</h2>
             <div class="state-selector" id="stateSelector">
-                <!-- States will be loaded here -->
+                <!-- States will be dynamically loaded here based on active tab -->
             </div>
         </div>
 
         <div class="card" id="storeCard" style="display: none;">
-            <h2>Select Specific Stores (Optional)</h2>
-            <p style="color: #64748b; margin-bottom: 16px;">Leave all unchecked to scrape all stores in selected states
-            </p>
+            <h2>
+                Select Specific Stores
+                <span style="font-size: 14px; font-weight: 400; color: #64748b;">(Optional - leave empty for all)</span>
+            </h2>
 
-            <div class="select-all">
-                <input type="checkbox" id="selectAllStores" onchange="toggleAllStores()">
-                <label for="selectAllStores" style="cursor: pointer;">Select/Deselect All</label>
+            <div class="store-controls">
+                <div class="select-all-wrap">
+                    <input type="checkbox" id="selectAllStores" onchange="toggleAllStores()">
+                    <label for="selectAllStores" style="cursor: pointer; font-size: 14px;">Select All in View</label>
+                </div>
+
+                <!-- Presets only visible for FL -->
+                <div class="preset-group" id="flPresets" style="display: none;">
+                    <span class="preset-label">Quick Select:</span>
+                    <button class="btn btn-preset" onclick="applyPreset('stuart_miami')">🌴 Stuart to Miami
+                        (18)</button>
+                </div>
             </div>
 
             <div class="store-list" id="storeList">
@@ -363,6 +416,22 @@
         let allStores = {};
         let selectedStates = [];
         let selectedStores = [];
+        let activeTab = 'nw'; // 'nw' or 'se'
+
+        // Define region mapping
+        const REGIONS = {
+            'nw': ['WA', 'OR'],
+            'se': ['FL']
+        };
+
+        // Define presets
+        const PRESETS = {
+            'stuart_miami': [
+                '1109', '1962', '1720', '0654', '1111', '1069',
+                '1792', '0704', '0754', '1113', '1681', '0725', '3315',
+                '1841', '2254', '3413', '2904', '2707'
+            ]
+        };
 
         async function checkAuth() {
             const token = localStorage.getItem('admin_token');
@@ -379,9 +448,7 @@
 
             try {
                 const response = await fetch('/admin/api/config', {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
+                    headers: { 'Authorization': `Bearer ${token}` }
                 });
 
                 if (response.status === 401) {
@@ -392,15 +459,46 @@
 
                 const data = await response.json();
                 allStores = data.all_stores;
-                selectedStates = data.enabled_states;
-                selectedStores = data.enabled_stores;
+                selectedStates = data.enabled_states || [];
+                selectedStores = data.enabled_stores || [];
 
-                renderStates();
-                renderStores();
+                // Determine which tab to show based on selected states
+                // If FL is selected, switch to SE tab, otherwise default to NW
+                if (selectedStates.includes('FL') && !selectedStates.includes('WA')) {
+                    switchTab('se');
+                } else {
+                    renderStates();
+                    renderStores();
+                }
+
                 updateStats();
             } catch (error) {
+                console.error(error);
                 showToast('Failed to load configuration', 'error');
             }
+        }
+
+        function switchTab(tab) {
+            activeTab = tab;
+
+            // Update UI tabs
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.textContent.includes(tab === 'nw' ? 'Northwest' : 'Southeast')) {
+                    btn.classList.add('active');
+                }
+            });
+
+            // Show/Hide presets
+            const flPresets = document.getElementById('flPresets');
+            if (tab === 'se') {
+                flPresets.style.display = 'flex';
+            } else {
+                flPresets.style.display = 'none';
+            }
+
+            renderStates();
+            renderStores();
         }
 
         function renderStates() {
@@ -413,7 +511,13 @@
                 'FL': { name: 'Florida', emoji: '🌴' }
             };
 
-            for (const [state, stores] of Object.entries(allStores)) {
+            // Get states for current tab
+            const statesToShow = REGIONS[activeTab] || [];
+
+            for (const state of statesToShow) {
+                const stores = allStores[state] || [];
+                if (stores.length === 0) continue; // Skip empty
+
                 const info = stateInfo[state] || { name: state, emoji: '📍' };
                 const card = document.createElement('div');
                 card.className = 'state-card' + (selectedStates.includes(state) ? ' selected' : '');
@@ -429,6 +533,12 @@
 
         function toggleState(state) {
             const index = selectedStates.indexOf(state);
+
+            // Exclusive behavior recommendation:
+            // When switching vast regions, maybe we want to unselect the other region?
+            // But let's keep it flexible for now, users can mix and match if they really want.
+            // Just basic toggle.
+
             if (index > -1) {
                 selectedStates.splice(index, 1);
             } else {
@@ -439,11 +549,47 @@
             updateStats();
         }
 
+        function applyPreset(name) {
+            const presetIds = PRESETS[name];
+            if (!presetIds) return;
+
+            // Ensure Florida is selected first
+            if (!selectedStates.includes('FL')) {
+                selectedStates.push('FL');
+                renderStates();
+            }
+
+            // Add preset IDs to selectedStores
+            // First clear existing selections for FL if we want "only" these? 
+            // Or just append? User said "I mainly want ones near me", implying exclusively these.
+            // Let's filter out FL stores that aren't in the preset, then add these.
+
+            // 1. Find all FL store IDs
+            const flStores = (allStores['FL'] || []).map(s => s.id);
+
+            // 2. Remove all FL stores from current selection
+            selectedStores = selectedStores.filter(id => !flStores.includes(id));
+
+            // 3. Add the preset IDs
+            for (const id of presetIds) {
+                if (!selectedStores.includes(id)) {
+                    selectedStores.push(id);
+                }
+            }
+
+            renderStores();
+            updateStats();
+            showToast('Applied Stuart to Miami preset!', 'success');
+        }
+
         function renderStores() {
             const container = document.getElementById('storeList');
             const card = document.getElementById('storeCard');
 
-            if (selectedStates.length === 0) {
+            // Find which states from the ACTIVE tab are selected
+            const visibleStates = REGIONS[activeTab].filter(s => selectedStates.includes(s));
+
+            if (visibleStates.length === 0) {
                 card.style.display = 'none';
                 return;
             }
@@ -451,8 +597,11 @@
             card.style.display = 'block';
             container.innerHTML = '';
 
-            for (const state of selectedStates) {
+            for (const state of visibleStates) {
                 const stores = allStores[state] || [];
+                // Sort by city
+                stores.sort((a, b) => a.city.localeCompare(b.city));
+
                 for (const store of stores) {
                     const item = document.createElement('div');
                     item.className = 'store-item';
@@ -486,17 +635,24 @@
 
         function toggleAllStores() {
             const checkbox = document.getElementById('selectAllStores');
-            const allStoreIds = [];
+            const visibleStates = REGIONS[activeTab].filter(s => selectedStates.includes(s));
 
-            for (const state of selectedStates) {
+            const visibleStoreIds = [];
+            for (const state of visibleStates) {
                 const stores = allStores[state] || [];
-                allStoreIds.push(...stores.map(s => s.id));
+                visibleStoreIds.push(...stores.map(s => s.id));
             }
 
             if (checkbox.checked) {
-                selectedStores = [...allStoreIds];
+                // Add all visible IDs that aren't already selected
+                for (const id of visibleStoreIds) {
+                    if (!selectedStores.includes(id)) {
+                        selectedStores.push(id);
+                    }
+                }
             } else {
-                selectedStores = [];
+                // Remove all visible IDs
+                selectedStores = selectedStores.filter(id => !visibleStoreIds.includes(id));
             }
 
             renderStores();
@@ -507,16 +663,21 @@
             document.getElementById('stateCount').textContent = selectedStates.length;
 
             let totalStores = 0;
+            // If explicit selections exist, count them
+            // BUT we need to handle the case where "empty selectedStores means ALL enabled states"
+            // Wait, the backend logic says "empty enabled_stores means ALL".
+            // The UI logic should reflect that.
+
             if (selectedStores.length > 0) {
                 totalStores = selectedStores.length;
             } else {
+                // If no specific stores selected, count all stores in selected states
                 for (const state of selectedStates) {
                     totalStores += (allStores[state] || []).length;
                 }
             }
-            document.getElementById('storeCount').textContent = totalStores;
 
-            // Category count is static for now
+            document.getElementById('storeCount').textContent = totalStores;
             document.getElementById('categoryCount').textContent = '225';
         }
 
