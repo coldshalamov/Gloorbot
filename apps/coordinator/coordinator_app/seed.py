@@ -79,13 +79,28 @@ def seed_tasks_from_parallel_urls(repo_root: Path) -> int:
     if env_path and Path(env_path).exists():
         urls_path = Path(env_path)
     else:
-        # 2. Fallback to standard locations
-        # Render builds often use `apps/coordinator` as the build context, so ship a copy here.
-        local_urls = Path(__file__).resolve().parents[1] / "data" / "urls.txt"
-        urls_path = local_urls if local_urls.exists() else (repo_root / "PARALLEL" / "urls.txt")
+        # 2. Check persistent data directory (Render/Docker)
+        data_dir = os.getenv("DATA_DIR", "").strip()
+        if data_dir:
+            persist_urls = Path(data_dir).expanduser() / "urls.txt"
+        else:
+            # Sibling to code in Render context often works
+            persist_urls = Path(__file__).resolve().parents[1] / "data" / "urls.txt"
+            
+        if persist_urls.exists():
+            urls_path = persist_urls
+        else:
+            # 3. Fallback to repository root (local dev)
+            urls_path = repo_root / "PARALLEL" / "urls.txt"
     
     if not urls_path.exists():
-        raise FileNotFoundError(f"Expected urls.txt at {urls_path} or {repo_root / 'PARALLEL' / 'urls.txt'}")
+        # Final fallback - maybe we are inside the app directory
+        alt_path = Path(__file__).resolve().parents[1] / "PARALLEL" / "urls.txt"
+        if alt_path.exists():
+            urls_path = alt_path
+        else:
+            raise FileNotFoundError(f"Expected urls.txt at {urls_path} or {repo_root / 'PARALLEL' / 'urls.txt'}")
+    
 
     stores, categories = _load_urls_file(urls_path)
     # The list is now filtered by the Admin store selector before being written to urls.txt,

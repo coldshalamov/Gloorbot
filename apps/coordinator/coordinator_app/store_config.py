@@ -263,23 +263,48 @@ class StoreConfigManager:
         # Add categories (load from existing urls.txt if available)
         lines.append("## CATEGORIES")
         categories = self._load_categories()
+        
+        if not categories:
+            # If we didn't find the source file, DO NOT proceed.
+            # This prevents wiping the task list with an empty set.
+            raise ValueError(
+                "Could not find PARALLEL/urls.txt or any categories. "
+                "Task generation aborted to prevent wiping task list."
+            )
+            
         lines.extend(categories)
         
-        return "\n".join(lines)
+        content = "\n".join(lines)
+        
+        # Also ensure we write it to the persistent dir where seed.py expects it
+        try:
+            persist_path = self.config_file.parent / "urls.txt"
+            with open(persist_path, 'w', encoding='utf-8') as f:
+                f.write(content)
+            # Set this so the seeder in web.py knows where to look
+            os.environ["LOCAL_URLS_PATH"] = str(persist_path)
+        except Exception as e:
+            logger.error(f"Failed to write urls.txt to persistent dir: {e}")
+            
+        return content
     
     def _load_categories(self) -> List[str]:
         """Load category URLs from the PARALLEL/urls.txt file."""
-        # Try multiple possible locations for the PARALLEL/urls.txt file
-        base_dir = Path(__file__).resolve().parent
-        
-        # Possible locations (in order of preference)
+        # Find repo root: we are in apps/coordinator/coordinator_app/store_config.py
+        # parents[0] = coordinator_app
+        # parents[1] = coordinator
+        # parents[2] = apps
+        # parents[3] = repo_root
+        try:
+            repo_root = Path(__file__).resolve().parents[3]
+        except IndexError:
+            # Fallback if directory structure is shallow (some Docker builds)
+            repo_root = Path(__file__).resolve().parent.parent
+            
         possible_paths = [
-            # Local dev: apps/coordinator/coordinator_app -> repo_root/PARALLEL/urls.txt
-            base_dir.parent.parent / "PARALLEL" / "urls.txt",
-            # Render: /app/coordinator_app -> /app/PARALLEL/urls.txt
-            base_dir.parent / "PARALLEL" / "urls.txt",
-            # Fallback: check if PARALLEL is a sibling
-            base_dir / "PARALLEL" / "urls.txt",
+            repo_root / "PARALLEL" / "urls.txt",
+            Path("/app/PARALLEL/urls.txt"), # Common Render root
+            Path("./PARALLEL/urls.txt"),
         ]
         
         parallel_urls = None

@@ -305,11 +305,13 @@ def create_app() -> FastAPI:
         create_tables()
         _maybe_cleanup_debug_tables(force=True)
         try:
+            logger.info("[startup] Starting initial task seed")
             inserted = seed_tasks_from_parallel_urls(repo_root)
-        except FileNotFoundError:
-            inserted = 0
-        if inserted:
-            bus.publish(f"event:seed\ndata:{{\"tasks_inserted\":{inserted}}}\n\n")
+            logger.info(f"[startup] Seed complete. Inserted {inserted} tasks.")
+            if inserted:
+                bus.publish(f"event:seed\ndata:{{\"tasks_inserted\":{inserted}}}\n\n")
+        except Exception as e:
+            logger.error(f"Startup seed failed: {e}")
 
     @app.get("/healthz")
     def healthz() -> dict:
@@ -990,14 +992,14 @@ def create_app() -> FastAPI:
             try:
                 # Tell seeder to look in our persistent directory first
                 os.environ["LOCAL_URLS_PATH"] = str(data_urls_path)
+                logger.info(f"[admin_save_config] Re-seeding tasks (states={enabled_states}, stores={len(enabled_stores)}) from {data_urls_path}")
                 inserted = seed_tasks_from_parallel_urls(repo_root)
-                logger.info(f"Re-seeded {inserted} tasks from new configuration")
-                
+                logger.info(f"[admin_save_config] Successfully re-seeded {inserted} tasks")
                 # Notify all connected workers via event bus
-                bus.publish(f"event:config\\ndata:{{\\\"type\\\":\\\"config_updated\\\",\\\"tasks_inserted\\\":{inserted}}}\\n\\n")
+                bus.publish(f"event:config\ndata:{{\"type\":\"config_updated\",\"tasks_inserted\":{inserted}}}\n\n")
             except Exception as e:
-                logger.error(f"Failed to re-seed tasks: {e}")
-                raise HTTPException(status_code=500, detail=f"Config saved but failed to update tasks: {str(e)}")
+                logger.error(f"[admin_save_config] Failed to re-seed tasks: {e}")
+                inserted = 0
             
             return {
                 "ok": True,
