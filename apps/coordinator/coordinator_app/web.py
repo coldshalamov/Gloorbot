@@ -36,6 +36,8 @@ from .schemas import (
     CategoryMetaBulkRequest,
 )
 from .seed import seed_tasks_from_parallel_urls, create_tables
+from .admin_auth import verify_credentials, create_session, verify_session, invalidate_session
+from .store_config import get_store_config_manager
 
 
 LEASE_SECONDS = int(os.getenv("LEASE_SECONDS", "900"))  # 15 minutes default
@@ -871,5 +873,149 @@ def create_app() -> FastAPI:
     @app.get("/api/v1/events", response_model=None)
     async def events() -> StreamingResponse:
         return StreamingResponse(_sse_stream(), media_type="text/event-stream")
+
+    # ============================================================================
+    # ADMIN ROUTES
+    # ============================================================================
+
+    @app.get("/admin/login", response_class=HTMLResponse)
+    def admin_login_page(request: Request) -> HTMLResponse:
+        """Render the admin login page."""
+        return templates.TemplateResponse("admin_login.html", {"request": request})
+
+    @app.get("/admin/dashboard", response_class=HTMLResponse)
+    def admin_dashboard_page(request: Request) -> HTMLResponse:
+        """Render the admin dashboard page."""
+        return templates.TemplateResponse("admin_dashboard.html", {"request": request})
+
+    @app.post("/admin/api/login")
+    def admin_login(request: Request) -> dict:
+        """Admin login endpoint."""
+        import json
+        try:
+            body = asyncio.run(request.body())
+            data = json.loads(body)
+            email = data.get("email", "")
+            password = data.get("password", "")
+            
+            if verify_credentials(email, password):
+                token = create_session(email)
+                return {"ok": True, "token": token}
+            else:
+                raise HTTPException(status_code=401, detail="Invalid credentials")
+        except json.JSONDecodeError:
+            raise HTTPException(status_code=400, detail="Invalid JSON")
+
+    def _require_admin_auth(request: Request) -> None:
+        """Verify admin authentication token."""
+        auth_header = request.headers.get("Authorization", "")
+        if not auth_header.startswith("Bearer "):
+            raise HTTPException(status_code=401, detail="Missing or invalid authorization header")
+        
+        token = auth_header[7:]  # Remove "Bearer " prefix
+        if not verify_session(token):
+            raise HTTPException(status_code=401, detail="Invalid or expired session")
+
+    @app.get("/admin/api/config")
+    def admin_get_config(request: Request) -> dict:
+        """Get current store configuration."""
+        _require_admin_auth(request)
+        
+        config_manager = get_store_config_manager()
+        return {
+            "enabled_states": config_manager.get_enabled_states(),
+            "enabled_stores": config_manager.config.get("enabled_stores", []),
+            "all_stores": config_manager.get_all_stores_by_state(),
+            "last_updated": config_manager.config.get("last_updated"),
+        }
+
+    @app.post("/admin/api/config")
+    def admin_save_config(request: Request) -> dict:
+        """Save store configuration."""
+        _require_admin_auth(request)
+        
+        import json
+        try:
+            body = asyncio.run(request.body())
+            data = json.loads(body)
+            
+            enabled_states = data.get("enabled_states", [])
+            enabled_stores = data.get("enabled_stores", [])
+            
+            config_manager = get_store_config_manager()
+            config_manager.set_enabled_states(enabled_states)
+            
+            if enabled_stores:
+                config_manager.set_enabled_stores(enabled_stores)
+            
+            # Generate new urls.txt file
+            urls_content = config_manager.generate_urls_txt()
+            
+            # Save to PARALLEL/urls.txt
+            parallel_urls_path = base_dir.parents[1] / "PARALLEL" / "urls.txt"
+            parallel_urls_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(parallel_urls_path, 'w') as f:
+                f.write(urls_content)
+            
+            # Also save to coordinator data directory for reference
+            data_urls_path = base_dir / "data" / "urls.txt"
+            data_urls_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(data_urls_path, 'w') as f:
+                f.write(urls_content)
+            
+            logger.info(f"Admin config saved: {len(enabled_states)} states, {len(enabled_stores)} specific stores")
+            
+            # Re-seed tasks from the new configuration
+            try:
+                inserted = seed_tasks_from_parallel_urls(repo_root)
+                logger.info(f"Re-seeded {inserted} tasks from new configuration")
+            except Exception as e:
+                logger.warning(f"Failed to re-seed tasks: {e}")
+            
+            return {
+                "ok": True,
+                "enabled_states": enabled_states,
+                "enabled_stores": enabled_stores,
+                "urls_generated": True,
+            }
+        except json.JSONDecodeError:
+            raise HTTPException(status_code=400, detail="Invalid JSON")
+
+    @app.post("/admin/api/config/reset")
+    def admin_reset_config(request: Request) -> dict:
+        """Reset configuration to default (WA/OR)."""
+        _require_admin_auth(request)
+        
+        config_manager = get_store_config_manager()
+        config_manager.set_enabled_states(["WA", "OR"])
+        config_manager.set_enabled_stores([])
+        
+        # Generate new urls.txt file
+        urls_content = config_manager.generate_urls_txt()
+        
+        # Save to PARALLEL/urls.txt
+        parallel_urls_path = base_dir.parents[1] / "PARALLEL" / "urls.txt"
+        with open(parallel_urls_path, 'w') as f:
+            f.write(urls_content)
+        
+        logger.info("Admin config reset to default (WA/OR)")
+        
+        # Re-seed tasks
+        try:
+            inserted = seed_tasks_from_parallel_urls(repo_root)
+            logger.info(f"Re-seeded {inserted} tasks after reset")
+        except Exception as e:
+            logger.warning(f"Failed to re-seed tasks: {e}")
+        
+        return {"ok": True, "reset": True}
+
+    @app.post("/admin/api/logout")
+    def admin_logout(request: Request) -> dict:
+        """Logout admin session."""
+        auth_header = request.headers.get("Authorization", "")
+        if auth_header.startswith("Bearer "):
+            token = auth_header[7:]
+            invalidate_session(token)
+        return {"ok": True}
 
     return app
