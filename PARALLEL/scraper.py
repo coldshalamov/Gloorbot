@@ -780,8 +780,8 @@ async def extract_tile_group_products(card: Locator) -> list[dict]:
                     first = srcset.split(",")[0].strip()
                     src = first.split(" ")[0].strip() if first else ""
                 
-                # Skip badge/clearance SVGs
-                if "/badges/" in src or src.endswith(".svg"):
+                # Skip badge/clearance SVGs (including the specific clearance.svg badge)
+                if "/badges/" in src or src.endswith(".svg") or "clearance.svg" in src:
                     continue
                 # Skip data: URIs
                 if src.startswith("data:"):

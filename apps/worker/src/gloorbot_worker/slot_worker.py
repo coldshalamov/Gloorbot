@@ -25,7 +25,7 @@ else:
     from .paths import logs_dir, profiles_dir, status_dir
 
 
-DEAL_THRESHOLD = float(os.getenv("DEAL_THRESHOLD", "0.50"))
+DEAL_THRESHOLD = float(os.getenv("DEAL_THRESHOLD", "0.30"))  # Lowered from 0.50 - most clearance is 20-40% off
 COOLDOWN_SECONDS = int(os.getenv("BLOCK_COOLDOWN_SECONDS", "300"))
 MAX_CATEGORY_SECONDS = int(os.getenv("MAX_CATEGORY_SECONDS", "1200"))
 
