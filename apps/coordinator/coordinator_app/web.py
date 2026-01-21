@@ -929,6 +929,50 @@ def create_app() -> FastAPI:
         if not verify_session(token):
             raise HTTPException(status_code=401, detail="Invalid or expired session")
 
+    @app.get("/admin/api/debug-paths")
+    def admin_debug_paths(request: Request) -> dict:
+        """Debug endpoint to see directory structure."""
+        _require_admin_auth(request)
+        
+        current = Path(__file__).resolve()
+        result = {
+            "current_file": str(current),
+            "parent_0": str(current.parent),
+            "parent_1": str(current.parent.parent),
+            "parent_2": str(current.parent.parent.parent),
+        }
+        
+        try:
+            result["parent_3"] = str(current.parent.parent.parent.parent)
+        except:
+            result["parent_3"] = "(doesn't exist)"
+            
+        # Check paths
+        paths_to_check = [
+            "/app/PARALLEL/urls.txt",
+            "./PARALLEL/urls.txt",
+            str(current.parent / "PARALLEL" / "urls.txt"),
+            str(current.parent.parent / "PARALLEL" / "urls.txt"),
+            str(current.parent.parent.parent / "PARALLEL" / "urls.txt"),
+        ]
+        
+        try:
+            paths_to_check.append(str(current.parent.parent.parent.parent / "PARALLEL" / "urls.txt"))
+        except:
+            pass
+            
+        result["checked_paths"] = {}
+        for p in paths_to_check:
+            result["checked_paths"][p] = Path(p).exists()
+            
+        # List /app contents
+        if Path("/app").exists():
+            result["app_contents"] = [f"{item.name} ({'dir' if item.is_dir() else 'file'})" for item in Path("/app").iterdir()]
+        else:
+            result["app_contents"] = []
+            
+        return result
+    
     @app.get("/admin/api/config")
     def admin_get_config(request: Request) -> dict:
         """Get current store configuration."""
