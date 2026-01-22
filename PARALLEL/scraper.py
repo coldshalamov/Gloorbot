@@ -791,7 +791,9 @@ async def extract_tile_group_products(card: Locator) -> list[dict]:
                 # Skip invalid/badge images
                 if not src or src.startswith("data:"):
                     continue
-                if "/badges/" in src or "clearance.svg" in src or src.endswith(".svg"):
+                # Filter out badges, icons, and clearance tags (common patterns)
+                src_lower = src.lower()
+                if any(pattern in src_lower for pattern in ["/badges/", "clearance", "badge", "icon", ".svg"]):
                     continue
                 
                 # Normalize URL
@@ -1856,8 +1858,10 @@ async def scrape_category_page(page: Page, url: str, store_info: dict, page_num:
                             first = srcset.split(",")[0].strip()
                             src = first.split(" ")[0].strip() if first else ""
                         
-                        # Skip badge/clearance SVGs
-                        if "/badges/" in src or src.endswith(".svg"):
+                        
+                        # Skip badge/clearance images (comprehensive filter)
+                        src_lower = src.lower()
+                        if any(pattern in src_lower for pattern in ["/badges/", "clearance", "badge", "icon", ".svg"]):
                             continue
                         # Skip data: URIs
                         if src.startswith("data:"):
