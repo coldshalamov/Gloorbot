@@ -302,15 +302,17 @@ class StoreConfigManager:
             repo_root = Path(__file__).resolve().parent.parent
             
         possible_paths = [
-            repo_root / "PARALLEL" / "urls.txt",
-            Path("/app/PARALLEL/urls.txt"), # Common Render root
-            Path("./PARALLEL/urls.txt"),
+            Path("/app/data/urls.txt"),  # Dockerfile copies it here on Render
+            repo_root / "PARALLEL" / "urls.txt",  # Local dev
+            Path("/app/PARALLEL/urls.txt"),  # Alternative Render location
+            Path("./PARALLEL/urls.txt"),  # Current directory fallback
         ]
         
         parallel_urls = None
         for path in possible_paths:
             if path.exists():
                 parallel_urls = path
+                logger.info(f"Found urls.txt at {path}")
                 break
         
         if not parallel_urls:
