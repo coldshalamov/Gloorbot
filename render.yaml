@@ -2,8 +2,8 @@ services:
   - type: web
     name: gloorbot-coordinator
     env: docker
-    rootDir: apps/coordinator
-    dockerfilePath: Dockerfile
+    dockerfilePath: apps/coordinator/Dockerfile
+    dockerContext: .
     plan: starter
     healthCheckPath: /healthz
     envVars:
