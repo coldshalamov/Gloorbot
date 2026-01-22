@@ -6,10 +6,14 @@ from __future__ import annotations
 
 import os
 import json
+import logging
 from pathlib import Path
 from typing import List, Dict
 from datetime import datetime
 import re
+
+logger = logging.getLogger(__name__)
+
 
 # All available Lowe's stores organized by state
 ALL_STORES = {
