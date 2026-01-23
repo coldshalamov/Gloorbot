@@ -25,6 +25,11 @@ from .db import db_session
 from .category_breadcrumbs import Breadcrumb, breadcrumb_leaf_name, breadcrumb_path
 from .category_name import extract_category_name
 from .models import Client, Task, Deal, DealSource, IngestEvent, CategoryMeta
+from .structured_logs import (
+    log_task_delegation,
+    log_coordinator_dispatch,
+    structured_log,
+)
 from .schemas import (
     RegisterRequest,
     RegisterResponse,
@@ -648,6 +653,17 @@ def create_app() -> FastAPI:
                     leased_task = db.get(Task, task.id)
                     if not leased_task:
                         return None
+
+                    # Log task delegation
+                    log_task_delegation(
+                        slot_id=None,  # Will be filled in by worker
+                        task_id=leased_task.id,
+                        store_id=leased_task.store_id,
+                        store_name=leased_task.store_name,
+                        category_url=leased_task.category_url,
+                        status="assigned",
+                    )
+
                     return LeaseResponse(
                         task_id=leased_task.id,
                         lease_seconds=LEASE_SECONDS,
@@ -678,6 +694,18 @@ def create_app() -> FastAPI:
             task.last_duration_sec = req.duration_sec
             task.completed_count += 1
             db.commit()
+
+            # Log task completion
+            log_task_delegation(
+                slot_id=None,
+                task_id=task.id,
+                store_id=task.store_id,
+                store_name=task.store_name,
+                category_url=task.category_url,
+                status="completed",
+                duration_seconds=req.duration_sec,
+                products_found=req.products_found if hasattr(req, 'products_found') else None,
+            )
 
         bus.publish(f"event:task\ndata:{{\"type\":\"complete\",\"task_id\":{req.task_id}}}\n\n")
         return {"ok": True}
@@ -1105,5 +1133,55 @@ def create_app() -> FastAPI:
             token = auth_header[7:]
             invalidate_session(token)
         return {"ok": True}
+
+    @app.get("/api/v1/diagnostics/logs")
+    def get_structured_logs(limit: int = 100, event_type: str | None = None) -> list[dict]:
+        """
+        Get structured JSON logs for diagnostics.
+        Visible on Render dashboard for real-time monitoring.
+
+        Args:
+            limit: Maximum number of log entries to return
+            event_type: Filter by event type (e.g., "worker_browser_crash", "task_delegation")
+        """
+        log_file = Path("/var/logs/gloorbot-structured.jsonl")
+        if not log_file.exists():
+            return []
+
+        logs = []
+        try:
+            with open(log_file, "r", encoding="utf-8") as f:
+                # Read last N lines efficiently
+                lines = f.readlines()
+                for line in reversed(lines[-limit * 2:]):  # Read extra to account for filtering
+                    try:
+                        entry = json.loads(line.strip())
+                        if event_type and entry.get("event") != event_type:
+                            continue
+                        logs.append(entry)
+                        if len(logs) >= limit:
+                            break
+                    except json.JSONDecodeError:
+                        continue
+        except Exception as e:
+            logger.error(f"Failed to read structured logs: {e}")
+            return []
+
+        return list(reversed(logs))  # Return in chronological order
+
+    @app.get("/api/v1/diagnostics/crashes")
+    def get_browser_crashes(limit: int = 50) -> list[dict]:
+        """Get recent browser crash logs for debugging."""
+        return get_structured_logs(limit=limit, event_type="worker_browser_crash")
+
+    @app.get("/api/v1/diagnostics/task-delegation")
+    def get_task_delegation_logs(limit: int = 100) -> list[dict]:
+        """Get task delegation logs to debug worker assignment issues."""
+        return get_structured_logs(limit=limit, event_type="task_delegation")
+
+    @app.get("/api/v1/diagnostics/grid-failures")
+    def get_grid_failures(limit: int = 50) -> list[dict]:
+        """Get grid validation failures to debug redirect/crash issues."""
+        return get_structured_logs(limit=limit, event_type="grid_validation_failure")
 
     return app
