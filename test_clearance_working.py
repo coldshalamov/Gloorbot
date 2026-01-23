@@ -90,4 +90,5 @@ async def test():
         await asyncio.sleep(10)
         await context.close()
 
-asyncio.run(test())
+if __name__ == "__main__":
+    asyncio.run(test())

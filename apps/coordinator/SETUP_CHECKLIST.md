@@ -64,8 +64,8 @@ INFO:     Application startup complete
 ### Step 3: Test Login
 1. Open browser: `http://localhost:8000/admin/login`
 2. Enter credentials:
-   - Email: `93robingattis@gmail.com`
-   - Password: `Alphonse5150$`
+   - Email: `GLOORBOT_ADMIN_EMAIL`
+   - Password: `GLOORBOT_ADMIN_PASSWORD`
 3. Click "Sign In"
 
 **Expected Result:**

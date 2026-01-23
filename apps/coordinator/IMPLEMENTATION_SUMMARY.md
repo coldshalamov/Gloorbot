@@ -7,8 +7,7 @@ I've created a complete admin interface for Gloorbot that allows you to easily c
 ## Key Features
 
 ### 🔐 Secure Admin Login
-- Email: `93robingattis@gmail.com`
-- Password: `Alphonse5150$`
+- Credentials: `GLOORBOT_ADMIN_EMAIL` + `GLOORBOT_ADMIN_PASSWORD`
 - Session-based authentication (24-hour sessions)
 - Protected API endpoints
 

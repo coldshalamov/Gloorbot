@@ -20,8 +20,8 @@ You'll see a **⚙️ Admin** button in the top-right corner of the page, next t
 
 ### Step 3: Login
 Enter your credentials:
-- **Email**: `93robingattis@gmail.com`
-- **Password**: `Alphonse5150$`
+- **Email**: `GLOORBOT_ADMIN_EMAIL`
+- **Password**: `GLOORBOT_ADMIN_PASSWORD`
 
 ### Step 4: Configure Stores
 Select your region:
@@ -70,7 +70,7 @@ Click "Save Configuration" and your workers will immediately start scraping the 
 | Action | Steps |
 |--------|-------|
 | Access Admin | Click "⚙️ Admin" button on main page |
-| Login | Use 93robingattis@gmail.com / Alphonse5150$ |
+| Login | Use `GLOORBOT_ADMIN_EMAIL` / `GLOORBOT_ADMIN_PASSWORD` |
 | Switch to FL | Uncheck WA/OR, Check FL, Save |
 | Switch to WA/OR | Uncheck FL, Check WA/OR, Save |
 | Select Specific Stores | Check state, scroll down, select stores |

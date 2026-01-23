@@ -41,4 +41,5 @@ async def test():
         await page.screenshot(path="test_result.png")
         await browser.close()
 
-asyncio.run(test())
+if __name__ == "__main__":
+    asyncio.run(test())

@@ -8,7 +8,7 @@ from pathlib import Path
 # Add the coordinator app to the path
 sys.path.insert(0, str(Path(__file__).parent))
 
-from coordinator_app.admin_auth import verify_credentials, create_session
+from coordinator_app.admin_auth import ADMIN_EMAIL, ADMIN_PASSWORD, verify_credentials, create_session
 from coordinator_app.store_config import get_store_config_manager
 
 
@@ -20,8 +20,8 @@ def main():
 
     # Test authentication
     print("1. Testing Admin Authentication...")
-    test_email = "93robingattis@gmail.com"
-    test_password = "Alphonse5150$"
+    test_email = ADMIN_EMAIL
+    test_password = ADMIN_PASSWORD
     
     if verify_credentials(test_email, test_password):
         print("   ✅ Admin credentials verified")
@@ -88,7 +88,7 @@ def main():
     print()
     print("3. Login with:")
     print(f"   Email: {test_email}")
-    print(f"   Password: {test_password}")
+    print("   Password: (set via GLOORBOT_ADMIN_PASSWORD)")
     print()
 
 

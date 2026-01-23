@@ -5,7 +5,33 @@
 
 ---
 
-### 🎯 CURRENT OBJECTIVE
+### REPO MAP (WHAT RUNS)
+**Core runtime (this repo):**
+- **Coordinator (API + Admin UI)**: `apps/coordinator/`
+  - Entrypoint: `apps/coordinator/coordinator_app/main.py` (creates FastAPI app via `apps/coordinator/coordinator_app/web.py`)
+  - Task seeding: `apps/coordinator/coordinator_app/seed.py`
+  - Seed file resolution order:
+    1) `LOCAL_URLS_PATH` (explicit override)
+    2) `${DATA_DIR}/urls.txt` or `apps/coordinator/data/urls.txt` (Render/Docker)
+    3) `PARALLEL/urls.txt` (local dev fallback)
+- **Worker (Windows EXE / GUI + slot workers)**: `apps/worker/`
+  - Entrypoint: `apps/worker/src/gloorbot_worker/__main__.py`
+  - Scrape logic: `apps/worker/src/gloorbot_worker/slot_worker.py`
+
+**Support/legacy (not deployed to Render as ?the worker?):**
+- `PARALLEL/` contains older/local scraper + orchestrator used for experimentation and some regression fixture parsing.
+- `verification/` is the deterministic, no-network regression suite used in CI (`verification/run_suite.py`).
+
+### URL SEED LISTS (SOURCE OF TRUTH)
+- Canonical combined store+category list: `PARALLEL/urls.txt`
+- Deployment fallback copy (kept in sync): `apps/coordinator/data/urls.txt`
+- Derived category-only lists (not used unless copied into `PARALLEL/urls.txt`):
+  - `PARALLEL/urls_refined.txt` (broad set)
+  - `PARALLEL/urls_leaf_only.txt` (recommended when pruning parents)
+  - `PARALLEL/urls_parents_only.txt` (broad parents only)
+
+
+### CURRENT OBJECTIVE
 *Primary Goal*: Ensure Nucleus Brain MCP is reliable & Complete Gloorbot Indexing.
 *Protocol Version*: **v1.3 (Slow & Steady)**
 *Philosophy*: Quality over speed. Persistence over rapid iteration.
@@ -13,7 +39,7 @@
 
 ---
 
-### 🤖 ACTIVE FLEET STATUS
+### ACTIVE FLEET STATUS
 | Agent | Current Task | Status |
 | :--- | :--- | :--- |
 | **Antigravity (Native)** | Fleet Coordination & Handshake | **Unified & Ready** |
@@ -22,7 +48,8 @@
 
 ---
 
-### 📝 RECENT MILESTONES (LAST 24 HOURS)
+### RECENT MILESTONES (LAST 24 HOURS)
+- [2026-01-23]: Codex: Verified coordinator + worker imports/tests; fixed worker `__main__.py` running on import; synced `apps/coordinator/data/urls.txt` to `PARALLEL/urls.txt`; marked async Playwright regression tests with `@pytest.mark.asyncio`; guarded several root `test_*.py` scripts from running at import-time; moved admin credentials docs to `GLOORBOT_ADMIN_EMAIL`/`GLOORBOT_ADMIN_PASSWORD` env vars (code supports env override).
 - [2026-01-10]: Swarm: Kilo Code CLI is working again → reinstated `kilo-cli` subagent access across agents (Codex `C:\\Users\\User\\.codex\\config.toml`, Antigravity/Claude `C:\\Users\\User\\.claude\\mcp_settings.json`, Gemini `C:\\Users\\User\\.gemini\\settings.json`). Restarted/validated lazy-MCP proxies: **Swarm Senses** (9091) + **Opaque Hands** (9092). Updated Gemini instructions to match `opaque-hands` + Kilo usage.
 - [2026-01-10]: Codex: Published worker installer **v0.11.8** (GitHub Release asset `WorkerSetup.exe`). Coordinator `/download` now supports GitHub “latest release” resolution when `WORKER_DOWNLOAD_URL` is unset or set to `latest`/`github:latest` (fallback repo `coldshalamov/Gloorbot`).
 - [2026-01-10]: Kilo Code: Reverted serena configuration to port 9090 (http://127.0.0.1:9090/serena/sse) - correct port matching nucleus configuration. Issue: serena is not running on port 9090 (returns HTTP 404). This is a known issue requiring investigation into why serena isn't mounted on the unified proxy at port 9090.

@@ -78,4 +78,5 @@ async def test():
         await asyncio.sleep(2)
         await browser.close()
 
-asyncio.run(test())
+if __name__ == "__main__":
+    asyncio.run(test())

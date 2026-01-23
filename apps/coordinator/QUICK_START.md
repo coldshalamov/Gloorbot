@@ -12,8 +12,8 @@ uvicorn coordinator_app.main:app --reload
 Navigate to: **http://localhost:8000/admin/login**
 
 ### Step 3: Login
-- **Email**: `93robingattis@gmail.com`
-- **Password**: `Alphonse5150$`
+- Set `GLOORBOT_ADMIN_EMAIL` and `GLOORBOT_ADMIN_PASSWORD`
+- Then login with those values
 
 ---
 
@@ -28,7 +28,7 @@ Navigate to: **http://localhost:8000/admin/login**
 │                                     │
 │  ┌───────────────────────────────┐ │
 │  │ Email Address                 │ │
-│  │ [93robingattis@gmail.com]     │ │
+│  │ [your-admin-email]           │ │
 │  └───────────────────────────────┘ │
 │                                     │
 │  ┌───────────────────────────────┐ │

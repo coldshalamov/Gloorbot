@@ -27,8 +27,8 @@ https://your-gloorbot-app.onrender.com
 You'll see it in the top-right corner next to "Download Worker"
 
 ### Step 3: Login
-- **Email**: `93robingattis@gmail.com`
-- **Password**: `Alphonse5150$`
+- **Email**: `GLOORBOT_ADMIN_EMAIL`
+- **Password**: `GLOORBOT_ADMIN_PASSWORD`
 
 ### Step 4: Switch Regions
 

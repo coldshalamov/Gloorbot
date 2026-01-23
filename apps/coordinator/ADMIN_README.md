@@ -18,8 +18,9 @@ The Gloorbot Admin Interface allows you to easily configure which stores to scra
 ## Access
 
 ### Login Credentials
-- **Email**: `93robingattis@gmail.com`
-- **Password**: `Alphonse5150$`
+Admin credentials are configured via environment variables:
+- `GLOORBOT_ADMIN_EMAIL`
+- `GLOORBOT_ADMIN_PASSWORD`
 
 ### URLs
 

@@ -503,6 +503,17 @@ async def _run_slot(client_id: str, slot_id: int) -> None:
                     f"[slot-{slot_id}] Failed to set store {lease.store_name} - aborting lease",
                     flush=True,
                 )
+                # CAPTURE ARTIFACTS ON CONTEXT FAILURE
+                try:
+                    await _dump_block_artifacts(
+                        slot_id=slot_id,
+                        lease=lease,
+                        page=page,
+                        error=RuntimeError(f"Context Set Failed: {lease.store_name}"),
+                    )
+                except Exception:
+                    pass
+
                 # Close context to force rebuild next time, ensuring fresh retry
                 if context:
                     await context.close()
@@ -744,7 +755,12 @@ async def _run_slot(client_id: str, slot_id: int) -> None:
 
                 # Block/cooldown behavior: if blocked, wait then rebuild browser.
                 msg = str(e).lower()
-                if "access denied" in msg or "robot" in msg or "blocked" in msg:
+                if (
+                    "access denied" in msg
+                    or "robot" in msg
+                    or "blocked" in msg
+                    or "could not set store" in msg
+                ):
                     # Signal to supervisor that we got blocked
                     _signal_block()
                     try:

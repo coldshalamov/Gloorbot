@@ -4,13 +4,20 @@ Provides simple session-based authentication for admin features.
 """
 from __future__ import annotations
 
+import os
 import secrets
 from datetime import datetime, timedelta
 from typing import Dict
 
-# Admin credentials (hardcoded as requested)
-ADMIN_EMAIL = "93robingattis@gmail.com"
-ADMIN_PASSWORD = "Alphonse5150$"
+# Admin credentials
+#
+# Production: set these via env vars.
+# Local/dev fallback: defaults exist to preserve existing behavior.
+_DEFAULT_ADMIN_EMAIL = "93robingattis@gmail.com"
+_DEFAULT_ADMIN_PASSWORD = "Alphonse5150$"
+
+ADMIN_EMAIL = os.getenv("GLOORBOT_ADMIN_EMAIL", _DEFAULT_ADMIN_EMAIL).strip()
+ADMIN_PASSWORD = os.getenv("GLOORBOT_ADMIN_PASSWORD", _DEFAULT_ADMIN_PASSWORD)
 
 # Session storage (in-memory for simplicity; use Redis in production)
 _sessions: Dict[str, dict] = {}

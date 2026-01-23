@@ -262,8 +262,8 @@ async def set_store_context(page: Page, store_url: str, store_name: str):
         if store_name.split(",")[0] in header_store:
             Actor.log.info(f"Store verified in header: {header_store}")
             return True
-    except:
-        pass
+    except Exception as e:
+        Actor.log.debug(f"Initial store check failed: {e}")
 
     for selector in [
         "button:has-text('Set Store')",
@@ -285,6 +285,22 @@ async def set_store_context(page: Page, store_url: str, store_name: str):
         await asyncio.sleep(2)
         if await page.locator("button:has-text('My Store')").is_visible():
             return True
+    except Exception as e:
+        Actor.log.debug(f"Final verification failed: {e}")
+
+    # DIAGNOSTIC: Capture what's actually on the page
+    try:
+        page_title = await page.title()
+        page_url = page.url
+        Actor.log.warning(
+            f"Store validation failed - Title: '{page_title}', URL: '{page_url}'"
+        )
+
+        # Take screenshot for debugging
+        try:
+            await page.screenshot(path=f"debug_store_fail_{int(time.time())}.png")
+        except:
+            pass
     except:
         pass
 
@@ -2361,8 +2377,10 @@ async def scrape_category_all_pages(
 
     # 1. Go to page 1 to set "Pickup Today" filter
     try:
+        Actor.log.info(f"NAVIGATING TO: {category_url}")
         await page.goto(category_url, wait_until="domcontentloaded", timeout=60000)
         await asyncio.sleep(2)
+        Actor.log.info(f"LANDED ON: {page.url}")
         try:
             _navlog(
                 "category_goto",
