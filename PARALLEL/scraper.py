@@ -2149,13 +2149,47 @@ async def scrape_category_page(
                 f"First card on page {page_num} has no product link (/pd/). "
                 f"This might be a redirect or unexpected page layout. Skipping page."
             )
+            # Log for Render diagnostics
+            _navlog(
+                "grid_validation_failure",
+                {
+                    "store_id": store_info.get("store_id"),
+                    "store_name": store_info.get("name"),
+                    "page_num": page_num,
+                    "category_url": url[:200] if url else None,
+                    "page_url": page.url[:200] if page else None,
+                    "reason": "first_card_no_product_link",
+                },
+            )
             return []
     except asyncio.TimeoutError:
         Actor.log.warning(f"Timeout validating first card on page {page_num}. Skipping page.")
+        _navlog(
+            "grid_validation_failure",
+            {
+                "store_id": store_info.get("store_id"),
+                "store_name": store_info.get("name"),
+                "page_num": page_num,
+                "category_url": url[:200] if url else None,
+                "page_url": page.url[:200] if page else None,
+                "reason": "validation_timeout",
+            },
+        )
         return []
     except Exception as e:
         Actor.log.warning(
             f"Error validating first card on page {page_num}: {e}. Skipping page to avoid crash."
+        )
+        _navlog(
+            "grid_validation_failure",
+            {
+                "store_id": store_info.get("store_id"),
+                "store_name": store_info.get("name"),
+                "page_num": page_num,
+                "category_url": url[:200] if url else None,
+                "page_url": page.url[:200] if page else None,
+                "reason": f"validation_error: {str(e)[:100]}",
+            },
         )
         return []
 
