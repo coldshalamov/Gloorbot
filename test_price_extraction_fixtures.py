@@ -1,7 +1,6 @@
 import asyncio
 from pathlib import Path
 
-import pytest
 from playwright.async_api import async_playwright
 
 import PARALLEL.scraper as scraper
@@ -25,7 +24,6 @@ async def _extract_prices_from_fixture(filename: str) -> list[dict]:
         return products
 
 
-@pytest.mark.asyncio
 async def test_fixture_mixed_tile_group() -> None:
     products = await _extract_prices_from_fixture("mixed_tile_group.html")
     assert len(products) == 2
@@ -43,7 +41,6 @@ async def test_fixture_mixed_tile_group() -> None:
     assert by_url["https://www.lowes.com/pd/Product-B/222"].get("was_price") == "$977.49"
 
 
-@pytest.mark.asyncio
 async def test_fixture_financing_noise() -> None:
     products = await _extract_prices_from_fixture("financing_noise.html")
     assert len(products) == 1
@@ -52,7 +49,6 @@ async def test_fixture_financing_noise() -> None:
     assert p.get("was_price") == "$1,266.73"
 
 
-@pytest.mark.asyncio
 async def test_fixture_savings_percentage_noise() -> None:
     products = await _extract_prices_from_fixture("savings_percentage.html")
     assert len(products) == 1
@@ -65,3 +61,4 @@ if __name__ == "__main__":
     asyncio.run(test_fixture_mixed_tile_group())
     asyncio.run(test_fixture_financing_noise())
     asyncio.run(test_fixture_savings_percentage_noise())
+
