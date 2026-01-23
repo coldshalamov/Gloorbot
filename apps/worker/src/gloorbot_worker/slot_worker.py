@@ -15,9 +15,12 @@ from typing import Any
 from urllib.parse import urlparse, urlunparse
 
 # Handle PyInstaller frozen executable - need absolute imports
-if getattr(sys, 'frozen', False):
+if getattr(sys, "frozen", False):
     from gloorbot_worker import api
-    from gloorbot_worker.navlog import default_event_logger, set_default_parallel_navlog_path
+    from gloorbot_worker.navlog import (
+        default_event_logger,
+        set_default_parallel_navlog_path,
+    )
     from gloorbot_worker.paths import logs_dir, profiles_dir, status_dir
 else:
     from . import api
@@ -35,7 +38,10 @@ _DIAG_FALSE_VALUES = {"0", "false", "no", "off", ""}
 
 
 def _deal_diag_enabled() -> bool:
-    return os.getenv("GLOORBOT_DEAL_DIAGNOSTICS", "").strip().lower() not in _DIAG_FALSE_VALUES
+    return (
+        os.getenv("GLOORBOT_DEAL_DIAGNOSTICS", "").strip().lower()
+        not in _DIAG_FALSE_VALUES
+    )
 
 
 def _deal_diag_path(slot_id: int) -> Path:
@@ -92,7 +98,9 @@ def _normalize_lowes_url(url: str) -> str:
         return url
 
 
-async def _dump_block_artifacts(*, slot_id: int, lease: api.Lease, page: Any, error: Exception) -> None:
+async def _dump_block_artifacts(
+    *, slot_id: int, lease: api.Lease, page: Any, error: Exception
+) -> None:
     if os.getenv("GLOORBOT_BLOCK_DIAGNOSTICS", "0").strip().lower() in _FALSE_VALUES:
         return
     try:
@@ -116,7 +124,9 @@ async def _dump_block_artifacts(*, slot_id: int, lease: api.Lease, page: Any, er
             pass
         try:
             meta["navigator_ua"] = await page.evaluate("() => navigator.userAgent")
-            meta["navigator_webdriver"] = await page.evaluate("() => navigator.webdriver")
+            meta["navigator_webdriver"] = await page.evaluate(
+                "() => navigator.webdriver"
+            )
         except Exception:
             pass
         try:
@@ -126,7 +136,9 @@ async def _dump_block_artifacts(*, slot_id: int, lease: api.Lease, page: Any, er
         except Exception:
             pass
 
-        (block_dir / f"{prefix}.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
+        (block_dir / f"{prefix}.json").write_text(
+            json.dumps(meta, indent=2), encoding="utf-8"
+        )
         try:
             await page.screenshot(path=str(block_dir / f"{prefix}.png"), full_page=True)
         except Exception:
@@ -187,7 +199,7 @@ def _load_parallel_scraper() -> Any:
     return mod
 
 
-_PRICE_RE = re.compile(r"\$?\s*([0-9]{1,5})(?:[.,]\s*([0-9]{2}))?")
+_PRICE_RE = re.compile(r"\$?\s*([0-9]{1,9})(?:[.,]\s*([0-9]{2}))?")
 
 
 def _to_float_price(text: str) -> float | None:
@@ -225,25 +237,34 @@ def _to_float_price(text: str) -> float | None:
             return None
         if re.search(r"(?i)\b(save|savings|off)\b", text):
             return None
+
     # Prefer explicit $ patterns first
-    m = re.search(r"\$([0-9]{1,5})(?:\.([0-9]{2}))?", compact)
-    if m:
-        whole = m.group(1)
-        cents = m.group(2) or "00"
+    def _build_price(whole: str, cents: str | None) -> float | None:
+        if not whole:
+            return None
+        if cents is None:
+            # Lowe's sometimes renders cents without a literal '.' (CSS adds it),
+            # producing strings like "$163710" for "$1,637.10" after commas/space removal.
+            # Heuristic: when we see a long run of digits and no explicit cents, treat
+            # the last 2 digits as cents. Keep the threshold conservative so we don't
+            # misread whole-dollar prices like "$2699" as "$26.99".
+            if len(whole) >= 5:
+                whole, cents = whole[:-2], whole[-2:]
+            else:
+                cents = "00"
         try:
             return float(f"{whole}.{cents}")
         except Exception:
             return None
+
+    m = re.search(r"\$([0-9]{1,9})(?:\.([0-9]{2}))?", compact)
+    if m:
+        return _build_price(m.group(1), m.group(2))
     # Fallback to loose match
     m2 = _PRICE_RE.search(compact)
     if not m2:
         return None
-    whole = m2.group(1)
-    cents = m2.group(2) or "00"
-    try:
-        return float(f"{whole}.{cents}")
-    except Exception:
-        return None
+    return _build_price(m2.group(1), m2.group(2))
 
 
 def _deal_from_product(p: dict, category_url: str) -> dict | None:
@@ -299,7 +320,9 @@ def _deal_from_product(p: dict, category_url: str) -> dict | None:
     image_url = p.get("image_url")
     if isinstance(image_url, str):
         image_url = image_url.strip() or None
-        if image_url and not (image_url.startswith("http://") or image_url.startswith("https://")):
+        if image_url and not (
+            image_url.startswith("http://") or image_url.startswith("https://")
+        ):
             image_url = None
         if image_url:
             image_url = image_url[:2048]
@@ -380,14 +403,16 @@ async def _run_slot(client_id: str, slot_id: int) -> None:
 
         async def ensure_store(lease: api.Lease):
             nonlocal browser, context, page, current_store_id, preferred_store_id
-            if current_store_id == lease.store_id and context and page:   
+            if current_store_id == lease.store_id and context and page:
                 return
             if context:
                 try:
                     if current_store_id:
                         prev_profile_dir = profiles_dir() / f"store-{current_store_id}"
                         prev_profile_dir.mkdir(parents=True, exist_ok=True)
-                        await context.storage_state(path=str(prev_profile_dir / "storage_state.json"))
+                        await context.storage_state(
+                            path=str(prev_profile_dir / "storage_state.json")
+                        )
                     await context.close()
                 except Exception:
                     pass
@@ -404,7 +429,7 @@ async def _run_slot(client_id: str, slot_id: int) -> None:
 
             # IMPORTANT: Profile is PER-STORE only (not per-slot)
             # This matches PARALLEL and allows profile seasoning to benefit all slots
-            profile_dir = profiles_dir() / f"store-{lease.store_id}"      
+            profile_dir = profiles_dir() / f"store-{lease.store_id}"
             profile_dir.mkdir(parents=True, exist_ok=True)
 
             storage_state_path = profile_dir / "storage_state.json"
@@ -416,7 +441,7 @@ async def _run_slot(client_id: str, slot_id: int) -> None:
                 "args": [
                     "--disable-blink-features=AutomationControlled",
                     "--disable-dev-shm-usage",
-                    "--disable-features=IsolateOrigins,site-per-process", 
+                    "--disable-features=IsolateOrigins,site-per-process",
                     "--disable-infobars",
                     "--lang=en-US",
                     "--no-default-browser-check",
@@ -424,17 +449,29 @@ async def _run_slot(client_id: str, slot_id: int) -> None:
             }
 
             # Prefer system Chrome when available (matches PARALLEL’s most reliable setup).
-            explicit_channel = (os.getenv("GLOORBOT_BROWSER_CHANNEL") or "").strip() or None
-            prefer_chrome = os.getenv("GLOORBOT_PREFER_CHROME", "1").strip().lower() not in _FALSE_VALUES
-            force_bundled = os.getenv("GLOORBOT_FORCE_BUNDLED", "0").strip().lower() not in _FALSE_VALUES
-            try_channel = explicit_channel or ("chrome" if (prefer_chrome and not force_bundled) else None)
+            explicit_channel = (
+                os.getenv("GLOORBOT_BROWSER_CHANNEL") or ""
+            ).strip() or None
+            prefer_chrome = (
+                os.getenv("GLOORBOT_PREFER_CHROME", "1").strip().lower()
+                not in _FALSE_VALUES
+            )
+            force_bundled = (
+                os.getenv("GLOORBOT_FORCE_BUNDLED", "0").strip().lower()
+                not in _FALSE_VALUES
+            )
+            try_channel = explicit_channel or (
+                "chrome" if (prefer_chrome and not force_bundled) else None
+            )
 
             # Launch Chromium browser
             print(f"[slot-{slot_id}] Launching browser...", flush=True)
             try:
                 if try_channel:
                     try:
-                        browser = await p.chromium.launch(channel=try_channel, **launch_kwargs)
+                        browser = await p.chromium.launch(
+                            channel=try_channel, **launch_kwargs
+                        )
                     except Exception:
                         if explicit_channel:
                             raise
@@ -462,7 +499,10 @@ async def _run_slot(client_id: str, slot_id: int) -> None:
             store_url = _normalize_lowes_url(lease.store_url)
             await parallel.warmup_session(page)
             if not await parallel.set_store_context(page, store_url, lease.store_name):
-                print(f"[slot-{slot_id}] Failed to set store {lease.store_name} - aborting lease", flush=True)
+                print(
+                    f"[slot-{slot_id}] Failed to set store {lease.store_name} - aborting lease",
+                    flush=True,
+                )
                 # Close context to force rebuild next time, ensuring fresh retry
                 if context:
                     await context.close()
@@ -566,14 +606,22 @@ async def _run_slot(client_id: str, slot_id: int) -> None:
                 batch_id = ""
                 while True:
                     try:
-                        deals_sent, batch_id = api.submit_deals(client_id, deals, task_id=lease.task_id)
+                        deals_sent, batch_id = api.submit_deals(
+                            client_id, deals, task_id=lease.task_id
+                        )
                         break
                     except Exception:
                         submit_attempts += 1
                         if submit_attempts >= 3:
                             raise
                         await backoff_sleep(2, submit_attempts, 30)
-                api.lease_complete(client_id, lease.task_id, time.time() - start, products_seen, deals_sent)
+                api.lease_complete(
+                    client_id,
+                    lease.task_id,
+                    time.time() - start,
+                    products_seen,
+                    deals_sent,
+                )
 
                 slot_status_path.write_text(
                     json.dumps(
@@ -608,7 +656,7 @@ async def _run_slot(client_id: str, slot_id: int) -> None:
                     deals_sent=deals_sent,
                     batch_id=batch_id,
                 )
-                
+
                 # CRITICAL: Add inter-lease delay to match PARALLEL's pacing
                 # PARALLEL sleeps 2.0-4.55s between categories (scraper.py:802-803)
                 # Without this, Worker hammers the server too fast → detection
@@ -622,9 +670,17 @@ async def _run_slot(client_id: str, slot_id: int) -> None:
                 raw_category_url = getattr(lease, "category_url", "") or ""
                 msg_lower = str(e).lower()
                 is_c = (
-                    (isinstance(page_url, str) and ("/c/" in page_url) and ("/pl/" not in page_url))
+                    (
+                        isinstance(page_url, str)
+                        and ("/c/" in page_url)
+                        and ("/pl/" not in page_url)
+                    )
                     or ("/c/" in msg_lower and "redirect" in msg_lower)
-                    or (isinstance(raw_category_url, str) and ("/c/" in raw_category_url) and ("/pl/" not in raw_category_url))
+                    or (
+                        isinstance(raw_category_url, str)
+                        and ("/c/" in raw_category_url)
+                        and ("/pl/" not in raw_category_url)
+                    )
                 )
                 should_abandon = False
                 task_id_val = getattr(lease, "task_id", None)
@@ -638,7 +694,9 @@ async def _run_slot(client_id: str, slot_id: int) -> None:
                     should_abandon = True
 
                 if should_abandon:
-                    api.lease_complete(client_id, lease.task_id, time.time() - start, 0, 0)
+                    api.lease_complete(
+                        client_id, lease.task_id, time.time() - start, 0, 0
+                    )
                     eventlog.write(
                         "task_abandoned_non_pl",
                         slot_id=slot_id,
@@ -651,7 +709,11 @@ async def _run_slot(client_id: str, slot_id: int) -> None:
                 else:
                     api.lease_fail(client_id, lease.task_id, time.time() - start)
                 try:
-                    err_title = await asyncio.wait_for(page.title(), timeout=5.0) if page else None
+                    err_title = (
+                        await asyncio.wait_for(page.title(), timeout=5.0)
+                        if page
+                        else None
+                    )
                 except Exception:
                     err_title = None
                 eventlog.write(
@@ -687,7 +749,9 @@ async def _run_slot(client_id: str, slot_id: int) -> None:
                     _signal_block()
                     try:
                         if page and lease:
-                            await _dump_block_artifacts(slot_id=slot_id, lease=lease, page=page, error=e)
+                            await _dump_block_artifacts(
+                                slot_id=slot_id, lease=lease, page=page, error=e
+                            )
                     except Exception:
                         pass
                     try:

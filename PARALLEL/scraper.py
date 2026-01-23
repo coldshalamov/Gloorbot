@@ -32,19 +32,26 @@ from playwright.async_api import async_playwright, Page, Locator
 # MOCK ACTOR (replaces Apify dependency)
 # ============================================================================
 
+
 class Actor:
     class log:
         @staticmethod
-        def info(msg): print(f"[INFO] {msg}")
+        def info(msg):
+            print(f"[INFO] {msg}")
+
         @staticmethod
-        def warning(msg): print(f"[WARN] {msg}")
+        def warning(msg):
+            print(f"[WARN] {msg}")
+
         @staticmethod
-        def error(msg): print(f"[ERROR] {msg}")
+        def error(msg):
+            print(f"[ERROR] {msg}")
 
 
 # ============================================================================
 # OPTIONAL NAVIGATION LOGGING (used by the installed Worker)
 # ============================================================================
+
 
 def _strip_pagination(url: str) -> str:
     try:
@@ -110,6 +117,7 @@ LOWES_MAP_PATH = Path(__file__).parent / "urls.txt"
 # LOAD STORES & CATEGORIES
 # ============================================================================
 
+
 def load_stores_and_categories():
     """Load WA/OR stores and all category URLs from LowesMap.txt"""
     stores = []
@@ -119,27 +127,34 @@ def load_stores_and_categories():
         Actor.log.warning(f"LowesMap.txt not found at {LOWES_MAP_PATH}")
         return stores, categories
 
-    with open(LOWES_MAP_PATH, 'r') as f:
+    with open(LOWES_MAP_PATH, "r") as f:
         for line in f:
             line = line.strip()
-            if not line or line.startswith('#') or line.startswith('This') or line.startswith('##'):
+            if (
+                not line
+                or line.startswith("#")
+                or line.startswith("This")
+                or line.startswith("##")
+            ):
                 continue
 
             # Store URLs
-            if '/store/' in line:
-                match = re.search(r'/store/([A-Z]{2})-([^/]+)/(\d+)', line)
+            if "/store/" in line:
+                match = re.search(r"/store/([A-Z]{2})-([^/]+)/(\d+)", line)
                 if match:
                     state, city, store_id = match.groups()
-                    stores.append({
-                        "url": line,
-                        "store_id": store_id,
-                        "city": city.replace('-', ' '),
-                        "state": state,
-                        "name": f"{city}, {state} (#{store_id})"
-                    })
+                    stores.append(
+                        {
+                            "url": line,
+                            "store_id": store_id,
+                            "city": city.replace("-", " "),
+                            "state": state,
+                            "name": f"{city}, {state} (#{store_id})",
+                        }
+                    )
 
             # Category URLs (skip clearance)
-            elif '/pl/' in line and 'the-back-aisle' not in line.lower():
+            elif "/pl/" in line and "the-back-aisle" not in line.lower():
                 categories.append(line)
 
     Actor.log.info(f"Loaded {len(stores)} stores and {len(categories)} categories")
@@ -150,11 +165,12 @@ def load_stores_and_categories():
 # HUMAN BEHAVIOR
 # ============================================================================
 
+
 async def human_mouse_move(page: Page):
     """Human-like mouse movement"""
     viewport = page.viewport_size
-    width = viewport.get('width', 1440) if viewport else 1440
-    height = viewport.get('height', 900) if viewport else 900
+    width = viewport.get("width", 1440) if viewport else 1440
+    height = viewport.get("height", 900) if viewport else 900
 
     start_x = random.random() * width * 0.3
     start_y = random.random() * height * 0.3
@@ -164,7 +180,11 @@ async def human_mouse_move(page: Page):
     steps = 10 + int(random.random() * 10)
     for i in range(steps + 1):
         progress = i / steps
-        eased = 2 * progress * progress if progress < 0.5 else 1 - pow(-2 * progress + 2, 2) / 2
+        eased = (
+            2 * progress * progress
+            if progress < 0.5
+            else 1 - pow(-2 * progress + 2, 2) / 2
+        )
         x = start_x + (end_x - start_x) * eased + (random.random() - 0.5) * 3
         y = start_y + (end_y - start_y) * eased + (random.random() - 0.5) * 3
         await page.mouse.move(x, y)
@@ -184,14 +204,16 @@ async def human_scroll(page: Page):
 async def warmup_session(page: Page):
     """
     CRITICAL: Visit homepage with human behavior to establish trust.
-    
+
     PROVEN WORKING: NO fingerprint injection! (Makes detection WORSE!)
     Just do natural human-like interactions.
     """
     Actor.log.info("Warming up session...")
 
     # Go to homepage first
-    await page.goto("https://www.lowes.com/", wait_until='domcontentloaded', timeout=60000)
+    await page.goto(
+        "https://www.lowes.com/", wait_until="domcontentloaded", timeout=60000
+    )
     await asyncio.sleep(3.5 + random.random() * 2)  # 3.5-5.5 seconds
 
     # Human behavior - mouse movement and scrolling
@@ -199,16 +221,18 @@ async def warmup_session(page: Page):
     await asyncio.sleep(1 + random.random())
     await human_scroll(page)
     await asyncio.sleep(1.5 + random.random() * 1.5)
-    
+
     # 3. Perform a Search (Crucial for trust)
     Actor.log.info("Searching for 'caulk' to establish trust...")
     try:
-        search_input = page.locator('input[id*="search"], input[name*="search"], input[aria-label*="search"]').first
+        search_input = page.locator(
+            'input[id*="search"], input[name*="search"], input[aria-label*="search"]'
+        ).first
         if await search_input.count() > 0:
             await search_input.click()
             await page.keyboard.type("caulk", delay=100)
             await page.keyboard.press("Enter")
-            await page.wait_for_load_state('domcontentloaded', timeout=30000)
+            await page.wait_for_load_state("domcontentloaded", timeout=30000)
             await asyncio.sleep(3 + random.random() * 2)
             await human_mouse_move(page)
             await human_scroll(page)
@@ -224,7 +248,7 @@ async def set_store_context(page: Page, store_url: str, store_name: str):
     """Set store for pricing/availability"""
     Actor.log.info(f"Setting store: {store_name}")
 
-    await page.goto(store_url, wait_until='domcontentloaded', timeout=60000)
+    await page.goto(store_url, wait_until="domcontentloaded", timeout=60000)
     await asyncio.sleep(2 + random.random())
 
     # Check if already set (sometimes page says "My Store" immediately)
@@ -232,14 +256,19 @@ async def set_store_context(page: Page, store_url: str, store_name: str):
         if await page.locator("button:has-text('My Store')").is_visible():
             Actor.log.info("Store already set as My Store")
             return True
-        header_store = await page.locator("#store-search-link, [data-test='store-search-link']").first.inner_text()
-        if store_name.split(',')[0] in header_store:
+        header_store = await page.locator(
+            "#store-search-link, [data-test='store-search-link']"
+        ).first.inner_text()
+        if store_name.split(",")[0] in header_store:
             Actor.log.info(f"Store verified in header: {header_store}")
             return True
     except:
         pass
 
-    for selector in ["button:has-text('Set Store')", "button:has-text('Set as My Store')"]:
+    for selector in [
+        "button:has-text('Set Store')",
+        "button:has-text('Set as My Store')",
+    ]:
         try:
             btn = page.locator(selector).first
             if await btn.is_visible():
@@ -252,7 +281,7 @@ async def set_store_context(page: Page, store_url: str, store_name: str):
 
     # Final verification
     try:
-        await page.reload(wait_until='domcontentloaded')
+        await page.reload(wait_until="domcontentloaded")
         await asyncio.sleep(2)
         if await page.locator("button:has-text('My Store')").is_visible():
             return True
@@ -279,7 +308,10 @@ _PRICE_DIAG_FALSE_VALUES = {"0", "false", "no", "off", ""}
 
 
 def _price_diag_enabled() -> bool:
-    return os.getenv("GLOORBOT_PRICE_DIAGNOSTICS", "").strip().lower() not in _PRICE_DIAG_FALSE_VALUES
+    return (
+        os.getenv("GLOORBOT_PRICE_DIAGNOSTICS", "").strip().lower()
+        not in _PRICE_DIAG_FALSE_VALUES
+    )
 
 
 def _price_diag_max_len() -> int:
@@ -336,7 +368,39 @@ def _first_money_str(text: str) -> str:
     m = _MONEY_STR_RE.search(text)
     if not m:
         return ""
-    return re.sub(r"\s+", "", m.group(0))
+    raw = re.sub(r"\s+", "", m.group(0))
+    # Lowe's sometimes renders cents as plain digits adjacent to the dollars
+    # and draws the decimal via CSS, which can produce strings like "$1,63710".
+    # Normalize to "$<dollars>.<cents>" to avoid later truncation/decimal shifts.
+    return _normalize_money_str(raw)
+
+
+def _normalize_money_str(value: str) -> str:
+    if not value:
+        return ""
+    s = value.strip().replace(" ", "")
+    if not s.startswith("$"):
+        return s
+    if "." in s:
+        return s
+    digits = s[1:].replace(",", "")
+    if not digits.isdigit():
+        return s
+
+    # If there's no explicit decimal, treat the last 2 digits as cents when
+    # the string looks like it includes cents appended (common on Lowe's).
+    #
+    # Heuristics:
+    # - If there are commas and the last comma group is >3 digits, cents were appended.
+    # - If there are no commas and 4+ digits, cents are likely appended.
+    if "," in s:
+        last_group = s.split(",")[-1]
+        if len(last_group) > 3 and len(digits) > 2:
+            return f"${digits[:-2]}.{digits[-2:]}"
+        return f"${digits}.00"
+    if len(digits) >= 4:
+        return f"${digits[:-2]}.{digits[-2:]}"
+    return f"${digits}.00"
 
 
 def _looks_like_financing_noise(text: str) -> bool:
@@ -388,9 +452,16 @@ def _money_values_from_text_blob(text: str) -> list[float]:
     compact = re.sub(r"\s+", "", cleaned)
     compact = compact.replace(",", "")
     vals: list[float] = []
-    for m in re.finditer(r"\$([0-9]{1,5})(?:\.([0-9]{2}))?", compact):
+    for m in re.finditer(r"\$([0-9]{1,9})(?:\.([0-9]{2}))?", compact):
         whole = m.group(1)
-        cents = m.group(2) or "00"
+        cents = m.group(2)
+        if cents is None:
+            # Handle "$163710" style strings where cents are appended without a dot.
+            if len(whole) > 2:
+                cents = whole[-2:]
+                whole = whole[:-2]
+            else:
+                cents = "00"
         try:
             v = float(f"{whole}.{cents}")
         except Exception:
@@ -426,9 +497,13 @@ async def extract_prices_from_card(card: Locator) -> dict[str, str]:
     except Exception:
         pass
     try:
-        t = card.locator(":scope [data-selector='splp-prd-ttl'], :scope h2, :scope h3").first
+        t = card.locator(
+            ":scope [data-selector='splp-prd-ttl'], :scope h2, :scope h3"
+        ).first
         if await t.count() > 0:
-            diag["title"] = _truncate((await t.inner_text()) or "", _price_diag_max_len())
+            diag["title"] = _truncate(
+                (await t.inner_text()) or "", _price_diag_max_len()
+            )
     except Exception:
         pass
 
@@ -439,7 +514,9 @@ async def extract_prices_from_card(card: Locator) -> dict[str, str]:
     # This is the most reliable selector set - use it first
     try:
         # Try current-price first, then regular-price as fallback
-        current_price_el = card.locator(":scope [data-testid='current-price'], :scope [data-testid='regular-price']").first
+        current_price_el = card.locator(
+            ":scope [data-testid='current-price'], :scope [data-testid='regular-price']"
+        ).first
         if await current_price_el.count() > 0:
             aria = (await current_price_el.get_attribute("aria-label")) or ""
             inner = (await current_price_el.inner_text()) or ""
@@ -451,22 +528,26 @@ async def extract_prices_from_card(card: Locator) -> dict[str, str]:
                 rejected.append("financing_noise_in_text")
             if candidate and not rejected:
                 price_text = candidate
-                diag["steps"].append({
-                    "source": "data_testid_current_price",
-                    "ok": True,
-                    "candidate": candidate,
-                    "aria": _truncate(aria, _price_diag_max_len()),
-                    "text": _truncate(inner, _price_diag_max_len()),
-                })
+                diag["steps"].append(
+                    {
+                        "source": "data_testid_current_price",
+                        "ok": True,
+                        "candidate": candidate,
+                        "aria": _truncate(aria, _price_diag_max_len()),
+                        "text": _truncate(inner, _price_diag_max_len()),
+                    }
+                )
             else:
-                diag["steps"].append({
-                    "source": "data_testid_current_price",
-                    "ok": False,
-                    "candidate": candidate,
-                    "rejected": rejected,
-                    "aria": _truncate(aria, _price_diag_max_len()),
-                    "text": _truncate(inner, _price_diag_max_len()),
-                })
+                diag["steps"].append(
+                    {
+                        "source": "data_testid_current_price",
+                        "ok": False,
+                        "candidate": candidate,
+                        "rejected": rejected,
+                        "aria": _truncate(aria, _price_diag_max_len()),
+                        "text": _truncate(inner, _price_diag_max_len()),
+                    }
+                )
     except Exception:
         pass
 
@@ -483,22 +564,26 @@ async def extract_prices_from_card(card: Locator) -> dict[str, str]:
                 rejected.append("financing_noise_in_text")
             if candidate and not rejected:
                 was_price = candidate
-                diag["steps"].append({
-                    "source": "data_testid_was_price",
-                    "ok": True,
-                    "candidate": candidate,
-                    "aria": _truncate(aria, _price_diag_max_len()),
-                    "text": _truncate(inner, _price_diag_max_len()),
-                })
+                diag["steps"].append(
+                    {
+                        "source": "data_testid_was_price",
+                        "ok": True,
+                        "candidate": candidate,
+                        "aria": _truncate(aria, _price_diag_max_len()),
+                        "text": _truncate(inner, _price_diag_max_len()),
+                    }
+                )
             else:
-                diag["steps"].append({
-                    "source": "data_testid_was_price",
-                    "ok": False,
-                    "candidate": candidate,
-                    "rejected": rejected,
-                    "aria": _truncate(aria, _price_diag_max_len()),
-                    "text": _truncate(inner, _price_diag_max_len()),
-                })
+                diag["steps"].append(
+                    {
+                        "source": "data_testid_was_price",
+                        "ok": False,
+                        "candidate": candidate,
+                        "rejected": rejected,
+                        "aria": _truncate(aria, _price_diag_max_len()),
+                        "text": _truncate(inner, _price_diag_max_len()),
+                    }
+                )
     except Exception:
         pass
 
@@ -506,7 +591,9 @@ async def extract_prices_from_card(card: Locator) -> dict[str, str]:
     if not price_text:
         try:
             now_el = card.locator(":scope [data-selector='splp-prd-act-$']").first
-            diag["canonical_now_count"] = await card.locator(":scope [data-selector='splp-prd-act-$']").count()
+            diag["canonical_now_count"] = await card.locator(
+                ":scope [data-selector='splp-prd-act-$']"
+            ).count()
             if await now_el.count() > 0:
                 aria = (await now_el.get_attribute("aria-label")) or ""
                 inner = (await now_el.inner_text()) or ""
@@ -544,7 +631,9 @@ async def extract_prices_from_card(card: Locator) -> dict[str, str]:
     if not was_price:
         try:
             was_el = card.locator(":scope [data-selector='splp-prd-promo-was-$']").first
-            diag["canonical_was_count"] = await card.locator(":scope [data-selector='splp-prd-promo-was-$']").count()
+            diag["canonical_was_count"] = await card.locator(
+                ":scope [data-selector='splp-prd-promo-was-$']"
+            ).count()
             if await was_el.count() > 0:
                 aria = (await was_el.get_attribute("aria-label")) or ""
                 inner = (await was_el.inner_text()) or ""
@@ -638,7 +727,9 @@ async def extract_prices_from_card(card: Locator) -> dict[str, str]:
                 inner = (await strike.inner_text()) or ""
                 candidate = _first_money_str(inner)
                 rejected = []
-                if _looks_like_financing_noise(inner) or _looks_like_financing_noise(candidate):
+                if _looks_like_financing_noise(inner) or _looks_like_financing_noise(
+                    candidate
+                ):
                     rejected.append("financing_noise_in_text")
                 if candidate and not rejected:
                     was_price = candidate
@@ -719,14 +810,18 @@ async def extract_prices_from_card(card: Locator) -> dict[str, str]:
     diag["price"] = out["price"]
     diag["was_price"] = out["was_price"]
     try:
-        diag["card_text"] = _truncate((await card.inner_text()) or "", _price_diag_max_len())
+        diag["card_text"] = _truncate(
+            (await card.inner_text()) or "", _price_diag_max_len()
+        )
     except Exception:
         pass
     _price_diag_write(diag)
     try:
         # Emit a single-line marker into Actor logs too (cheap to grep in Render).
         if _price_diag_enabled():
-            Actor.log.info(f"PRICE_DIAG now={out['price']} was={out['was_price']} steps={len(diag.get('steps') or [])}")
+            Actor.log.info(
+                f"PRICE_DIAG now={out['price']} was={out['was_price']} steps={len(diag.get('steps') or [])}"
+            )
     except Exception:
         pass
     return out
@@ -753,7 +848,11 @@ async def extract_tile_group_products(card: Locator) -> list[dict]:
         if await title_el.count() > 0:
             title_text = (await title_el.inner_text()).strip()
         if not title_text:
-            aria = (await link_el.get_attribute("aria-label")) if await link_el.count() > 0 else ""
+            aria = (
+                (await link_el.get_attribute("aria-label"))
+                if await link_el.count() > 0
+                else ""
+            )
             title_text = (aria or "").strip()
 
         prices = await extract_prices_from_card(scope)
@@ -767,11 +866,36 @@ async def extract_tile_group_products(card: Locator) -> list[dict]:
             # 1. Images from productimages/ or mobileimages.lowes.com (product photos)
             # 2. Any .jpg/.png/.jpeg that's not a badge
             # 3. None if only badges found
-            
+
+            # Fast path: Lowe's product image marker (avoids grabbing overlay badges).
+            try:
+                preferred = scope.locator("img[data-selector='splp-prd-img-org']").first
+                if await preferred.count() > 0:
+                    src = (
+                        await preferred.get_attribute("src")
+                        or await preferred.get_attribute("data-src")
+                        or await preferred.get_attribute("data-lazy-src")
+                        or ""
+                    )
+                    if src:
+                        if src.startswith("//"):
+                            src = "https:" + src
+                        elif src.startswith("/"):
+                            src = "https://www.lowes.com" + src
+                        low = src.lower()
+                        if (
+                            (not src.startswith("data:"))
+                            and ("/badges/" not in low)
+                            and (not low.endswith(".svg"))
+                        ):
+                            image_url = src
+            except Exception:
+                pass
+
             all_imgs = await scope.locator("img").all()
             product_images = []  # High priority: actual product photos
             fallback_images = []  # Low priority: other images
-            
+
             for img in all_imgs:
                 src = (
                     await img.get_attribute("src")
@@ -787,34 +911,49 @@ async def extract_tile_group_products(card: Locator) -> list[dict]:
                     )
                     first = srcset.split(",")[0].strip()
                     src = first.split(" ")[0].strip() if first else ""
-                
+
                 # Skip invalid/badge images
                 if not src or src.startswith("data:"):
                     continue
                 # Filter out badges, icons, and clearance tags (common patterns)
                 src_lower = src.lower()
-                if any(pattern in src_lower for pattern in ["/badges/", "clearance", "badge", "icon", ".svg"]):
+                if any(
+                    pattern in src_lower
+                    for pattern in [
+                        "/badges/",
+                        "lowescdn.com/images/badges",
+                        "badge",
+                        "icon",
+                        ".svg",
+                    ]
+                ):
                     continue
-                
+
                 # Normalize URL
                 if src.startswith("//"):
                     src = "https:" + src
                 elif src.startswith("/"):
                     src = "https://www.lowes.com" + src
-                
+
                 # Categorize by quality
                 if "productimages/" in src or "mobileimages.lowes.com" in src:
                     product_images.append(src)
-                elif ".jpg" in src.lower() or ".png" in src.lower() or ".jpeg" in src.lower():
+                elif (
+                    ".jpg" in src.lower()
+                    or ".png" in src.lower()
+                    or ".jpeg" in src.lower()
+                ):
                     fallback_images.append(src)
-            
+
             # Use best available image
-            if product_images:
+            if image_url:
+                pass
+            elif product_images:
                 image_url = product_images[0]  # Prefer product photos
             elif fallback_images:
                 image_url = fallback_images[0]  # Fallback to any valid image
             # else: image_url stays None (no valid image found)
-            
+
         except Exception:
             image_url = None
 
@@ -838,6 +977,7 @@ async def extract_tile_group_products(card: Locator) -> list[dict]:
 # ============================================================================
 # PICKUP FILTER - CRITICAL FOR LOCAL INVENTORY
 # ============================================================================
+
 
 async def apply_pickup_filter(page: Page, category_name: str) -> bool:
     """
@@ -894,7 +1034,9 @@ async def apply_pickup_filter(page: Page, category_name: str) -> bool:
                 if await toggle.count() > 0 and await toggle.is_visible():
                     expanded = await toggle.get_attribute("aria-expanded")
                     if expanded == "false":
-                        Actor.log.info(f"[{category_name}] Expanding availability section")
+                        Actor.log.info(
+                            f"[{category_name}] Expanding availability section"
+                        )
                         await toggle.click()
                         await asyncio.sleep(0.4 + random.random() * 0.4)
                     return True
@@ -917,7 +1059,10 @@ async def apply_pickup_filter(page: Page, category_name: str) -> bool:
 
             # Check if element or parent has disabled/greyed CSS classes
             class_name = await element.get_attribute("class") or ""
-            if any(cls in class_name.lower() for cls in ["disabled", "greyed", "inactive", "unavailable"]):
+            if any(
+                cls in class_name.lower()
+                for cls in ["disabled", "greyed", "inactive", "unavailable"]
+            ):
                 return True
 
             # Check if input checkbox is disabled
@@ -1077,16 +1222,20 @@ async def apply_pickup_filter(page: Page, category_name: str) -> bool:
             """)
 
             # Check if the filter is disabled (no items available for pickup)
-            if result.get('disabled'):
-                reason = result.get('reason', 'unknown')
-                Actor.log.info(f"[{category_name}] Pickup filter is DISABLED (reason: {reason}) - no pickup items available at this store - SKIPPING CATEGORY")
-                return 'disabled'  # Special return value to indicate we should skip
+            if result.get("disabled"):
+                reason = result.get("reason", "unknown")
+                Actor.log.info(
+                    f"[{category_name}] Pickup filter is DISABLED (reason: {reason}) - no pickup items available at this store - SKIPPING CATEGORY"
+                )
+                return "disabled"  # Special return value to indicate we should skip
 
-            if result.get('wasChecked'):
+            if result.get("wasChecked"):
                 Actor.log.info(f"[{category_name}] Pickup filter already checked (JS)")
                 return True
-            if result.get('clicked'):
-                Actor.log.info(f"[{category_name}] Clicked pickup filter via JS (method: {result.get('method', 'checkbox')})")
+            if result.get("clicked"):
+                Actor.log.info(
+                    f"[{category_name}] Clicked pickup filter via JS (method: {result.get('method', 'checkbox')})"
+                )
                 await asyncio.sleep(1.5 + random.random())
                 try:
                     await page.wait_for_load_state("networkidle", timeout=10000)
@@ -1094,11 +1243,19 @@ async def apply_pickup_filter(page: Page, category_name: str) -> bool:
                     pass
                 # CRITICAL FIX: Verify via URL change - Lowe's uses inStock=1 parameter
                 current_url = page.url.lower()
-                if "instock=1" in current_url or "pickup" in current_url or "refinement" in current_url:
-                    Actor.log.info(f"[{category_name}] Pickup filter verified via URL (inStock param)")
+                if (
+                    "instock=1" in current_url
+                    or "pickup" in current_url
+                    or "refinement" in current_url
+                ):
+                    Actor.log.info(
+                        f"[{category_name}] Pickup filter verified via URL (inStock param)"
+                    )
                     return True
                 # Even if URL doesn't show it, the click happened - trust it
-                Actor.log.info(f"[{category_name}] Pickup filter applied (JS click succeeded)")
+                Actor.log.info(
+                    f"[{category_name}] Pickup filter applied (JS click succeeded)"
+                )
                 return True
 
         except Exception as e:
@@ -1110,19 +1267,27 @@ async def apply_pickup_filter(page: Page, category_name: str) -> bool:
     if js_result is True:
         # Verify the filter actually shows products
         await asyncio.sleep(2)
-        zero_products = await page.evaluate("() => document.body.innerText.match(/0 Products|0 results|Please reduce your filters/i) !== null")
+        zero_products = await page.evaluate(
+            "() => document.body.innerText.match(/0 Products|0 results|Please reduce your filters/i) !== null"
+        )
         if zero_products:
-            Actor.log.warning(f"[{category_name}] Pickup filter applied but shows 0 products - no pickup items available")
+            Actor.log.warning(
+                f"[{category_name}] Pickup filter applied but shows 0 products - no pickup items available"
+            )
             return False
         return True  # Filter successfully applied with products
-    elif js_result == 'disabled':
-        Actor.log.info(f"[{category_name}] JS detection confirmed pickup filter is DISABLED - skipping category")
+    elif js_result == "disabled":
+        Actor.log.info(
+            f"[{category_name}] JS detection confirmed pickup filter is DISABLED - skipping category"
+        )
         return False  # Filter is disabled - do NOT attempt fallback
     # If js_result is False (not found), continue to fallback selector-based approach
 
     # APPROACH 2: Fallback to selector-based clicking
     for attempt in range(3):
-        Actor.log.info(f"[{category_name}] Looking for pickup filter via selectors (attempt {attempt + 1}/3)")
+        Actor.log.info(
+            f"[{category_name}] Looking for pickup filter via selectors (attempt {attempt + 1}/3)"
+        )
 
         for selector in pickup_selectors:
             try:
@@ -1136,7 +1301,9 @@ async def apply_pickup_filter(page: Page, category_name: str) -> bool:
 
                         # CRITICAL: Check if element is disabled before attempting to click
                         if await is_element_disabled(element):
-                            Actor.log.info(f"[{category_name}] Pickup filter is DISABLED (no pickup items available) - skipping category")
+                            Actor.log.info(
+                                f"[{category_name}] Pickup filter is DISABLED (no pickup items available) - skipping category"
+                            )
                             return False
 
                         # STRICT VALIDATION: Element or its title/aria-label must contain "Pickup"
@@ -1145,16 +1312,27 @@ async def apply_pickup_filter(page: Page, category_name: str) -> bool:
                         title_attr = (await element.get_attribute("title")) or ""
                         combined_text = (text + " " + aria + " " + title_attr).lower()
 
-                        if "pickup" not in combined_text and "pick up" not in combined_text:
+                        if (
+                            "pickup" not in combined_text
+                            and "pick up" not in combined_text
+                        ):
                             # CRITICAL FIX: Check ONLY the immediate parent row, not the whole sidebar
                             # Using specialized Lowe's filter row selectors
-                            container_text = await page.evaluate("""(el) => {
+                            container_text = await page.evaluate(
+                                """(el) => {
                                 const row = el.closest('div.filter-label, li.filter-item, div[class*="filter"]');
                                 return row ? row.innerText : '';
-                            }""", element)
-                            
-                            if "pickup" not in container_text.lower() and "pick up" not in container_text.lower():
-                                Actor.log.debug(f"[{category_name}] Skipping non-pickup filter: '{text[:20]}...' (Container: '{container_text[:30]}')")
+                            }""",
+                                element,
+                            )
+
+                            if (
+                                "pickup" not in container_text.lower()
+                                and "pick up" not in container_text.lower()
+                            ):
+                                Actor.log.debug(
+                                    f"[{category_name}] Skipping non-pickup filter: '{text[:20]}...' (Container: '{container_text[:30]}')"
+                                )
                                 continue
 
                         # Skip if text is too long (probably wrong element)
@@ -1163,17 +1341,26 @@ async def apply_pickup_filter(page: Page, category_name: str) -> bool:
 
                         # Check if already selected
                         if await is_filter_selected(element):
-                            Actor.log.info(f"[{category_name}] Pickup filter already active")
+                            Actor.log.info(
+                                f"[{category_name}] Pickup filter already active"
+                            )
                             # Verify it shows products
                             await asyncio.sleep(1)
-                            zero_products = await page.locator('text="0 Products"').count() > 0 or await page.locator('text="0 results"').count() > 0
+                            zero_products = (
+                                await page.locator('text="0 Products"').count() > 0
+                                or await page.locator('text="0 results"').count() > 0
+                            )
                             if zero_products:
-                                Actor.log.warning(f"[{category_name}] Pickup filter active but shows 0 products")
+                                Actor.log.warning(
+                                    f"[{category_name}] Pickup filter active but shows 0 products"
+                                )
                                 return False
                             return True
 
                         # Click the filter
-                        Actor.log.info(f"[{category_name}] Clicking pickup filter: '{text[:40]}'")
+                        Actor.log.info(
+                            f"[{category_name}] Clicking pickup filter: '{text[:40]}'"
+                        )
                         await element.click()
 
                         # Wait for page update
@@ -1184,9 +1371,14 @@ async def apply_pickup_filter(page: Page, category_name: str) -> bool:
                             pass
 
                         # Check if we got 0 products after clicking
-                        zero_products = await page.locator('text="0 Products"').count() > 0 or await page.locator('text="0 results"').count() > 0
+                        zero_products = (
+                            await page.locator('text="0 Products"').count() > 0
+                            or await page.locator('text="0 results"').count() > 0
+                        )
                         if zero_products:
-                            Actor.log.warning(f"[{category_name}] Filter click resulted in 0 products - no pickup items available")
+                            Actor.log.warning(
+                                f"[{category_name}] Filter click resulted in 0 products - no pickup items available"
+                            )
                             return False
 
                         # VERIFY the click worked
@@ -1196,8 +1388,14 @@ async def apply_pickup_filter(page: Page, category_name: str) -> bool:
 
                         # Check URL for filter params
                         current_url = page.url.lower()
-                        if "pickup" in current_url or "availability" in current_url or "refinement" in current_url:
-                            Actor.log.info(f"[{category_name}] Pickup filter verified via URL")
+                        if (
+                            "pickup" in current_url
+                            or "availability" in current_url
+                            or "refinement" in current_url
+                        ):
+                            Actor.log.info(
+                                f"[{category_name}] Pickup filter verified via URL"
+                            )
                             return True
 
                     except Exception as e:
@@ -1217,31 +1415,43 @@ async def apply_pickup_filter(page: Page, category_name: str) -> bool:
 # SCRAPING
 # ============================================================================
 
-async def scrape_category_page(page: Page, url: str, store_info: dict, page_num: int = 1) -> list[dict]:
+
+async def scrape_category_page(
+    page: Page, url: str, store_info: dict, page_num: int = 1
+) -> list[dict]:
     """Scrape one page of products"""
     products = []
 
     # Build URL with pagination - preserve all existing query params (including filters!)
     from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
-    
+
     parsed = urlparse(url)
     params = parse_qs(parsed.query, keep_blank_values=True)
-    
+
     # Add/update offset for pagination
     if page_num > 1:
-        params['offset'] = [str((page_num - 1) * 24)]
-    elif 'offset' in params:
-        del params['offset']  # Remove offset for page 1
-    
+        params["offset"] = [str((page_num - 1) * 24)]
+    elif "offset" in params:
+        del params["offset"]  # Remove offset for page 1
+
     # Rebuild URL with all params
     new_query = urlencode(params, doseq=True)
-    page_url = urlunparse((parsed.scheme, parsed.netloc, parsed.path, parsed.params, new_query, parsed.fragment))
+    page_url = urlunparse(
+        (
+            parsed.scheme,
+            parsed.netloc,
+            parsed.path,
+            parsed.params,
+            new_query,
+            parsed.fragment,
+        )
+    )
 
     # Navigate with human behavior - MINIMUM 1.5 seconds to avoid blocking
     await asyncio.sleep(1.5 + random.random() * 2.4)  # 1.5-3.9 seconds (30% inc)
 
     try:
-        await page.goto(page_url, wait_until='domcontentloaded', timeout=60000)
+        await page.goto(page_url, wait_until="domcontentloaded", timeout=60000)
     except asyncio.TimeoutError:
         Actor.log.error(f"Navigation timeout on page {page_num} after 60s")
         raise  # Re-raise timeout - browser might be hung
@@ -1266,7 +1476,9 @@ async def scrape_category_page(page: Page, url: str, store_info: dict, page_num:
         )
         raise RuntimeError(f"Category redirected from /pl/ to /c/ page: {page.url}")
 
-    await asyncio.sleep(2.0 + random.random() * 2.55)  # 2.0-4.55 seconds (30% inc) after page load
+    await asyncio.sleep(
+        2.0 + random.random() * 2.55
+    )  # 2.0-4.55 seconds (30% inc) after page load
 
     try:
         await human_mouse_move(page)
@@ -1275,16 +1487,18 @@ async def scrape_category_page(page: Page, url: str, store_info: dict, page_num:
         Actor.log.warning(f"Interaction error on page {page_num}: {e}")
         # Continue even if mouse/scroll fails
 
-    await asyncio.sleep(1.5 + random.random() * 1.75)  # 1.5-3.25 seconds (30% inc) before scraping
+    await asyncio.sleep(
+        1.5 + random.random() * 1.75
+    )  # 1.5-3.25 seconds (30% inc) before scraping
 
     # CRITICAL: Verify the URL still has pickup filter applied.
     # The pickup filter adds parameters like inStock=1 or refinement IDs.
     # If these are missing, we might be scraping unfiltered nationwide inventory.
     current_url_lower = page.url.lower()
     has_pickup_indicator = (
-        "instock=1" in current_url_lower or
-        "pickup" in current_url_lower or
-        "refinement" in current_url_lower
+        "instock=1" in current_url_lower
+        or "pickup" in current_url_lower
+        or "refinement" in current_url_lower
     )
     if not has_pickup_indicator and page_num == 1:
         # On page 1, the filter should definitely be applied.
@@ -1300,7 +1514,7 @@ async def scrape_category_page(page: Page, url: str, store_info: dict, page_num:
         if "Access Denied" in title or "Robot" in title or "Blocked" in title:
             Actor.log.error(f"BLOCKED on page {page_num}: {title}")
             raise Exception(f"Blocked by anti-bot: {title}")  # Raise to stop scraping
-        
+
         # ABSOLUTE KILL-SWITCH: If page says 0 results, STOP IMMEDIATELY
         # This prevents infinite loops on bad filter landing pages
         empty_check = await page.evaluate("""() => {
@@ -1308,11 +1522,15 @@ async def scrape_category_page(page: Page, url: str, store_info: dict, page_num:
             return /0 Products/i.test(body) || /0 results/i.test(body) || /Please reduce your filters/i.test(body);
         }""")
         if empty_check:
-            Actor.log.warning(f"[{store_info['name']} - {url.split('/')[-1]}] Zero products detected - ABORTING CATEGORY")
+            Actor.log.warning(
+                f"[{store_info['name']} - {url.split('/')[-1]}] Zero products detected - ABORTING CATEGORY"
+            )
             return []
-            
+
     except asyncio.TimeoutError:
-        Actor.log.error(f"Timeout getting page title on page {page_num} - browser may be hung")
+        Actor.log.error(
+            f"Timeout getting page title on page {page_num} - browser may be hung"
+        )
         raise  # Re-raise - this indicates a serious problem
 
     # ------------------------------------------------------------------------
@@ -1325,7 +1543,9 @@ async def scrape_category_page(page: Page, url: str, store_info: dict, page_num:
     # ------------------------------------------------------------------------
     expected_tiles = None
     try:
-        total_attr = await page.locator("#listItems").first.get_attribute("data-totaltile")
+        total_attr = await page.locator("#listItems").first.get_attribute(
+            "data-totaltile"
+        )
         if total_attr and total_attr.strip().isdigit():
             expected_tiles = int(total_attr.strip())
     except Exception:
@@ -1351,16 +1571,166 @@ async def scrape_category_page(page: Page, url: str, store_info: dict, page_num:
                     return (t || "").replace(/\\s+/g, " ").trim();
                 }
 
-                function firstMoney(t) {
-                    const m = String(t || "").match(/\\$\\s*\\d{1,3}(?:,\\d{3})*(?:\\.\\d{2})?/);
-                    return m ? m[0].replace(/\\s+/g, "") : null;
+                function normalizeMoney(m) {
+                    if (!m) return null;
+                    let s = String(m).replace(/\\s+/g, "");
+                    if (!s.startsWith("$")) return null;
+                    if (s.includes(".")) return s;
+                    const raw = s.slice(1);
+                    const digits = raw.replace(/,/g, "");
+                    if (!/^\\d+$/.test(digits)) return s;
+
+                    if (s.includes(",")) {
+                        const lastGroup = s.split(",").pop() || "";
+                        // If the last comma group is >3 digits, cents were likely appended.
+                        if (lastGroup.length > 3 && digits.length > 2) {
+                            return "$" + digits.slice(0, -2) + "." + digits.slice(-2);
+                        }
+                        return "$" + digits + ".00";
+                    }
+
+                    // No commas and no dot: when 4+ digits, Lowe's often means cents are appended.
+                    if (digits.length >= 4) {
+                        return "$" + digits.slice(0, -2) + "." + digits.slice(-2);
+                    }
+                    return "$" + digits + ".00";
                 }
+
+                function firstMoney(t) {
+                    const s = String(t || "");
+                    // Some Lowe's nodes include multiple "$..." fragments (e.g. price + savings).
+                    // Also, some price containers can accidentally include other numeric text.
+                    // Collect all candidates and prefer the one that looks most like a real price.
+                    // IMPORTANT: Support prices >= $1,000 even if the comma is not present in
+                    // text (some Lowe's price widgets render separators via CSS).
+                    const re = /\\$\\s*\\d+(?:,\\d{3})*(?:\\.\\d{2}|\\d{2})?/g;
+                    const matches = s.match(re) || [];
+                    if (!matches.length) return null;
+
+                    const candidates = [];
+                    for (const raw of matches) {
+                        const norm = normalizeMoney(raw);
+                        if (norm) candidates.push({ raw, norm });
+                    }
+                    if (!candidates.length) return null;
+
+                    function score(raw) {
+                        const r = String(raw || "");
+                        if (r.includes(".")) return 3;
+                        if (r.includes(",")) {
+                            const last = r.split(",").pop() || "";
+                            // When Lowe's appends cents without a dot, the last group becomes >3.
+                            if (last.length > 3) return 2;
+                            return 1;
+                        }
+                        const digits = r.replace(/[^0-9]/g, "");
+                        if (digits.length >= 4) return 2;
+                        return 1;
+                    }
+
+                    function asNumber(norm) {
+                        try {
+                            return parseFloat(String(norm || "").replace(/[^0-9.]/g, "")) || 0;
+                        } catch (e) {
+                            return 0;
+                        }
+                    }
+
+                    candidates.sort((a, b) => {
+                        const sa = score(a.raw);
+                        const sb = score(b.raw);
+                        if (sb !== sa) return sb - sa;
+                        // Tie-breaker: prefer the larger $ amount (e.g. "$2,699.00" over "Save $901.00").
+                        return asNumber(b.norm) - asNumber(a.norm);
+                    });
+                    return candidates[0].norm;
+                }
+
 
                 function normalizeHref(href) {
                     if (!href) return null;
                     if (href.startsWith("/")) return "https://www.lowes.com" + href;
                     if (href.startsWith("http")) return href;
                     return href;
+                }
+
+                function normalizeImgSrc(img) {
+                    if (!img) return null;
+                    let src =
+                        img.getAttribute("src") ||
+                        img.getAttribute("data-src") ||
+                        img.getAttribute("data-lazy-src") ||
+                        "";
+                    if (!src) {
+                        const srcset = img.getAttribute("srcset") || img.getAttribute("data-srcset") || "";
+                        const first = srcset.split(",")[0].trim();
+                        src = first ? first.split(" ")[0].trim() : "";
+                    }
+                    if (!src) return null;
+                    if (src.startsWith("//")) src = "https:" + src;
+                    if (src.startsWith("/")) src = "https://www.lowes.com" + src;
+                    if (src.startsWith("data:")) return null;
+                    return src;
+                }
+
+                function isBadgeImage(img, src) {
+                    const low = String(src || "").toLowerCase();
+                    if (!low) return true;
+                    if (low.endsWith(".svg")) return true;
+                    if (low.includes("/badges/") || low.includes("lowescdn.com/images/badges")) return true;
+                    if (low.includes("badge") || low.includes("sprite") || low.includes("icon")) return true;
+                    const alt = String((img && img.getAttribute("alt")) || "").toLowerCase();
+                    if (alt.includes("clearance") || alt.includes("trending") || alt.includes("hot buy")) return true;
+                    return false;
+                }
+
+                function pickProductImage(root, linkEl, scopeSel) {
+                    const prefix = scopeSel ? scopeSel + " " : "";
+                    const q = (sel) => root.querySelector(prefix + sel);
+                    const qAll = (sel) => Array.from(root.querySelectorAll(prefix + sel));
+
+                    const candidates = [];
+                    // Strong signal: Lowe's product image
+                    const preferred = q('img[data-selector="splp-prd-img-org"]');
+                    if (preferred) candidates.push(preferred);
+                    if (linkEl) {
+                        const linkPreferred = linkEl.querySelector('img[data-selector="splp-prd-img-org"]');
+                        if (linkPreferred) candidates.push(linkPreferred);
+                        candidates.push(...Array.from(linkEl.querySelectorAll("img")));
+                    }
+                    // Then any images in the scoped card
+                    candidates.push(...qAll("img"));
+
+                    let best = null;
+                    let bestScore = -1;
+                    for (const img of candidates) {
+                        const src = normalizeImgSrc(img);
+                        if (!src) continue;
+                        if (isBadgeImage(img, src)) continue;
+
+                        let score = 0;
+                        const low = src.toLowerCase();
+                        if (low.includes("mobileimages.lowes.com")) score += 10;
+                        if (low.includes("productimages/")) score += 10;
+                        if (low.includes(".jpg") || low.includes(".jpeg") || low.includes(".png")) score += 2;
+                        if (score > bestScore) {
+                            best = src;
+                            bestScore = score;
+                        }
+                    }
+                    return best;
+                }
+
+                function pickMoneyFromEl(el) {
+                    if (!el) return null;
+                    const ariaLabel = el.getAttribute("aria-label") || "";
+                    const fromAria = firstMoney(ariaLabel);
+                    if (fromAria) return fromAria;
+                    // Some Lowe's tiles render the decimal/comma via CSS and split the text into
+                    // multiple spans. Prefer innerText (adds separators) over textContent to
+                    // reduce accidental digit concatenation with nearby UI numbers.
+                    const t = el.innerText || el.textContent || "";
+                    return firstMoney(t);
                 }
 
                 function extractCard(card) {
@@ -1386,9 +1756,16 @@ async def scrape_category_page(page: Page, url: str, store_info: dict, page_num:
                     if (lowTitle.includes("related searches")) return null;
                     if (lowTitle.includes("pickup today at")) return null;
 
-                    const nowEl = card.querySelector('[data-selector="splp-prd-act-$"]');
-                    const wasEl = card.querySelector('[data-selector="splp-prd-promo-was-$"]');
+                    // Prefer data-testid price nodes when available (tighter + less polluted).
+                    const nowEl =
+                        card.querySelector('[data-testid="current-price"]') ||
+                        card.querySelector('[data-testid="regular-price"]') ||
+                        card.querySelector('[data-selector="splp-prd-act-$"]');
+                    const wasEl =
+                        card.querySelector('[data-testid="was-price"]') ||
+                        card.querySelector('[data-selector="splp-prd-promo-was-$"]');
                     const strike = card.querySelector("s, del");
+
 
                     const text = normText(card.textContent);
                     const pickupMatch = /pickup\\b/i.test(text) ? (text.match(/pickup[^.]{0,80}/i) || [])[0] : null;
@@ -1402,33 +1779,18 @@ async def scrape_category_page(page: Page, url: str, store_info: dict, page_num:
                     // Only fallback to textContent if aria-label fails
                     let now = null;
                     if (nowEl) {
-                        const ariaLabel = nowEl.getAttribute("aria-label") || "";
-                        now = firstMoney(ariaLabel) || firstMoney(nowEl.textContent);
+                        now = pickMoneyFromEl(nowEl);
                     }
-                    // DO NOT fallback to firstMoney(text) - it grabs random $ amounts from card!
+                    // DO NOT fallback to firstMoney(card text) - it grabs random $ amounts from card!
 
                     let was = null;
                     if (wasEl) {
-                        const wasAriaLabel = wasEl.getAttribute("aria-label") || "";
-                        was = firstMoney(wasAriaLabel) || firstMoney(wasEl.textContent);
+                        was = pickMoneyFromEl(wasEl);
                     } else if (strike) {
-                        was = firstMoney(strike.textContent);
+                        was = firstMoney(strike.innerText || strike.textContent);
                     }
 
-                    let imageUrl = null;
-                    const img = card.querySelector("img");
-                    if (img) {
-                        let src = img.getAttribute("src") || img.getAttribute("data-src") || "";
-                        if (!src) {
-                            const srcset = img.getAttribute("srcset") || img.getAttribute("data-srcset") || "";
-                            const first = srcset.split(",")[0].trim();
-                            src = first ? first.split(" ")[0].trim() : "";
-                        }
-                        if (src.startsWith("//")) src = "https:" + src;
-                        if (src.startsWith("/")) src = "https://www.lowes.com" + src;
-                        if (src.startsWith("data:")) src = "";
-                        imageUrl = src || null;
-                    }
+                    const imageUrl = pickProductImage(card, a, null);
 
                     return {
                         href,
@@ -1528,8 +1890,13 @@ async def scrape_category_page(page: Page, url: str, store_info: dict, page_num:
                         if (lowTitle.includes("related searches")) continue;
                         if (lowTitle.includes("pickup today at")) continue;
 
-                        const nowEl = tileGroup.querySelector(`${scopeSel} [data-selector="splp-prd-act-$"]`);
-                        const wasEl = tileGroup.querySelector(`${scopeSel} [data-selector="splp-prd-promo-was-$"]`);
+                        const nowEl =
+                            tileGroup.querySelector(`${scopeSel} [data-testid="current-price"]`) ||
+                            tileGroup.querySelector(`${scopeSel} [data-testid="regular-price"]`) ||
+                            tileGroup.querySelector(`${scopeSel} [data-selector="splp-prd-act-$"]`);
+                        const wasEl =
+                            tileGroup.querySelector(`${scopeSel} [data-testid="was-price"]`) ||
+                            tileGroup.querySelector(`${scopeSel} [data-selector="splp-prd-promo-was-$"]`);
                         const strike = tileGroup.querySelector(`${scopeSel} s, ${scopeSel} del`);
 
                         // Build a tile-scoped text blob (avoid mixing across tiles).
@@ -1544,32 +1911,18 @@ async def scrape_category_page(page: Page, url: str, store_info: dict, page_num:
 
                         let now = null;
                         if (nowEl) {
-                            const ariaLabel = nowEl.getAttribute("aria-label") || "";
-                            now = firstMoney(ariaLabel) || firstMoney(nowEl.textContent);
+                            now = pickMoneyFromEl(nowEl);
                         }
 
                         let was = null;
                         if (wasEl) {
-                            const wasAriaLabel = wasEl.getAttribute("aria-label") || "";
-                            was = firstMoney(wasAriaLabel) || firstMoney(wasEl.textContent);
+                            was = pickMoneyFromEl(wasEl);
                         } else if (strike) {
-                            was = firstMoney(strike.textContent);
+                            was = firstMoney(strike.innerText || strike.textContent);
                         }
 
-                        let imageUrl = null;
-                        const img = tileGroup.querySelector(`${scopeSel} img`);
-                        if (img) {
-                            let src = img.getAttribute("src") || img.getAttribute("data-src") || "";
-                            if (!src) {
-                                const srcset = img.getAttribute("srcset") || img.getAttribute("data-srcset") || "";
-                                const first = srcset.split(",")[0].trim();
-                                src = first ? first.split(" ")[0].trim() : "";
-                            }
-                            if (src.startsWith("//")) src = "https:" + src;
-                            if (src.startsWith("/")) src = "https://www.lowes.com" + src;
-                            if (src.startsWith("data:")) src = "";
-                            imageUrl = src || null;
-                        }
+
+                        const imageUrl = pickProductImage(tileGroup, a, scopeSel);
 
                         out.push({
                             href,
@@ -1628,17 +1981,21 @@ async def scrape_category_page(page: Page, url: str, store_info: dict, page_num:
                 reason = near_me_payload.get("reason", "unknown")
                 Actor.log.warning(f"Near-me extraction failed: {reason}")
 
-        if isinstance(near_me_payload, dict) and near_me_payload.get("ok") and near_me_payload.get("products"):
+        if (
+            isinstance(near_me_payload, dict)
+            and near_me_payload.get("ok")
+            and near_me_payload.get("products")
+        ):
             now = datetime.utcnow().isoformat()
             js_products = near_me_payload.get("products", [])
-            
+
             for idx, p in enumerate(js_products):
                 try:
                     product_url = p.get("href")
                     title_text = (p.get("title") or "").strip()
                     price_text = (p.get("now_price") or "").strip()
                     was_price_text = (p.get("was_price") or "").strip()
-                    
+
                     if not product_url or not title_text:
                         continue
 
@@ -1659,7 +2016,9 @@ async def scrape_category_page(page: Page, url: str, store_info: dict, page_num:
                         }
                     )
                 except Exception as e:
-                    Actor.log.warning(f"Product {idx+1}: Exception during processing: {e}")
+                    Actor.log.warning(
+                        f"Product {idx + 1}: Exception during processing: {e}"
+                    )
                     continue
 
             if expected_tiles and len(products) != expected_tiles:
@@ -1685,15 +2044,15 @@ async def scrape_category_page(page: Page, url: str, store_info: dict, page_num:
     # The main product grid is inside: #listingPagesSearchResults, .search-results-wrapper,
     # or sections with role="main" / id="main-content"
     main_grid_containers = [
-        '#listingPagesSearchResults',           # Primary Lowe's search results container
-        '[data-selector="splp-prd-lst"]',        # Product list container
-        '.search-results-wrapper',               # Search results wrapper
-        '[class*="searchResults"]',              # Any search results class
-        '[class*="product-listing"]',            # Product listing container
-        'main[role="main"]',                     # Main content area
-        '#main-content',                         # Main content ID
-        'main',                                  # Main element fallback
-        '#listItems',                            # WARNING: often includes promo carousels; keep as last resort
+        "#listingPagesSearchResults",  # Primary Lowe's search results container
+        '[data-selector="splp-prd-lst"]',  # Product list container
+        ".search-results-wrapper",  # Search results wrapper
+        '[class*="searchResults"]',  # Any search results class
+        '[class*="product-listing"]',  # Product listing container
+        'main[role="main"]',  # Main content area
+        "#main-content",  # Main content ID
+        "main",  # Main element fallback
+        "#listItems",  # WARNING: often includes promo carousels; keep as last resort
     ]
 
     # First, try to find the main grid container to scope our search
@@ -1710,7 +2069,7 @@ async def scrape_category_page(page: Page, url: str, store_info: dict, page_num:
 
     # Define card selectors - these should be SPECIFIC to actual product cards
     card_selectors = [
-        'div.tile_group',  # Lowe's actual product tile with content
+        "div.tile_group",  # Lowe's actual product tile with content
         '[class*="tile_group"]',  # Alternative class selector
         '[data-selector="splp-prd-crd"]',  # Wrapper (may be empty)
         '[class*="product-card"]',
@@ -1756,7 +2115,11 @@ async def scrape_category_page(page: Page, url: str, store_info: dict, page_num:
         try:
             # If a tile_group contains multiple products, split by data-tile.
             try:
-                if await card.locator("[data-tile]").count() > 0 and await card.locator("[data-selector='splp-prd-act-$']").count() > 1:
+                if (
+                    await card.locator("[data-tile]").count() > 0
+                    and await card.locator("[data-selector='splp-prd-act-$']").count()
+                    > 1
+                ):
                     tile_products = await extract_tile_group_products(card)
                     if tile_products:
                         now = datetime.utcnow().isoformat()
@@ -1811,7 +2174,12 @@ async def scrape_category_page(page: Page, url: str, store_info: dict, page_num:
                     except Exception:
                         title_text = ""
 
-                if (not title_text) or ("$" in title_text) or ("%" in title_text) or ("save" in title_text.lower()):
+                if (
+                    (not title_text)
+                    or ("$" in title_text)
+                    or ("%" in title_text)
+                    or ("save" in title_text.lower())
+                ):
                     # Best-effort fallback: use the first non-price line from the card blob.
                     try:
                         blob_title = await card.inner_text()
@@ -1822,7 +2190,11 @@ async def scrape_category_page(page: Page, url: str, store_info: dict, page_num:
                             low = s.lower()
                             if "$" in s:
                                 continue
-                            if "add to cart" in low or "pickup" in low or "delivery" in low:
+                            if (
+                                "add to cart" in low
+                                or "pickup" in low
+                                or "delivery" in low
+                            ):
                                 continue
                             if "save" in low or "savings" in low or "off" == low:
                                 continue
@@ -1841,6 +2213,33 @@ async def scrape_category_page(page: Page, url: str, store_info: dict, page_num:
                 image_url = None
                 try:
                     # Find the actual product image, NOT badge/clearance SVGs
+                    # Fast path: Lowe's product image marker.
+                    try:
+                        preferred = card.locator(
+                            ":scope img[data-selector='splp-prd-img-org']"
+                        ).first
+                        if await preferred.count() > 0:
+                            src = (
+                                await preferred.get_attribute("src")
+                                or await preferred.get_attribute("data-src")
+                                or await preferred.get_attribute("data-lazy-src")
+                                or ""
+                            )
+                            if src:
+                                if src.startswith("//"):
+                                    src = "https:" + src
+                                if src.startswith("/"):
+                                    src = "https://www.lowes.com" + src
+                                low = src.lower()
+                                if (
+                                    (not src.startswith("data:"))
+                                    and ("/badges/" not in low)
+                                    and (not low.endswith(".svg"))
+                                ):
+                                    image_url = src
+                    except Exception:
+                        pass
+
                     all_imgs = await card.locator(":scope img").all()
                     for img in all_imgs:
                         src = (
@@ -1857,39 +2256,63 @@ async def scrape_category_page(page: Page, url: str, store_info: dict, page_num:
                             )
                             first = srcset.split(",")[0].strip()
                             src = first.split(" ")[0].strip() if first else ""
-                        
-                        
+
                         # Skip badge/clearance images (comprehensive filter)
                         src_lower = src.lower()
-                        if any(pattern in src_lower for pattern in ["/badges/", "clearance", "badge", "icon", ".svg"]):
+                        if any(
+                            pattern in src_lower
+                            for pattern in [
+                                "/badges/",
+                                "lowescdn.com/images/badges",
+                                "badge",
+                                "icon",
+                                ".svg",
+                            ]
+                        ):
                             continue
                         # Skip data: URIs
                         if src.startswith("data:"):
                             continue
-                        
+
                         if src.startswith("//"):
                             src = "https:" + src
                         if src.startswith("/"):
                             src = "https://www.lowes.com" + src
-                        
+
                         # Prefer product images from mobileimages.lowes.com/productimages/
                         if "productimages/" in src or "mobileimages.lowes.com" in src:
                             image_url = src
                             break  # Found the best match
-                        
+
                         # Fallback: any non-badge image with jpg/png extension
-                        if not image_url and (".jpg" in src.lower() or ".png" in src.lower() or ".jpeg" in src.lower()):
+                        if not image_url and (
+                            ".jpg" in src.lower()
+                            or ".png" in src.lower()
+                            or ".jpeg" in src.lower()
+                        ):
                             image_url = src
                 except Exception:
                     image_url = None
 
                 if title_text and href and len(title_text) > 5:
                     # Filter out bad titles
-                    bad_titles = ["pickup today", "free pickup", "delivery", "add to cart", "view details", "unavailable", "out of stock"]
+                    bad_titles = [
+                        "pickup today",
+                        "free pickup",
+                        "delivery",
+                        "add to cart",
+                        "view details",
+                        "unavailable",
+                        "out of stock",
+                    ]
                     if any(bt in title_text.lower() for bt in bad_titles):
                         # Try to fall back to image alt text if available, or just skip
                         alt_title = await card.locator("img").get_attribute("alt")
-                        if alt_title and len(alt_title) > 5 and not any(bt in alt_title.lower() for bt in bad_titles):
+                        if (
+                            alt_title
+                            and len(alt_title) > 5
+                            and not any(bt in alt_title.lower() for bt in bad_titles)
+                        ):
                             title_text = alt_title
                         else:
                             # Skip this item if we can't find a real title
@@ -1901,13 +2324,15 @@ async def scrape_category_page(page: Page, url: str, store_info: dict, page_num:
                         "was_price": was_price.strip() if was_price else "",
                         "image_url": image_url,
                         "has_markdown": bool(was_price),
-                        "url": f"https://www.lowes.com{href}" if href.startswith("/") else href,
+                        "url": f"https://www.lowes.com{href}"
+                        if href.startswith("/")
+                        else href,
                         "category_url": url,
                         "store_id": store_info["store_id"],
                         "store_name": store_info["name"],
                         "store_city": store_info["city"],
                         "store_state": store_info["state"],
-                        "scraped_at": datetime.utcnow().isoformat()
+                        "scraped_at": datetime.utcnow().isoformat(),
                     }
                 return None
 
@@ -1927,14 +2352,16 @@ async def scrape_category_page(page: Page, url: str, store_info: dict, page_num:
     return products
 
 
-async def scrape_category_all_pages(page: Page, category_url: str, store_info: dict) -> list[dict]:
-    """Scrape ALL pages of a category until no more products found"""     
+async def scrape_category_all_pages(
+    page: Page, category_url: str, store_info: dict
+) -> list[dict]:
+    """Scrape ALL pages of a category until no more products found"""
     all_products = []
-    cat_name = category_url.split('/pl/')[-1].split('/')[0][:30]
+    cat_name = category_url.split("/pl/")[-1].split("/")[0][:30]
 
     # 1. Go to page 1 to set "Pickup Today" filter
     try:
-        await page.goto(category_url, wait_until='domcontentloaded', timeout=60000)
+        await page.goto(category_url, wait_until="domcontentloaded", timeout=60000)
         await asyncio.sleep(2)
         try:
             _navlog(
@@ -1969,14 +2396,16 @@ async def scrape_category_all_pages(page: Page, category_url: str, store_info: d
         try:
             # Match variations: "0 Products.", "could not find any products", "0 results"
             empty_selectors = [
-                 'text=/0 Products/i',
-                 'text=/0 results/i',
-                 'text=/could not find any products/i',
-                 'text=/Please reduce your filters/i'
+                "text=/0 Products/i",
+                "text=/0 results/i",
+                "text=/could not find any products/i",
+                "text=/Please reduce your filters/i",
             ]
             for selector in empty_selectors:
                 if await page.locator(selector).first.is_visible(timeout=1000):
-                    Actor.log.info(f"{store_info['name']} - {cat_name}: Empty results page detected ({selector}); skipping category")
+                    Actor.log.info(
+                        f"{store_info['name']} - {cat_name}: Empty results page detected ({selector}); skipping category"
+                    )
                     return []
         except Exception:
             pass
@@ -1996,33 +2425,41 @@ async def scrape_category_all_pages(page: Page, category_url: str, store_info: d
         await asyncio.sleep(0.5 + random.random() * 0.5)
 
         # Apply the robust pickup filter with verification
-        filter_applied = await apply_pickup_filter(page, f"{store_info['name']}-{cat_name}")
+        filter_applied = await apply_pickup_filter(
+            page, f"{store_info['name']}-{cat_name}"
+        )
 
         if not filter_applied:
-            Actor.log.error(f"{store_info['name']} - {cat_name}: Pickup filter DISABLED or could not be applied - SKIPPING CATEGORY ENTIRELY")
-            Actor.log.error(f"This means no pickup items are available in this category at {store_info['name']}")
+            Actor.log.error(
+                f"{store_info['name']} - {cat_name}: Pickup filter DISABLED or could not be applied - SKIPPING CATEGORY ENTIRELY"
+            )
+            Actor.log.error(
+                f"This means no pickup items are available in this category at {store_info['name']}"
+            )
             return []  # Skip this category entirely instead of scraping wrong data
 
         # CRITICAL: Verify the URL actually has pickup filter parameters
         current_url_lower = page.url.lower()
         has_filter_params = (
-            "instock=1" in current_url_lower or
-            "pickup" in current_url_lower or
-            "refinement" in current_url_lower
+            "instock=1" in current_url_lower
+            or "pickup" in current_url_lower
+            or "refinement" in current_url_lower
         )
 
         if not has_filter_params:
-            Actor.log.error(f"{store_info['name']} - {cat_name}: URL missing pickup filter params after filter was 'applied' - SKIPPING CATEGORY")
+            Actor.log.error(
+                f"{store_info['name']} - {cat_name}: URL missing pickup filter params after filter was 'applied' - SKIPPING CATEGORY"
+            )
             Actor.log.error(f"URL: {page.url}")
             return []  # Don't scrape unfiltered results
 
         # Update category_url to include the new query params (facets)
         new_url = page.url
-        
+
         # CRITICAL BUG FIX: Validate we're still on a /pl/ product listing page
         # If Lowe's redirected us to a /c/ category page, we CANNOT scrape it (no products)
         # This was causing infinite loops where the scraper kept reloading /c/Generators-Electrical
-        if '/c/' in new_url and '/pl/' not in new_url:
+        if "/c/" in new_url and "/pl/" not in new_url:
             _navlog(
                 "redirect_to_c",
                 {
@@ -2033,14 +2470,20 @@ async def scrape_category_all_pages(page: Page, category_url: str, store_info: d
                     "landed_url": new_url,
                 },
             )
-            Actor.log.error(f"{store_info['name']} - {cat_name}: ABORT - Page redirected to /c/ category page: {new_url}")
+            Actor.log.error(
+                f"{store_info['name']} - {cat_name}: ABORT - Page redirected to /c/ category page: {new_url}"
+            )
             Actor.log.error(f"Original /pl/ URL was: {category_url}")
-            raise RuntimeError(f"Category redirected from /pl/ to /c/ page - this category has no product listings to scrape")
-        
+            raise RuntimeError(
+                f"Category redirected from /pl/ to /c/ page - this category has no product listings to scrape"
+            )
+
         # Only update URL if we're still on a valid /pl/ product listing page
-        if '/pl/' in new_url:
+        if "/pl/" in new_url:
             category_url = new_url
-            Actor.log.info(f"{store_info['name']} - {cat_name}: Pickup filter applied, URL now: {category_url[:100]}...")
+            Actor.log.info(
+                f"{store_info['name']} - {cat_name}: Pickup filter applied, URL now: {category_url[:100]}..."
+            )
             _navlog(
                 "pickup_applied",
                 {
@@ -2052,7 +2495,9 @@ async def scrape_category_all_pages(page: Page, category_url: str, store_info: d
             )
         else:
             # Unexpected URL format - keep original and log warning
-            Actor.log.warning(f"{store_info['name']} - {cat_name}: URL changed to unexpected format, keeping original: {new_url[:100]}")
+            Actor.log.warning(
+                f"{store_info['name']} - {cat_name}: URL changed to unexpected format, keeping original: {new_url[:100]}"
+            )
 
     except Exception as e:
         Actor.log.warning(f"{store_info['name']} - Failed setup: {e}")
@@ -2064,7 +2509,7 @@ async def scrape_category_all_pages(page: Page, category_url: str, store_info: d
     same_url_count = 0
     MAX_EMPTY_RETRIES = 3
     MAX_SAME_URL = 3
-    
+
     while True:  # Scrape until we run out of products
         try:
             # Check if we're stuck on the same URL (infinite reload bug)
@@ -2072,33 +2517,41 @@ async def scrape_category_all_pages(page: Page, category_url: str, store_info: d
             if current_url == last_url:
                 same_url_count += 1
                 if same_url_count >= MAX_SAME_URL:
-                    Actor.log.warning(f"{store_info['name']} - {cat_name}: Stuck on same URL {same_url_count} times, moving on")
+                    Actor.log.warning(
+                        f"{store_info['name']} - {cat_name}: Stuck on same URL {same_url_count} times, moving on"
+                    )
                     break
             else:
                 same_url_count = 0
                 last_url = current_url
-            
+
             # Add per-page timeout to prevent infinite hangs
             products = await asyncio.wait_for(
                 scrape_category_page(page, category_url, store_info, page_num),
-                timeout=120.0  # 2 minutes max per page
+                timeout=120.0,  # 2 minutes max per page
             )
 
             if not products:
                 consecutive_empty += 1
                 if consecutive_empty >= MAX_EMPTY_RETRIES:
-                    Actor.log.info(f"{store_info['name']} - {cat_name}: {consecutive_empty} consecutive empty pages, category done")
+                    Actor.log.info(
+                        f"{store_info['name']} - {cat_name}: {consecutive_empty} consecutive empty pages, category done"
+                    )
                     break
                 # Try once more in case of transient issue
-                Actor.log.info(f"{store_info['name']} - {cat_name} p{page_num}: Empty ({consecutive_empty}/{MAX_EMPTY_RETRIES}), retrying...")
+                Actor.log.info(
+                    f"{store_info['name']} - {cat_name} p{page_num}: Empty ({consecutive_empty}/{MAX_EMPTY_RETRIES}), retrying..."
+                )
                 await asyncio.sleep(1 + random.random())
                 continue
-            
+
             # Reset empty counter on success
             consecutive_empty = 0
 
             all_products.extend(products)
-            Actor.log.info(f"{store_info['name']} - {cat_name} p{page_num}: {len(products)} products")
+            Actor.log.info(
+                f"{store_info['name']} - {cat_name} p{page_num}: {len(products)} products"
+            )
 
             # Stop if partial page (end of results)
             if len(products) < 12:
@@ -2107,14 +2560,20 @@ async def scrape_category_all_pages(page: Page, category_url: str, store_info: d
             page_num += 1
 
         except asyncio.TimeoutError:
-            Actor.log.error(f"{store_info['name']} - {cat_name} p{page_num}: TIMEOUT after 120s")
+            Actor.log.error(
+                f"{store_info['name']} - {cat_name} p{page_num}: TIMEOUT after 120s"
+            )
             break
         except Exception as e:
-            Actor.log.error(f"{store_info['name']} - {cat_name} p{page_num}: Error - {e}")
+            Actor.log.error(
+                f"{store_info['name']} - {cat_name} p{page_num}: Error - {e}"
+            )
             break
 
     if all_products:
-        Actor.log.info(f"{store_info['name']} - {cat_name}: {len(all_products)} total from {page_num} pages")
+        Actor.log.info(
+            f"{store_info['name']} - {cat_name}: {len(all_products)} total from {page_num} pages"
+        )
 
     return all_products
 
@@ -2122,6 +2581,7 @@ async def scrape_category_all_pages(page: Page, category_url: str, store_info: d
 # ============================================================================
 # MAIN
 # ============================================================================
+
 
 async def main():
     async with Actor:
@@ -2159,9 +2619,9 @@ async def main():
 
         async with async_playwright() as p:
             for store in stores:
-                Actor.log.info(f"\n{'='*70}")
+                Actor.log.info(f"\n{'=' * 70}")
                 Actor.log.info(f"Starting store: {store['name']}")
-                Actor.log.info(f"{'='*70}")
+                Actor.log.info(f"{'=' * 70}")
 
                 # Browser setup
                 profile_dir = Path(f".playwright-profiles/store-{store['store_id']}")
@@ -2184,13 +2644,15 @@ async def main():
                         "--disable-backgrounding-occluded-windows",
                         "--disable-renderer-backgrounding",
                         "--memory-pressure-off",  # Prevent memory-based crashes
-                    ]
+                    ],
                 }
 
                 if proxy_url:
                     launch_kwargs["proxy"] = {"server": proxy_url}
 
-                context = await p.chromium.launch_persistent_context(str(profile_dir), **launch_kwargs)
+                context = await p.chromium.launch_persistent_context(
+                    str(profile_dir), **launch_kwargs
+                )
                 page = context.pages[0] if context.pages else await context.new_page()
 
                 try:
@@ -2202,14 +2664,18 @@ async def main():
                     store_products = []
                     for idx, category_url in enumerate(categories):
                         try:
-                            products = await scrape_category_all_pages(page, category_url, store)
+                            products = await scrape_category_all_pages(
+                                page, category_url, store
+                            )
                             store_products.extend(products)
 
                             # Push incrementally
                             if products:
                                 await Actor.push_data(products)
 
-                            await asyncio.sleep(2.0 + random.random() * 2.55)  # 2.0-4.55 sec (30% inc) between categories
+                            await asyncio.sleep(
+                                2.0 + random.random() * 2.55
+                            )  # 2.0-4.55 sec (30% inc) between categories
 
                         except Exception as e:
                             # Log the error but continue with next category
@@ -2218,7 +2684,9 @@ async def main():
                             continue
 
                     total_products += len(store_products)
-                    Actor.log.info(f"Store complete: {len(store_products)} products from {store['name']}")
+                    Actor.log.info(
+                        f"Store complete: {len(store_products)} products from {store['name']}"
+                    )
 
                 except Exception as e:
                     Actor.log.error(f"Error scraping {store['name']}: {e}")
