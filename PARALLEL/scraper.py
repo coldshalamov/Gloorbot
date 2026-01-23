@@ -2083,6 +2083,14 @@ async def scrape_category_page(
         except Exception:
             continue
 
+    # Log if no grid container found - this is a red flag for redirect/unexpected layout
+    if not main_container:
+        Actor.log.warning(
+            f"No main grid container found on page {page_num}. "
+            f"Will search entire page (may pick up non-product elements on redirect pages). "
+            f"URL: {page.url[:100]}"
+        )
+
     # Define card selectors - these should be SPECIFIC to actual product cards
     card_selectors = [
         "div.tile_group",  # Lowe's actual product tile with content
@@ -2124,6 +2132,31 @@ async def scrape_category_page(
 
     if not product_cards:
         Actor.log.warning(f"No product cards found on page {page_num}")
+        return []
+
+    # SAFETY CHECK: Validate that the first card is actually a product.
+    # On redirect pages or unexpected layouts, we might pick up non-product elements
+    # (nav links, promotions, etc.) that match our selectors.
+    # Check that at least the first card has a real product link before processing all.
+    try:
+        first_card = product_cards[0]
+        link_el = first_card.locator(
+            ":scope a[data-testid='item-description-link'], :scope a[href*='/pd/'], :scope a[data-test*='product-link']"
+        ).first
+        link_count = await asyncio.wait_for(link_el.count(), timeout=5.0)
+        if link_count == 0:
+            Actor.log.warning(
+                f"First card on page {page_num} has no product link (/pd/). "
+                f"This might be a redirect or unexpected page layout. Skipping page."
+            )
+            return []
+    except asyncio.TimeoutError:
+        Actor.log.warning(f"Timeout validating first card on page {page_num}. Skipping page.")
+        return []
+    except Exception as e:
+        Actor.log.warning(
+            f"Error validating first card on page {page_num}: {e}. Skipping page to avoid crash."
+        )
         return []
 
     # Extract products with timeout per card
