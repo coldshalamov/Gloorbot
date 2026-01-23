@@ -25,6 +25,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-else:
-    # Also run when imported as __main__ by PyInstaller
-    main()

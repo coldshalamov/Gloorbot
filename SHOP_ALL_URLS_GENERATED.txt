@@ -1,57 +1,6 @@
-# Lowe's Store and Department Map for WA/OR Crawler
-# This file contains the canonical list of Lowe's stores in Washington and Oregon, plus all department/category URLs discovered from the Lowe's website.
-## WA STORES
-https://www.lowes.com/store/WA-Arlington/0061
-https://www.lowes.com/store/WA-Auburn/1089
-https://www.lowes.com/store/WA-Bellingham/1631
-https://www.lowes.com/store/WA-BonneyLake/2895
-https://www.lowes.com/store/WA-Bremerton/1534
-https://www.lowes.com/store/WA-Everett/0149
-https://www.lowes.com/store/WA-FederalWay/2346
-https://www.lowes.com/store/WA-Issaquah/0140
-https://www.lowes.com/store/WA-Kennewick/0249
-https://www.lowes.com/store/WA-Kent/2561
-https://www.lowes.com/store/WA-Lacey/2738
-https://www.lowes.com/store/WA-Lakewood/1081
-https://www.lowes.com/store/WA-Longview/1887
-https://www.lowes.com/store/WA-Lynnwood/0285
-https://www.lowes.com/store/WA-MillCreek/1573
-https://www.lowes.com/store/WA-Monroe/2781
-https://www.lowes.com/store/WA-MosesLake/2956
-https://www.lowes.com/store/WA-MountVernon/0035
-https://www.lowes.com/store/WA-Olympia/1167
-https://www.lowes.com/store/WA-Pasco/2344
-https://www.lowes.com/store/WA-PortOrchard/2733
-https://www.lowes.com/store/WA-Puyallup/2734
-https://www.lowes.com/store/WA-Renton/2420
-https://www.lowes.com/store/WA-Seattle/0004
-https://www.lowes.com/store/WA-Seattle/0252
-https://www.lowes.com/store/WA-Silverdale/2746
-https://www.lowes.com/store/WA-Spokane/0172
-https://www.lowes.com/store/WA-Spokane/3045
-https://www.lowes.com/store/WA-SpokaneValley/2793
-https://www.lowes.com/store/WA-Tacoma/0026
-https://www.lowes.com/store/WA-Tukwila/0010
-https://www.lowes.com/store/WA-Vancouver/1632
-https://www.lowes.com/store/WA-Vancouver/2954
-https://www.lowes.com/store/WA-Wenatchee/0152
-https://www.lowes.com/store/WA-Yakima/3240
-## OR STORES
-https://www.lowes.com/store/OR-Albany/3057
-https://www.lowes.com/store/OR-Bend/1690
-https://www.lowes.com/store/OR-Eugene/2940
-https://www.lowes.com/store/OR-Hillsboro/1558
-https://www.lowes.com/store/OR-Keizer/2619
-https://www.lowes.com/store/OR-McMinnville/1693
-https://www.lowes.com/store/OR-Medford/0248
-https://www.lowes.com/store/OR-Milwaukie/1824
-https://www.lowes.com/store/OR-Portland/2579
-https://www.lowes.com/store/OR-Redmond/2865
-https://www.lowes.com/store/OR-Roseburg/1741
-https://www.lowes.com/store/OR-Salem/1600
-https://www.lowes.com/store/OR-Tigard/1108
-https://www.lowes.com/store/OR-WoodVillage/1114
-## CATEGORIES
+# Generated Shop All URLs (base categories without filters)
+# Total: 3597 URLs
+
 https://www.lowes.com/pl/plumbing-parts-repair/toilet-parts-repair/toilet-flanges/1002712065?goToProdList=true
 https://www.lowes.com/pl/camping-hunting-fishing/fishing/1006598218?goToProdList=true
 https://www.lowes.com/pl/appliance-parts-accessories/cooktop-range-parts/1006930184?goToProdList=true
@@ -3649,8 +3598,3 @@ https://www.lowes.com/pl/decking/deck-tiles/0-16-inch-wide/959458694?goToProdLis
 https://www.lowes.com/pl/plumbing-parts-repair/sink-parts-repair/sink-drain-repair-parts/983381659?goToProdList=true
 https://www.lowes.com/pl/outdoor-tools-equipment/power-base-engine-attachments/log-splitter-base-attachments/983676656?goToProdList=true
 https://www.lowes.com/pl/game-room/pool-tables-accessories/pool-cues/990127039?goToProdList=true
-https://www.lowes.com/pl/furniture/living-room-furniture/massage-chairs/3220964052679?goToProdList=true
-https://www.lowes.com/pl/moulding/window-door-moulding/window-door-trim/4210381967006?goToProdList=true
-https://www.lowes.com/pl/grills-outdoor-cooking/outdoor-kitchens/outdoor-kitchen-islands/4620321246971?goToProdList=true
-https://www.lowes.com/pl/christmas-decorations/christmas-wreaths-garland/fresh-christmas-plants/5011002071215?goToProdList=true
-https://www.lowes.com/pl/pet-cleaning-waste-supplies/dog-cleaning-potty/pet-sod-pieces/5121292475944?goToProdList=true

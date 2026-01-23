@@ -1,6 +1,7 @@
 import asyncio
 import urllib.parse
 
+import pytest
 from playwright.async_api import async_playwright
 
 import PARALLEL.scraper as scraper
@@ -50,6 +51,7 @@ async def _no_op(*_args, **_kwargs):
     return None
 
 
+@pytest.mark.asyncio
 async def test_near_me_dom_tile_group_split() -> None:
     # Speed up test by disabling scraper's intentional sleeps and human actions.
     scraper.asyncio.sleep = _no_sleep  # type: ignore[attr-defined]

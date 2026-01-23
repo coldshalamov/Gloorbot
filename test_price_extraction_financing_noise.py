@@ -1,5 +1,6 @@
 import asyncio
 
+import pytest
 from playwright.async_api import async_playwright
 
 import PARALLEL.scraper as scraper
@@ -42,6 +43,7 @@ HTML = """
 """
 
 
+@pytest.mark.asyncio
 async def test_price_extraction_financing_noise() -> None:
     async with async_playwright() as pw:
         browser = await pw.chromium.launch(headless=True)

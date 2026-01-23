@@ -1,0 +1,34 @@
+
+# Link Comparison Test File
+# Each block shows a category from YOUR list vs the SITEMAP list.
+# Both are appended with ?goToProdList=true for testing.
+
+# Case 1: Pet Food
+# YOURS (Missing specific ID, might result in empty or generic page?)
+# (You didn't have this specific one, so I'm showing the closest Parent you might have had, or just the missing one)
+# SITEMAP (Specific Faceted ID)
+https://www.lowes.com/pl/pet-feeding-supplies/pet-food/2710431208428?goToProdList=true
+
+# Case 2: Wheelchairs
+# YOURS (Generic ID often found in navigations)
+https://www.lowes.com/pl/wheelchairs-mobility-aids/4294644793?goToProdList=true
+# SITEMAP (Specific Sub-category ID)
+https://www.lowes.com/pl/wheelchairs-mobility-aids/walkers-wheelchairs-rollators/4294644785?goToProdList=true
+
+# Case 3: Accessible Cooktops
+# YOURS (Parent)
+https://www.lowes.com/pl/accessible-kitchen/accessible-cooking/37721669146471?goToProdList=true
+# SITEMAP (Child with specific ID)
+https://www.lowes.com/pl/accessible-kitchen/accessible-cooking/accessible-cooktops/37721669146474?goToProdList=true
+
+# Case 4: Pet Kennels
+# YOURS (Parent)
+https://www.lowes.com/pl/pet-kennels-crates/778128516?goToProdList=true
+# SITEMAP (Child)
+https://www.lowes.com/pl/pet-kennels-crates/crates-kennels/4294610556?goToProdList=true
+
+# Instructions:
+# 1. Click the first link in a pair. Does it show PRODUCTS directly (grid of items)?
+# 2. Click the second link. Does it show the SAME products, or a MORE SPECIFIC subset?
+# 3. If the Parent link shows a list of "Categories" (boxes) instead of products, it is BAD for scraping.
+# 4. If the Parent link shows products but pagination is limited (e.g. max 1000 items) and there are 5000 items, it is BAD.
