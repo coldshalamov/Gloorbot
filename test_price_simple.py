@@ -2,13 +2,14 @@
 Simple test to verify the price extraction fix works.
 Tests against a live Lowe's page with known clearance items.
 """
+
 import asyncio
 import sys
 import os
 from pathlib import Path
 
 # Enable price diagnostics
-os.environ['GLOORBOT_PRICE_DIAGNOSTICS'] = '1'
+os.environ["GLOORBOT_PRICE_DIAGNOSTICS"] = "1"
 
 # Add PARALLEL to path
 sys.path.insert(0, str(Path(__file__).parent / "PARALLEL"))
@@ -26,19 +27,14 @@ async def test_shower_product():
     print(f"URL: {test_url}\n")
 
     async with async_playwright() as p:
-        browser = await p.chromium.launch(
-            headless=False,
-            channel="chrome"
-        )
+        browser = await p.chromium.launch(headless=False, channel="chrome")
 
-        context = await browser.new_context(
-            viewport={"width": 1440, "height": 900}
-        )
+        context = await browser.new_context(viewport={"width": 1440, "height": 900})
         page = await context.new_page()
 
         try:
             print("Loading page...")
-            await page.goto(test_url, wait_until='domcontentloaded', timeout=30000)
+            await page.goto(test_url, wait_until="domcontentloaded", timeout=30000)
             await asyncio.sleep(5)  # Let page fully load
 
             print("Extracting prices using JavaScript (mimics the scraper)...\n")
@@ -46,9 +42,83 @@ async def test_shower_product():
             # Use the exact JavaScript extraction from the scraper
             result = await page.evaluate("""
                 () => {
+                    function normText(t) {
+                        return (t || "").replace(/\\s+/g, " ").trim();
+                    }
+
+                    function normalizeMoney(m) {
+                        if (!m) return null;
+                        let s = String(m).replace(/\\s+/g, "");
+                        if (!s.startsWith("$")) return null;
+                        if (s.includes(".")) return s;
+                        const raw = s.slice(1);
+                        const digits = raw.replace(/,/g, "");
+                        if (!/^\\d+$/.test(digits)) return s;
+
+                        if (s.includes(",")) {
+                            const lastGroup = s.split(",").pop() || "";
+                            if (lastGroup.length > 3 && digits.length > 2) {
+                                return "$" + digits.slice(0, -2) + "." + digits.slice(-2);
+                            }
+                            return "$" + digits + ".00";
+                        }
+
+                        if (digits.length >= 5) {
+                            return "$" + digits.slice(0, -2) + "." + digits.slice(-2);
+                        }
+                        return "$" + digits + ".00";
+                    }
+
                     function firstMoney(t) {
-                        const m = String(t || "").match(/\\$\\s*\\d{1,3}(?:,\\d{3})*(?:\\.\\d{2})?/);
-                        return m ? m[0].replace(/\\s+/g, "") : null;
+                        const s = String(t || "");
+                        const re = /\\$\\s*\\d+(?:,\\d{3})*(?:\\.\\d{2}|\\d{2})?/g;
+                        const matches = s.match(re) || [];
+                        if (!matches.length) return null;
+
+                        const candidates = [];
+                        for (const raw of matches) {
+                            const norm = normalizeMoney(raw);
+                            if (norm) candidates.push({ raw, norm });
+                        }
+                        if (!candidates.length) return null;
+
+                        function score(raw) {
+                            const r = String(raw || "");
+                            if (r.includes(".")) return 3;
+                            if (r.includes(",")) {
+                                const last = r.split(",").pop() || "";
+                                if (last.length > 3) return 2;
+                                return 1;
+                            }
+                            const digits = r.replace(/[^0-9]/g, "");
+                            if (digits.length >= 4) return 2;
+                            return 1;
+                        }
+
+                        function asNumber(norm) {
+                            try {
+                                return parseFloat(String(norm || "").replace(/[^0-9.]/g, "")) || 0;
+                            } catch (e) {
+                                return 0;
+                            }
+                        }
+
+                        candidates.sort((a, b) => {
+                            const sa = score(a.raw);
+                            const sb = score(b.raw);
+                            if (sb !== sa) return sb - sa;
+                            return asNumber(b.norm) - asNumber(a.norm);
+                        });
+                        return candidates[0].norm;
+                    }
+
+                    function pickMoneyFromEl(el) {
+                        if (!el) return null;
+                        const ariaLabel = el.getAttribute("aria-label") || "";
+                        const fromAria = firstMoney(ariaLabel);
+                        if (fromAria) return fromAria;
+                        const t = el.innerText || el.textContent || "";
+                        return firstMoney(t);
                     }
 
                     // Find product cards
@@ -70,26 +140,20 @@ async def test_shower_product():
                         // NEW: data-testid strategy (from fix)
                         const testidCurrent = card.querySelector('[data-testid="current-price"], [data-testid="regular-price"]');
                         if (testidCurrent) {
-                            const aria = testidCurrent.getAttribute('aria-label') || '';
-                            const text = testidCurrent.textContent || '';
-                            currentPrice = firstMoney(aria) || firstMoney(text);
+                            currentPrice = pickMoneyFromEl(testidCurrent);
                             if (currentPrice) method = 'data-testid';
                         }
 
                         const testidWas = card.querySelector('[data-testid="was-price"]');
                         if (testidWas) {
-                            const aria = testidWas.getAttribute('aria-label') || '';
-                            const text = testidWas.textContent || '';
-                            wasPrice = firstMoney(aria) || firstMoney(text);
+                            wasPrice = pickMoneyFromEl(testidWas);
                         }
 
                         // FALLBACK: old data-selector strategy
                         if (!currentPrice) {
                             const selectorCurrent = card.querySelector('[data-selector="splp-prd-act-$"]');
                             if (selectorCurrent) {
-                                const aria = selectorCurrent.getAttribute('aria-label') || '';
-                                const text = selectorCurrent.textContent || '';
-                                currentPrice = firstMoney(aria) || firstMoney(text);
+                                currentPrice = pickMoneyFromEl(selectorCurrent);
                                 if (currentPrice) method = 'data-selector';
                             }
                         }
@@ -97,9 +161,7 @@ async def test_shower_product():
                         if (!wasPrice) {
                             const selectorWas = card.querySelector('[data-selector="splp-prd-promo-was-$"]');
                             if (selectorWas) {
-                                const aria = selectorWas.getAttribute('aria-label') || '';
-                                const text = selectorWas.textContent || '';
-                                wasPrice = firstMoney(aria) || firstMoney(text);
+                                wasPrice = pickMoneyFromEl(selectorWas);
                             }
                         }
 
@@ -115,6 +177,7 @@ async def test_shower_product():
 
                     return results;
                 }
+
             """)
 
             if not result:
@@ -128,10 +191,10 @@ async def test_shower_product():
             fail_count = 0
 
             for i, product in enumerate(result, 1):
-                title = product['title']
-                current = product['currentPrice']
-                was = product.get('wasPrice')
-                method = product['method']
+                title = product["title"]
+                current = product["currentPrice"]
+                was = product.get("wasPrice")
+                method = product["method"]
 
                 print(f"{i}. {title}")
                 print(f"   Current: {current}")
@@ -140,8 +203,8 @@ async def test_shower_product():
 
                 if was and current:
                     try:
-                        current_val = float(current.replace('$', '').replace(',', ''))
-                        was_val = float(was.replace('$', '').replace(',', ''))
+                        current_val = float(current.replace("$", "").replace(",", ""))
+                        was_val = float(was.replace("$", "").replace(",", ""))
                         discount = ((was_val - current_val) / was_val) * 100
                         savings = was_val - current_val
 
