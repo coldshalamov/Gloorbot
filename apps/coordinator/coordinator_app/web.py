@@ -14,7 +14,13 @@ from typing import AsyncIterator
 
 import httpx
 from fastapi import FastAPI, Request, HTTPException
-from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse, PlainTextResponse, Response
+from fastapi.responses import (
+    HTMLResponse,
+    RedirectResponse,
+    StreamingResponse,
+    PlainTextResponse,
+    Response,
+)
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import select, func, and_, or_, update, delete
@@ -41,7 +47,12 @@ from .schemas import (
     CategoryMetaBulkRequest,
 )
 from .seed import seed_tasks_from_parallel_urls, create_tables
-from .admin_auth import verify_credentials, create_session, verify_session, invalidate_session
+from .admin_auth import (
+    verify_credentials,
+    create_session,
+    verify_session,
+    invalidate_session,
+)
 from .store_config import get_store_config_manager
 
 
@@ -49,6 +60,34 @@ LEASE_SECONDS = int(os.getenv("LEASE_SECONDS", "900"))  # 15 minutes default
 ACTIVE_WINDOW_SECONDS = int(os.getenv("ACTIVE_WINDOW_SECONDS", "180"))  # 3 minutes
 DEAL_THRESHOLD = float(os.getenv("DEAL_THRESHOLD", "0.50"))
 MAX_DEALS_PER_BATCH = int(os.getenv("MAX_DEALS_PER_BATCH", "500"))
+
+# Defense-in-depth against upstream price-parsing pollution.
+# The historic "scrambled was_price" bug correlates strongly with items at/above $1,000.
+MAX_ABS_PRICE = float(os.getenv("GLOORBOT_MAX_ABS_PRICE", "50000"))
+STRICT_WAS_MULT_MIN_PRICE = float(
+    os.getenv("GLOORBOT_STRICT_WAS_MULT_MIN_PRICE", "999.99")
+)
+MAX_WAS_MULT_STRICT = float(os.getenv("GLOORBOT_MAX_WAS_MULT_STRICT", "8.0"))
+MAX_WAS_MULT_LOOSE = float(os.getenv("GLOORBOT_MAX_WAS_MULT_LOOSE", "25.0"))
+
+
+def _deal_suspicious_reason(price: float, was_price: float) -> str | None:
+    # Keep coordinator validation aligned with the worker's defense-in-depth.
+    if price <= 0 or was_price <= 0:
+        return "nonpositive_price"
+    if price > MAX_ABS_PRICE or was_price > MAX_ABS_PRICE:
+        return "abs_price_ceiling"
+
+    max_mult = (
+        MAX_WAS_MULT_STRICT
+        if max(price, was_price) >= STRICT_WAS_MULT_MIN_PRICE
+        else MAX_WAS_MULT_LOOSE
+    )
+    if was_price > (price * max_mult):
+        return "was_multiplier_ceiling"
+
+    return None
+
 
 # Cheapskater integration - forward deals to the Cheapskater website
 CHEAPSKATER_INGEST_URL = os.getenv("CHEAPSKATER_INGEST_URL", "")
@@ -59,7 +98,7 @@ DEBUG_RETENTION_DAYS = int(os.getenv("DEBUG_RETENTION_DAYS", "3"))
 
 logger = logging.getLogger(__name__)
 
-# HTTP client for forwarding to Cheapskater (reused for connection pooling)     
+# HTTP client for forwarding to Cheapskater (reused for connection pooling)
 _http_client: httpx.Client | None = None
 
 _worker_download_url_cache: str | None = None
@@ -84,8 +123,15 @@ def _forward_deals_to_cheapskater(
     """Forward deals to Cheapskater website (best-effort, non-blocking)."""
     if not CHEAPSKATER_INGEST_URL or not deals:
         if not CHEAPSKATER_INGEST_URL:
-            logger.warning("CHEAPSKATER_INGEST_URL not configured - deals will not be forwarded")
-        return {"attempted": False, "status_code": None, "accepted": 0, "error": "not_configured"}
+            logger.warning(
+                "CHEAPSKATER_INGEST_URL not configured - deals will not be forwarded"
+            )
+        return {
+            "attempted": False,
+            "status_code": None,
+            "accepted": 0,
+            "error": "not_configured",
+        }
 
     logger.info(
         "[FORWARD] batch_id=%s client_id=%s attempting count=%s url_configured=%s",
@@ -141,8 +187,15 @@ def _forward_deals_to_cheapskater(
                 "error": f"{resp.status_code}: {resp.text[:200]}",
             }
     except Exception as e:
-        logger.warning("[FORWARD] batch_id=%s client_id=%s exception=%s", batch_id, client_id, e)
-        return {"attempted": True, "status_code": None, "accepted": 0, "error": str(e)[:200]}
+        logger.warning(
+            "[FORWARD] batch_id=%s client_id=%s exception=%s", batch_id, client_id, e
+        )
+        return {
+            "attempted": True,
+            "status_code": None,
+            "accepted": 0,
+            "error": str(e)[:200],
+        }
 
 
 def _require_debug_token(request: Request) -> None:
@@ -156,7 +209,11 @@ def _require_debug_token(request: Request) -> None:
 def _maybe_cleanup_debug_tables(*, force: bool = False) -> None:
     global _last_debug_cleanup_at
     now = datetime.utcnow()
-    if not force and _last_debug_cleanup_at and (now - _last_debug_cleanup_at) < timedelta(hours=1):
+    if (
+        not force
+        and _last_debug_cleanup_at
+        and (now - _last_debug_cleanup_at) < timedelta(hours=1)
+    ):
         return
 
     cutoff = now - timedelta(days=DEBUG_RETENTION_DAYS)
@@ -241,6 +298,7 @@ def _download_url() -> str | None:
         return None
     return value
 
+
 def _github_worker_repo() -> str:
     # Format: "owner/repo"
     return os.getenv("WORKER_GITHUB_REPO", "coldshalamov/Gloorbot").strip()
@@ -261,7 +319,11 @@ def _resolve_worker_download_url() -> str | None:
 
     global _worker_download_url_cache, _worker_download_url_cache_at
     now = time.time()
-    if _worker_download_url_cache and _worker_download_url_cache_at and (now - _worker_download_url_cache_at) < 15 * 60:
+    if (
+        _worker_download_url_cache
+        and _worker_download_url_cache_at
+        and (now - _worker_download_url_cache_at) < 15 * 60
+    ):
         return _worker_download_url_cache
 
     repo = _github_worker_repo()
@@ -274,7 +336,9 @@ def _resolve_worker_download_url() -> str | None:
             "Accept": "application/vnd.github+json",
             "User-Agent": "gloorbot-coordinator",
         }
-        resp = client.get(f"https://api.github.com/repos/{repo}/releases/latest", headers=headers)
+        resp = client.get(
+            f"https://api.github.com/repos/{repo}/releases/latest", headers=headers
+        )
         if resp.status_code != 200:
             return None
         data = resp.json()
@@ -314,7 +378,7 @@ def create_app() -> FastAPI:
             inserted = seed_tasks_from_parallel_urls(repo_root)
             logger.info(f"[startup] Seed complete. Inserted {inserted} tasks.")
             if inserted:
-                bus.publish(f"event:seed\ndata:{{\"tasks_inserted\":{inserted}}}\n\n")
+                bus.publish(f'event:seed\ndata:{{"tasks_inserted":{inserted}}}\n\n')
         except Exception as e:
             logger.error(f"Startup seed failed: {e}")
 
@@ -334,7 +398,10 @@ def create_app() -> FastAPI:
                 },
             )
         except Exception as e:
-            return HTMLResponse(f"<pre>Template error: {e}\nbase_dir={base_dir}\ntemplates_dir={base_dir / 'templates'}</pre>", status_code=500)
+            return HTMLResponse(
+                f"<pre>Template error: {e}\nbase_dir={base_dir}\ntemplates_dir={base_dir / 'templates'}</pre>",
+                status_code=500,
+            )
 
     @app.get("/download", response_model=None)
     def download() -> Response:
@@ -353,32 +420,64 @@ def create_app() -> FastAPI:
         with db_session() as db:
             total_tasks = db.scalar(select(func.count(Task.id))) or 0
             leased = (
-                db.scalar(select(func.count(Task.id)).where(Task.lease_expires_at != None, Task.lease_expires_at >= now))  # noqa: E711
+                db.scalar(
+                    select(func.count(Task.id)).where(
+                        Task.lease_expires_at != None, Task.lease_expires_at >= now
+                    )
+                )  # noqa: E711
                 or 0
             )
-            done = db.scalar(select(func.count(Task.id)).where(Task.last_completed_at != None)) or 0  # noqa: E711
+            done = (
+                db.scalar(
+                    select(func.count(Task.id)).where(Task.last_completed_at != None)
+                )
+                or 0
+            )  # noqa: E711
             completed_last_hour = (
-                db.scalar(select(func.count(Task.id)).where(Task.last_completed_at >= now - timedelta(hours=1)))
+                db.scalar(
+                    select(func.count(Task.id)).where(
+                        Task.last_completed_at >= now - timedelta(hours=1)
+                    )
+                )
                 or 0
             )
 
-            durations = db.execute(
-                select(Task.last_duration_sec).where(Task.last_duration_sec != None)  # noqa: E711
-            ).scalars().all()
+            durations = (
+                db.execute(
+                    select(Task.last_duration_sec).where(Task.last_duration_sec != None)  # noqa: E711
+                )
+                .scalars()
+                .all()
+            )
             median_duration = statistics.median(durations) if durations else None
 
-            active_clients = db.scalar(select(func.count(Client.id)).where(Client.last_seen_at >= active_cutoff)) or 0
+            active_clients = (
+                db.scalar(
+                    select(func.count(Client.id)).where(
+                        Client.last_seen_at >= active_cutoff
+                    )
+                )
+                or 0
+            )
 
-            recent_deals = db.execute(
-                select(Deal)
-                .where(Deal.pct_off >= DEAL_THRESHOLD)
-                .order_by(Deal.last_seen_at.desc())
-                .limit(50)
-            ).scalars().all()
+            recent_deals = (
+                db.execute(
+                    select(Deal)
+                    .where(Deal.pct_off >= DEAL_THRESHOLD)
+                    .order_by(Deal.last_seen_at.desc())
+                    .limit(50)
+                )
+                .scalars()
+                .all()
+            )
 
-            latest_ingest = db.execute(
-                select(IngestEvent).order_by(IngestEvent.created_at.desc()).limit(1)
-            ).scalars().first()
+            latest_ingest = (
+                db.execute(
+                    select(IngestEvent).order_by(IngestEvent.created_at.desc()).limit(1)
+                )
+                .scalars()
+                .first()
+            )
 
         return {
             "utc": now.isoformat(),
@@ -392,7 +491,9 @@ def create_app() -> FastAPI:
             "clients": {"active": active_clients},
             "integration": {
                 "cheapskater_ingest_url_configured": bool(CHEAPSKATER_INGEST_URL),
-                "cheapskater_ingest_api_key_configured": bool(CHEAPSKATER_INGEST_API_KEY),
+                "cheapskater_ingest_api_key_configured": bool(
+                    CHEAPSKATER_INGEST_API_KEY
+                ),
                 "debug_api_enabled": bool(DEBUG_API_TOKEN),
                 "latest_ingest": (
                     {
@@ -436,8 +537,18 @@ def create_app() -> FastAPI:
         now = datetime.utcnow()
         with db_session() as db:
             total = db.scalar(select(func.count(Task.id))) or 0
-            c_count = db.scalar(select(func.count(Task.id)).where(Task.category_url.like("%/c/%"))) or 0
-            pl_count = db.scalar(select(func.count(Task.id)).where(Task.category_url.like("%/pl/%"))) or 0
+            c_count = (
+                db.scalar(
+                    select(func.count(Task.id)).where(Task.category_url.like("%/c/%"))
+                )
+                or 0
+            )
+            pl_count = (
+                db.scalar(
+                    select(func.count(Task.id)).where(Task.category_url.like("%/pl/%"))
+                )
+                or 0
+            )
             leased_c = (
                 db.scalar(
                     select(func.count(Task.id))
@@ -446,23 +557,22 @@ def create_app() -> FastAPI:
                 )
                 or 0
             )
-            examples = (
-                db.execute(
-                    select(Task.category_url, func.count(Task.id).label("n"))
-                    .where(Task.category_url.like("%/c/%"))
-                    .group_by(Task.category_url)
-                    .order_by(func.count(Task.id).desc())
-                    .limit(limit)
-                )
-                .all()
-            )
+            examples = db.execute(
+                select(Task.category_url, func.count(Task.id).label("n"))
+                .where(Task.category_url.like("%/c/%"))
+                .group_by(Task.category_url)
+                .order_by(func.count(Task.id).desc())
+                .limit(limit)
+            ).all()
         return {
             "utc": now.isoformat(),
             "tasks_total": total,
             "tasks_pl_count": pl_count,
             "tasks_c_count": c_count,
             "tasks_c_leased_count": leased_c,
-            "tasks_c_examples": [{"category_url": url, "count": int(n)} for (url, n) in examples],
+            "tasks_c_examples": [
+                {"category_url": url, "count": int(n)} for (url, n) in examples
+            ],
         }
 
     @app.get("/api/v1/debug/ingest-events")
@@ -470,9 +580,15 @@ def create_app() -> FastAPI:
         _require_debug_token(request)
         limit = max(1, min(int(limit), 500))
         with db_session() as db:
-            events = db.execute(
-                select(IngestEvent).order_by(IngestEvent.created_at.desc()).limit(limit)
-            ).scalars().all()
+            events = (
+                db.execute(
+                    select(IngestEvent)
+                    .order_by(IngestEvent.created_at.desc())
+                    .limit(limit)
+                )
+                .scalars()
+                .all()
+            )
         return {
             "ok": True,
             "events": [
@@ -495,16 +611,27 @@ def create_app() -> FastAPI:
         }
 
     @app.get("/api/v1/debug/deal-sources")
-    def debug_deal_sources(request: Request, store_id: str, product_url: str, limit: int = 200) -> dict:
+    def debug_deal_sources(
+        request: Request, store_id: str, product_url: str, limit: int = 200
+    ) -> dict:
         _require_debug_token(request)
         limit = max(1, min(int(limit), 500))
         with db_session() as db:
-            sources = db.execute(
-                select(DealSource)
-                .where(DealSource.store_id == store_id, DealSource.product_url == product_url)
-                .order_by(DealSource.seen_count.desc(), DealSource.last_seen_at.desc())
-                .limit(limit)
-            ).scalars().all()
+            sources = (
+                db.execute(
+                    select(DealSource)
+                    .where(
+                        DealSource.store_id == store_id,
+                        DealSource.product_url == product_url,
+                    )
+                    .order_by(
+                        DealSource.seen_count.desc(), DealSource.last_seen_at.desc()
+                    )
+                    .limit(limit)
+                )
+                .scalars()
+                .all()
+            )
         return {
             "ok": True,
             "store_id": store_id,
@@ -524,7 +651,9 @@ def create_app() -> FastAPI:
         }
 
     @app.post("/api/v1/debug/category-meta/bulk")
-    def debug_category_meta_bulk(request: Request, req: CategoryMetaBulkRequest) -> dict:
+    def debug_category_meta_bulk(
+        request: Request, req: CategoryMetaBulkRequest
+    ) -> dict:
         """
         Upsert category metadata derived from Lowe's breadcrumbs.
 
@@ -543,7 +672,9 @@ def create_app() -> FastAPI:
                 url = (item.category_url or "").strip()
                 if not url:
                     continue
-                crumbs = [Breadcrumb(text=c.text, href=c.href) for c in item.breadcrumbs]
+                crumbs = [
+                    Breadcrumb(text=c.text, href=c.href) for c in item.breadcrumbs
+                ]
                 leaf = breadcrumb_leaf_name(crumbs)
                 path = breadcrumb_path(crumbs)
                 breadcrumbs_json = json.dumps(
@@ -572,7 +703,7 @@ def create_app() -> FastAPI:
             db.commit()
         return {"ok": True, "upserted": upserted}
 
-    @app.post("/api/v1/client/register", response_model=RegisterResponse)       
+    @app.post("/api/v1/client/register", response_model=RegisterResponse)
     def register(req: RegisterRequest, request: Request) -> RegisterResponse:
         client_id = secrets.token_urlsafe(16)
         now = datetime.utcnow()
@@ -588,7 +719,9 @@ def create_app() -> FastAPI:
                 )
             )
             db.commit()
-        bus.publish(f"event:client\ndata:{{\"type\":\"register\",\"client_id\":\"{client_id}\"}}\n\n")
+        bus.publish(
+            f'event:client\ndata:{{"type":"register","client_id":"{client_id}"}}\n\n'
+        )
         return RegisterResponse(client_id=client_id)
 
     @app.post("/api/v1/client/heartbeat")
@@ -606,7 +739,9 @@ def create_app() -> FastAPI:
             client.last_mem_percent = req.mem_percent
             client.last_slots = req.slots
             db.commit()
-        bus.publish(f"event:client\ndata:{{\"type\":\"heartbeat\",\"client_id\":\"{req.client_id}\"}}\n\n")
+        bus.publish(
+            f'event:client\ndata:{{"type":"heartbeat","client_id":"{req.client_id}"}}\n\n'
+        )
         return {"ok": True}
 
     @app.post("/api/v1/lease/next", response_model=LeaseResponse | None)
@@ -614,7 +749,9 @@ def create_app() -> FastAPI:
         now = datetime.utcnow()
         lease_until = now + timedelta(seconds=LEASE_SECONDS)
         with db_session() as db:
-            db.query(Task).where(Task.lease_expires_at != None, Task.lease_expires_at < now).update(  # noqa: E711
+            db.query(Task).where(
+                Task.lease_expires_at != None, Task.lease_expires_at < now
+            ).update(  # noqa: E711
                 {Task.lease_expires_at: None, Task.lease_client_id: None}
             )
             db.commit()
@@ -628,7 +765,9 @@ def create_app() -> FastAPI:
             query = select(Task).where(base_filter)
             if req.preferred_store_id:
                 query = query.order_by((Task.store_id != req.preferred_store_id).asc())
-            query = query.order_by(Task.last_completed_at.asc().nullsfirst(), Task.id.asc()).limit(1)
+            query = query.order_by(
+                Task.last_completed_at.asc().nullsfirst(), Task.id.asc()
+            ).limit(1)
 
             # Lease atomically to avoid two workers getting the same task under concurrency.
             for _ in range(5):
@@ -704,10 +843,14 @@ def create_app() -> FastAPI:
                 category_url=task.category_url,
                 status="completed",
                 duration_seconds=req.duration_sec,
-                products_found=req.products_found if hasattr(req, 'products_found') else None,
+                products_found=req.products_found
+                if hasattr(req, "products_found")
+                else None,
             )
 
-        bus.publish(f"event:task\ndata:{{\"type\":\"complete\",\"task_id\":{req.task_id}}}\n\n")
+        bus.publish(
+            f'event:task\ndata:{{"type":"complete","task_id":{req.task_id}}}\n\n'
+        )
         return {"ok": True}
 
     @app.post("/api/v1/lease/fail")
@@ -725,7 +868,7 @@ def create_app() -> FastAPI:
             task.error_count += 1
             db.commit()
 
-        bus.publish(f"event:task\ndata:{{\"type\":\"fail\",\"task_id\":{req.task_id}}}\n\n")
+        bus.publish(f'event:task\ndata:{{"type":"fail","task_id":{req.task_id}}}\n\n')
         return {"ok": True}
 
     @app.post("/api/v1/deals/bulk")
@@ -748,7 +891,9 @@ def create_app() -> FastAPI:
             key = (deal.store_id, deal.product_url)
             existing = unique_deals.get(key)
             # Keep the "best" (highest pct_off) entry if duplicates exist.
-            if existing is None or getattr(deal, "pct_off", 0) > getattr(existing, "pct_off", 0):
+            if existing is None or getattr(deal, "pct_off", 0) > getattr(
+                existing, "pct_off", 0
+            ):
                 unique_deals[key] = deal
         if len(unique_deals) != received_count:
             logger.info(
@@ -771,18 +916,37 @@ def create_app() -> FastAPI:
                 category_name_overrides: dict[str, str] = {}
                 if category_urls:
                     rows = db.execute(
-                        select(CategoryMeta.category_url, CategoryMeta.category_name).where(
-                            CategoryMeta.category_url.in_(list(category_urls))
-                        )
+                        select(
+                            CategoryMeta.category_url, CategoryMeta.category_name
+                        ).where(CategoryMeta.category_url.in_(list(category_urls)))
                     ).all()
-                    category_name_overrides = {row[0]: row[1] for row in rows if row and row[0] and row[1]}
+                    category_name_overrides = {
+                        row[0]: row[1] for row in rows if row and row[0] and row[1]
+                    }
 
                 for d in unique_deals.values():
                     # Track deals below threshold for metrics (no longer reject them)
                     if d.pct_off < DEAL_THRESHOLD:
                         below_threshold += 1
 
-                    category_name = category_name_overrides.get(d.category_url or "") or extract_category_name(d.category_url)
+                    suspicious_reason = _deal_suspicious_reason(d.price, d.was_price)
+                    if suspicious_reason:
+                        rejected_suspicious += 1
+                        logger.info(
+                            "[DEALS] batch_id=%s client_id=%s reject_suspicious store_id=%s product_url=%s reason=%s price=%s was_price=%s",
+                            batch_id,
+                            req.client_id,
+                            d.store_id,
+                            d.product_url,
+                            suspicious_reason,
+                            d.price,
+                            d.was_price,
+                        )
+                        continue
+
+                    category_name = category_name_overrides.get(
+                        d.category_url or ""
+                    ) or extract_category_name(d.category_url)
                     base = sqlite_insert(Deal).values(
                         store_id=d.store_id,
                         store_name=d.store_name,
@@ -799,6 +963,7 @@ def create_app() -> FastAPI:
                         seen_count=1,
                         last_client_id=req.client_id,
                     )
+
                     stmt = base.on_conflict_do_update(
                         index_elements=[Deal.store_id, Deal.product_url],
                         set_={
@@ -806,7 +971,9 @@ def create_app() -> FastAPI:
                             Deal.category_url.key: base.excluded.category_url,
                             Deal.category_name.key: base.excluded.category_name,
                             Deal.title.key: base.excluded.title,
-                            Deal.image_url.key: func.coalesce(base.excluded.image_url, Deal.image_url),
+                            Deal.image_url.key: func.coalesce(
+                                base.excluded.image_url, Deal.image_url
+                            ),
                             Deal.price.key: base.excluded.price,
                             Deal.was_price.key: base.excluded.was_price,
                             Deal.pct_off.key: base.excluded.pct_off,
@@ -831,7 +998,11 @@ def create_app() -> FastAPI:
                         last_task_id=getattr(req, "task_id", None),
                     )
                     src_stmt = src_base.on_conflict_do_update(
-                        index_elements=[DealSource.store_id, DealSource.product_url, DealSource.category_url],
+                        index_elements=[
+                            DealSource.store_id,
+                            DealSource.product_url,
+                            DealSource.category_url,
+                        ],
                         set_={
                             DealSource.last_seen_at.key: now,
                             DealSource.seen_count.key: DealSource.seen_count + 1,
@@ -861,8 +1032,15 @@ def create_app() -> FastAPI:
                 db.commit()
             except IntegrityError as exc:
                 db.rollback()
-                logger.exception("[DEALS] batch_id=%s client_id=%s integrity_error=%s", batch_id, req.client_id, exc)
-                raise HTTPException(status_code=500, detail="database integrity error") from exc
+                logger.exception(
+                    "[DEALS] batch_id=%s client_id=%s integrity_error=%s",
+                    batch_id,
+                    req.client_id,
+                    exc,
+                )
+                raise HTTPException(
+                    status_code=500, detail="database integrity error"
+                ) from exc
 
         logger.info(
             "[DEALS] batch_id=%s client_id=%s received=%s unique=%s below_threshold=%s rejected_suspicious=%s upserted=%s",
@@ -876,12 +1054,19 @@ def create_app() -> FastAPI:
         )
 
         if upserts:
-            bus.publish(f"event:deals\ndata:{{\"type\":\"deals\",\"count\":{upserts}}}\n\n")
+            bus.publish(f'event:deals\ndata:{{"type":"deals","count":{upserts}}}\n\n')
 
         # Forward to Cheapskater (best-effort, non-blocking on failure)
-        forward_result = {"attempted": False, "status_code": None, "accepted": 0, "error": None}
+        forward_result = {
+            "attempted": False,
+            "status_code": None,
+            "accepted": 0,
+            "error": None,
+        }
         if accepted_deals:
-            forward_result = _forward_deals_to_cheapskater(accepted_deals, batch_id=batch_id, client_id=req.client_id)
+            forward_result = _forward_deals_to_cheapskater(
+                accepted_deals, batch_id=batch_id, client_id=req.client_id
+            )
 
         with db_session() as db:
             db.add(
@@ -893,7 +1078,9 @@ def create_app() -> FastAPI:
                     unique_count=len(unique_deals),
                     below_threshold=below_threshold,
                     upserted=upserts,
-                    forwarded_count=len(accepted_deals) if forward_result.get("attempted") else 0,
+                    forwarded_count=len(accepted_deals)
+                    if forward_result.get("attempted")
+                    else 0,
                     forward_status_code=forward_result.get("status_code"),
                     forward_error=forward_result.get("error"),
                 )
@@ -937,7 +1124,7 @@ def create_app() -> FastAPI:
             data = await request.json()
             email = data.get("email", "")
             password = data.get("password", "")
-            
+
             if verify_credentials(email, password):
                 token = create_session(email)
                 return {"ok": True, "token": token}
@@ -951,8 +1138,10 @@ def create_app() -> FastAPI:
         """Verify admin authentication token."""
         auth_header = request.headers.get("Authorization", "")
         if not auth_header.startswith("Bearer "):
-            raise HTTPException(status_code=401, detail="Missing or invalid authorization header")
-        
+            raise HTTPException(
+                status_code=401, detail="Missing or invalid authorization header"
+            )
+
         token = auth_header[7:]  # Remove "Bearer " prefix
         if not verify_session(token):
             raise HTTPException(status_code=401, detail="Invalid or expired session")
@@ -961,7 +1150,7 @@ def create_app() -> FastAPI:
     def admin_debug_paths(request: Request) -> dict:
         """Debug endpoint to see directory structure."""
         _require_admin_auth(request)
-        
+
         current = Path(__file__).resolve()
         result = {
             "current_file": str(current),
@@ -969,12 +1158,12 @@ def create_app() -> FastAPI:
             "parent_1": str(current.parent.parent),
             "parent_2": str(current.parent.parent.parent),
         }
-        
+
         try:
             result["parent_3"] = str(current.parent.parent.parent.parent)
         except:
             result["parent_3"] = "(doesn't exist)"
-            
+
         # Check paths
         paths_to_check = [
             "/app/PARALLEL/urls.txt",
@@ -983,29 +1172,34 @@ def create_app() -> FastAPI:
             str(current.parent.parent / "PARALLEL" / "urls.txt"),
             str(current.parent.parent.parent / "PARALLEL" / "urls.txt"),
         ]
-        
+
         try:
-            paths_to_check.append(str(current.parent.parent.parent.parent / "PARALLEL" / "urls.txt"))
+            paths_to_check.append(
+                str(current.parent.parent.parent.parent / "PARALLEL" / "urls.txt")
+            )
         except:
             pass
-            
+
         result["checked_paths"] = {}
         for p in paths_to_check:
             result["checked_paths"][p] = Path(p).exists()
-            
+
         # List /app contents
         if Path("/app").exists():
-            result["app_contents"] = [f"{item.name} ({'dir' if item.is_dir() else 'file'})" for item in Path("/app").iterdir()]
+            result["app_contents"] = [
+                f"{item.name} ({'dir' if item.is_dir() else 'file'})"
+                for item in Path("/app").iterdir()
+            ]
         else:
             result["app_contents"] = []
-            
+
         return result
-    
+
     @app.get("/admin/api/config")
     def admin_get_config(request: Request) -> dict:
         """Get current store configuration."""
         _require_admin_auth(request)
-        
+
         config_manager = get_store_config_manager()
         return {
             "enabled_states": config_manager.get_enabled_states(),
@@ -1018,61 +1212,73 @@ def create_app() -> FastAPI:
     async def admin_save_config(request: Request) -> dict:
         """Save store configuration."""
         _require_admin_auth(request)
-        
+
         try:
             data = await request.json()
-            
+
             enabled_states = data.get("enabled_states", [])
             enabled_stores = data.get("enabled_stores", [])
-            
+
             config_manager = get_store_config_manager()
             config_manager.set_enabled_states(enabled_states, enabled_stores)
-            
+
             # Generate new urls.txt file
             urls_content = config_manager.generate_urls_txt()
-            
+
             # Save to PARALLEL/urls.txt (Works on local dev, might fail on Render)
             try:
                 parallel_urls_path = repo_root / "PARALLEL" / "urls.txt"
                 parallel_urls_path.parent.mkdir(parents=True, exist_ok=True)
-                with open(parallel_urls_path, 'w') as f:
+                with open(parallel_urls_path, "w") as f:
                     f.write(urls_content)
             except Exception as e:
-                logger.warning(f"Could not write to PARALLEL/urls.txt (expected on Render): {e}")
-            
+                logger.warning(
+                    f"Could not write to PARALLEL/urls.txt (expected on Render): {e}"
+                )
+
             # Save to persistent data directory (Crucial for state persistence)
             try:
                 data_urls_path = persistent_data_dir / "urls.txt"
-                with open(data_urls_path, 'w') as f:
+                with open(data_urls_path, "w") as f:
                     f.write(urls_content)
             except Exception as e:
                 logger.error(f"Failed to write to persistent data directory: {e}")
-            
-            logger.info(f"Admin config saved: {len(enabled_states)} states, {len(enabled_stores)} specific stores")
-            
+
+            logger.info(
+                f"Admin config saved: {len(enabled_states)} states, {len(enabled_stores)} specific stores"
+            )
+
             # CRITICAL: Clear ALL existing tasks so workers immediately get the new configuration
             # Without this, workers would continue processing old WA/OR tasks even after switching to FL
             with db_session() as db:
                 old_task_count = db.scalar(select(func.count(Task.id))) or 0
                 if old_task_count > 0:
-                    logger.info(f"Clearing {old_task_count} old tasks to apply new configuration")
+                    logger.info(
+                        f"Clearing {old_task_count} old tasks to apply new configuration"
+                    )
                     db.execute(delete(Task))
                     db.commit()
                     logger.info("Old tasks cleared successfully")
-            
+
             # Re-seed tasks from the new configuration
             try:
                 # Tell seeder to look in our persistent directory first
                 os.environ["LOCAL_URLS_PATH"] = str(data_urls_path)
-                logger.info(f"[admin_save_config] Re-seeding tasks (states={enabled_states}, stores={len(enabled_stores)}) from {data_urls_path}")
+                logger.info(
+                    f"[admin_save_config] Re-seeding tasks (states={enabled_states}, stores={len(enabled_stores)}) from {data_urls_path}"
+                )
                 inserted = seed_tasks_from_parallel_urls(repo_root)
-                logger.info(f"[admin_save_config] Successfully re-seeded {inserted} tasks")
+                logger.info(
+                    f"[admin_save_config] Successfully re-seeded {inserted} tasks"
+                )
                 # Notify all connected workers via event bus
-                bus.publish(f"event:config\ndata:{{\"type\":\"config_updated\",\"tasks_inserted\":{inserted}}}\n\n")
+                bus.publish(
+                    f'event:config\ndata:{{"type":"config_updated","tasks_inserted":{inserted}}}\n\n'
+                )
             except Exception as e:
                 logger.error(f"[admin_save_config] Failed to re-seed tasks: {e}")
                 inserted = 0
-            
+
             return {
                 "ok": True,
                 "enabled_states": enabled_states,
@@ -1089,40 +1295,42 @@ def create_app() -> FastAPI:
     async def admin_reset_config(request: Request) -> dict:
         """Reset configuration to default (WA/OR)."""
         _require_admin_auth(request)
-        
+
         config_manager = get_store_config_manager()
         config_manager.set_enabled_states(["WA", "OR"])
         config_manager.set_enabled_stores([])
-        
+
         # Generate new urls.txt file
         urls_content = config_manager.generate_urls_txt()
-        
+
         # Save to PARALLEL/urls.txt
         try:
             parallel_urls_path = repo_root / "PARALLEL" / "urls.txt"
             parallel_urls_path.parent.mkdir(parents=True, exist_ok=True)
-            with open(parallel_urls_path, 'w') as f:
+            with open(parallel_urls_path, "w") as f:
                 f.write(urls_content)
         except Exception as e:
             logger.warning(f"Could not reset PARALLEL/urls.txt: {e}")
-            
+
         # Save to persistent data directory
         try:
             data_urls_path = persistent_data_dir / "urls.txt"
-            with open(data_urls_path, 'w') as f:
+            with open(data_urls_path, "w") as f:
                 f.write(urls_content)
         except Exception as e:
-            logger.error(f"Failed to write to persistent data directory during reset: {e}")
-        
+            logger.error(
+                f"Failed to write to persistent data directory during reset: {e}"
+            )
+
         logger.info("Admin config reset to default (WA/OR)")
-        
+
         # Re-seed tasks
         try:
             inserted = seed_tasks_from_parallel_urls(repo_root)
             logger.info(f"Re-seeded {inserted} tasks after reset")
         except Exception as e:
             logger.warning(f"Failed to re-seed tasks: {e}")
-        
+
         return {"ok": True, "reset": True}
 
     @app.post("/admin/api/logout")
@@ -1135,7 +1343,9 @@ def create_app() -> FastAPI:
         return {"ok": True}
 
     @app.get("/api/v1/diagnostics/logs")
-    def get_structured_logs(limit: int = 100, event_type: str | None = None) -> list[dict]:
+    def get_structured_logs(
+        limit: int = 100, event_type: str | None = None
+    ) -> list[dict]:
         """
         Get structured JSON logs for diagnostics.
         Visible on Render dashboard for real-time monitoring.
@@ -1153,7 +1363,9 @@ def create_app() -> FastAPI:
             with open(log_file, "r", encoding="utf-8") as f:
                 # Read last N lines efficiently
                 lines = f.readlines()
-                for line in reversed(lines[-limit * 2:]):  # Read extra to account for filtering
+                for line in reversed(
+                    lines[-limit * 2 :]
+                ):  # Read extra to account for filtering
                     try:
                         entry = json.loads(line.strip())
                         if event_type and entry.get("event") != event_type:

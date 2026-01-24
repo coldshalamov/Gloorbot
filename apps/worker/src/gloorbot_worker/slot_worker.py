@@ -32,6 +32,21 @@ DEAL_THRESHOLD = float(os.getenv("DEAL_THRESHOLD", "0.50"))
 COOLDOWN_SECONDS = int(os.getenv("BLOCK_COOLDOWN_SECONDS", "300"))
 MAX_CATEGORY_SECONDS = int(os.getenv("MAX_CATEGORY_SECONDS", "1200"))
 
+# Safety bounds to prevent "manufactured" prices from polluted text blobs.
+# These should be high enough to avoid rejecting legitimate Lowe's items,
+# but low enough to catch concatenation bugs (price + review count, etc.).
+MAX_ABS_PRICE = float(os.getenv("GLOORBOT_MAX_ABS_PRICE", "50000"))
+
+# The "scrambled was_price" bug is strongly correlated with items crossing $1,000
+# (DOM variance + thousands separators + fallback parsing). Apply a strict sanity
+# check for high-ticket items, while being more permissive for cheap clearance
+# items that can legitimately be >5x off.
+STRICT_WAS_MULT_MIN_PRICE = float(
+    os.getenv("GLOORBOT_STRICT_WAS_MULT_MIN_PRICE", "999.99")
+)
+MAX_WAS_MULT_STRICT = float(os.getenv("GLOORBOT_MAX_WAS_MULT_STRICT", "8.0"))
+MAX_WAS_MULT_LOOSE = float(os.getenv("GLOORBOT_MAX_WAS_MULT_LOOSE", "25.0"))
+
 _FALSE_VALUES = {"0", "false", "no", "off"}
 
 _DIAG_FALSE_VALUES = {"0", "false", "no", "off", ""}
@@ -199,7 +214,27 @@ def _load_parallel_scraper() -> Any:
     return mod
 
 
-_PRICE_RE = re.compile(r"\$?\s*([0-9]{1,9})(?:[.,]\s*([0-9]{2}))?")
+# NOTE: Price parsing happens twice in the pipeline:
+# - The PARALLEL scraper extracts raw strings from the DOM.
+# - The worker parses those raw strings into floats.
+#
+# Lowe's markup occasionally concatenates unrelated digits (rating/review counts)
+# adjacent to prices. The worker must never "manufacture" a huge price from a
+# glued digit run.
+
+# Accept explicit dollars with explicit cents. Allow extra trailing digits after
+# the cents (this is how we safely salvage "$1,149.003756" -> $1,149.00).
+_PRICE_DOT_RE = re.compile(r"\$([0-9]{1,7})\.([0-9]{2})")
+# Accept dollars + cents separated by whitespace (common when cents are in a
+# separate DOM node): "$1,637 10".
+_PRICE_SPLIT_CENTS_RE = re.compile(r"\$([0-9]{1,7})\s+([0-9]{2})(?![0-9])")
+# No-dot prices are ambiguous. Only accept when the digit run is bounded (no
+# trailing digits) so we don't match inside glued digit blobs.
+_PRICE_NODOT_RE = re.compile(r"\$([0-9]{1,7})(?![0-9])")
+
+# Loose (no-$) forms: allow plain numeric strings the scraper may pass through.
+_LOOSE_DOT_RE = re.compile(r"(?<![0-9])([0-9]{1,7})\.([0-9]{2})(?![0-9])")
+_LOOSE_NODOT_RE = re.compile(r"(?<![0-9])([0-9]{1,7})(?![0-9])")
 
 
 def _to_float_price(text: str) -> float | None:
@@ -227,27 +262,30 @@ def _to_float_price(text: str) -> float | None:
         or "accessory" in low
     ):
         return None
-    # Normalize weird newlines like "$\n42\n.29"
-    compact = re.sub(r"\s+", "", text)
+
+    # Preserve token boundaries (do NOT delete all whitespace).
+    s = re.sub(r"\s+", " ", text).strip()
     # Remove thousand separators like "$1,049.90" -> "$1049.90"
-    compact = compact.replace(",", "")
+    s = s.replace(",", "")
+    # Normalize weird newlines like "$\n42\n.29" while still preserving boundaries
+    # between unrelated numbers.
+    s = re.sub(r"\$\s+(\d)", r"$\1", s)
+    s = re.sub(r"(\d)\s*\.\s*(\d)", r"\1.\2", s)
+
     # Avoid interpreting non-price discount labels as money (e.g. "Save 5%").
-    if "$" not in compact:
-        if "%" in compact:
+    if "$" not in s:
+        if "%" in s:
             return None
-        if re.search(r"(?i)\b(save|savings|off)\b", text):
+        if re.search(r"(?i)\b(save|savings|off)\b", s):
             return None
 
-    # Prefer explicit $ patterns first
     def _build_price(whole: str, cents: str | None) -> float | None:
         if not whole:
             return None
         if cents is None:
-            # Lowe's sometimes renders cents without a literal '.' (CSS adds it),
-            # producing strings like "$163710" for "$1,637.10" after commas/space removal.
-            # Heuristic: when we see a long run of digits and no explicit cents, treat
-            # the last 2 digits as cents. Keep the threshold conservative so we don't
-            # misread whole-dollar prices like "$2699" as "$26.99".
+            # Ambiguous "no-dot" path: only treat the last 2 digits as cents for
+            # sufficiently long values (e.g. "$163710" -> $1,637.10). This is also
+            # where glued digit blobs can sneak in, so keep it conservative.
             if len(whole) >= 5:
                 whole, cents = whole[:-2], whole[-2:]
             else:
@@ -257,14 +295,31 @@ def _to_float_price(text: str) -> float | None:
         except Exception:
             return None
 
-    m = re.search(r"\$([0-9]{1,9})(?:\.([0-9]{2}))?", compact)
+    # 1) Explicit cents
+    m = _PRICE_DOT_RE.search(s)
     if m:
         return _build_price(m.group(1), m.group(2))
-    # Fallback to loose match
-    m2 = _PRICE_RE.search(compact)
-    if not m2:
-        return None
-    return _build_price(m2.group(1), m2.group(2))
+
+    # 2) Dollars and cents in separate tokens: "$1637 10"
+    m = _PRICE_SPLIT_CENTS_RE.search(s)
+    if m:
+        return _build_price(m.group(1), m.group(2))
+
+    # 3) No-dot bounded digit run: "$163710" (cents appended)
+    m = _PRICE_NODOT_RE.search(s)
+    if m:
+        whole = m.group(1)
+        return _build_price(whole, None)
+
+    # 4) Loose numeric forms (no $)
+    m = _LOOSE_DOT_RE.search(s)
+    if m:
+        return _build_price(m.group(1), m.group(2))
+    m = _LOOSE_NODOT_RE.search(s)
+    if m:
+        return _build_price(m.group(1), None)
+
+    return None
 
 
 def _deal_from_product(p: dict, category_url: str) -> dict | None:
@@ -299,6 +354,47 @@ def _deal_from_product(p: dict, category_url: str) -> dict | None:
                 },
             )
         return None
+
+    # Defense-in-depth: even if some upstream text blob gets polluted,
+    # never accept absurd prices or absurd "was" multipliers.
+    if price_now > MAX_ABS_PRICE or was_price > MAX_ABS_PRICE:
+        if _deal_diag_enabled():
+            _deal_diag_write(
+                slot_id,
+                {
+                    "stage": "reject",
+                    "reason": "abs_price_ceiling",
+                    "category_url": category_url,
+                    "product_url": p.get("url"),
+                    "price_now": price_now,
+                    "was_price": was_price,
+                    "max_abs_price": MAX_ABS_PRICE,
+                },
+            )
+        return None
+
+    max_mult = (
+        MAX_WAS_MULT_STRICT
+        if max(price_now, was_price) >= STRICT_WAS_MULT_MIN_PRICE
+        else MAX_WAS_MULT_LOOSE
+    )
+    if price_now > 0 and was_price > (price_now * max_mult):
+        if _deal_diag_enabled():
+            _deal_diag_write(
+                slot_id,
+                {
+                    "stage": "reject",
+                    "reason": "was_multiplier_ceiling",
+                    "category_url": category_url,
+                    "product_url": p.get("url"),
+                    "price_now": price_now,
+                    "was_price": was_price,
+                    "max_was_mult": max_mult,
+                    "strict_min_price": STRICT_WAS_MULT_MIN_PRICE,
+                },
+            )
+        return None
+
     pct_off = (was_price - price_now) / was_price
     # Filter deals that don't meet the minimum discount threshold
     if pct_off < DEAL_THRESHOLD:
