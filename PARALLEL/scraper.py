@@ -312,7 +312,9 @@ async def set_store_context(page: Page, store_url: str, store_name: str):
 # TILE GROUP EXTRACTION (ROW -> PER-PRODUCT)
 # ============================================================================
 
-_MONEY_STR_RE = re.compile(r"\$\s*[0-9,]+(?:\.\d{2})?")
+_MONEY_STR_RE = re.compile(
+    r"\$\s*(?:(?:\d{1,3}(?:,\d{3})+|\d{1,6})\.\d{2}|(?:\d{1,3}(?:,\d{3})+(?:\d{2})?|\d{1,7})(?=\D|$))"
+)
 _FINANCING_NOISE_RE = re.compile(
     r"(?i)(/mo\b|\bper\s+month\b|\bmonthly\b|\bmonth\b|suggested\s+payments?"
     r"|special\s+financing|buy\s+now|pay\s+later|learn\s+how|when\s+you\s+choose|eligible\s+purchases|protection|plan|warranty|accessory)"
@@ -402,6 +404,10 @@ def _normalize_money_str(value: str) -> str:
     digits = s[1:].replace(",", "")
     if not digits.isdigit():
         return s
+    # Guard: if we see an extremely long no-decimal digit run, it's likely a
+    # concatenation bug (e.g. price digits glued to review counts).
+    if "," not in s and len(digits) > 7:
+        return ""
 
     # If there's no explicit decimal, treat the last 2 digits as cents when
     # the string looks like it includes cents appended (common on Lowe's).
@@ -464,12 +470,20 @@ def _money_values_from_text_blob(text: str) -> list[float]:
         cleaned,
     )
 
-    # Extract money values, normalized.
-    compact = re.sub(r"\s+", "", cleaned)
+    # Parse money values with boundary safety (don't merge "Price" + "ReviewCount")
+    # 1. Collapse multiple spaces/newlines to a single space
+    compact = re.sub(r"\s+", " ", cleaned)
+    # 2. Ensure "$" is attached to digits (fix "$\n14" -> "$ 14" -> "$14")
+    compact = re.sub(r"\$\s+", "$", compact)
+    # 3. Remove commas (thousands result in pure digits)
     compact = compact.replace(",", "")
     vals: list[float] = []
-    for m in re.finditer(r"\$([0-9]{1,9})(?:\.([0-9]{2}))?", compact):
-        whole = m.group(1)
+    # Prefer decimal-dot forms (safe even if followed by digits), but require a
+    # non-digit boundary for no-dot forms to avoid partial matches inside
+    # concatenated digit runs (e.g. "$1149003756").
+    money_re = re.compile(r"\$([0-9]{1,7})\.([0-9]{2})|\$([0-9]{1,7})(?![0-9])")
+    for m in money_re.finditer(compact):
+        whole = m.group(1) or m.group(3)
         cents = m.group(2)
         if cents is None:
             # Handle "$163710" style strings where cents are appended without a dot.
@@ -1595,6 +1609,10 @@ async def scrape_category_page(
                     const raw = s.slice(1);
                     const digits = raw.replace(/,/g, "");
                     if (!/^\\d+$/.test(digits)) return s;
+                    // Guard: if separators are missing and we end up with an unusually long
+                    // digit run, it's likely a concatenation with review counts or other UI
+                    // numbers (e.g. "$1149003756").
+                    if (!s.includes(",") && digits.length > 7) return null;
 
                     if (s.includes(",")) {
                         const lastGroup = s.split(",").pop() || "";
@@ -1619,7 +1637,8 @@ async def scrape_category_page(
                     // Collect all candidates and prefer the one that looks most like a real price.
                     // IMPORTANT: Support prices >= $1,000 even if the comma is not present in
                     // text (some Lowe's price widgets render separators via CSS).
-                    const re = /\\$\\s*\\d+(?:,\\d{3})*(?:\\.\\d{2}|\\d{2})?/g;
+                    const re =
+                        /\\$\\s*(?:(?:\\d{1,3}(?:,\\d{3})+|\\d{1,6})\\.\\d{2}|(?:\\d{1,3}(?:,\\d{3})+(?:\\d{2})?|\\d{1,7})(?=$|[^0-9]))/g;
                     const matches = s.match(re) || [];
                     if (!matches.length) return null;
 

@@ -222,6 +222,14 @@ Optional diagnostics:
 - Randomized mouse movements during warmup
 - Never run multiple workers on same IP (use different computers)
 
+## Agent Instructions
+
+**⚠️ CRITICAL: Do NOT auto-commit or push without explicit user request.**
+
+Claude will make changes but NOT commit them automatically. The user must explicitly ask "commit this" or similar. This prevents rebuilding the Render service 30 times a day from unsolicited commits.
+
+Changes stay in working tree until user asks. Only commit when explicitly requested.
+
 ## Current Plan
 
 - [x] Build working distributed scraper

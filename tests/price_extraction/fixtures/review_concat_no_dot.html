@@ -1,0 +1,28 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Review Concat (No Dot) Fixture</title>
+  </head>
+  <body>
+    <!--
+      Reproduces the nastier dirty-text failure mode:
+      a no-decimal digit run gets concatenated with the rating count
+      (e.g. "$114900" + "3756" => "$1149003756").
+
+      We must NOT interpret this as a real price.
+    -->
+    <div class="tile_group">
+      <div data-tile="1">
+        <a href="/pd/Product-D/444">
+          <span data-selector="splp-prd-ttl">Product D Range</span>
+        </a>
+
+        <div data-testid="current-price" aria-label="Actual Price $799.00">$799.00</div>
+
+        <!-- No aria-label on purpose: force parsing from inner text -->
+        <span data-testid="was-price">$114900<span class="rating-count">3756</span></span>
+      </div>
+    </div>
+  </body>
+</html>

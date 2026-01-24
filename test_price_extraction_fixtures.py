@@ -61,6 +61,25 @@ async def test_fixture_savings_percentage_noise() -> None:
     assert p.get("was_price") == "$1,399.99"
 
 
+@pytest.mark.asyncio
+async def test_fixture_review_concat_dot_keeps_price() -> None:
+    products = await _extract_prices_from_fixture("review_concat_dot.html")
+    assert len(products) == 1
+    p = products[0]
+    assert p.get("price") == "$799.00"
+    assert p.get("was_price") == "$1,149.00"
+
+
+@pytest.mark.asyncio
+async def test_fixture_review_concat_no_dot_is_rejected() -> None:
+    products = await _extract_prices_from_fixture("review_concat_no_dot.html")
+    assert len(products) == 1
+    p = products[0]
+    assert p.get("price") == "$799.00"
+    # The broken "$1149003756" should NOT become a huge bogus price.
+    assert p.get("was_price") in ("", None)
+
+
 if __name__ == "__main__":
     asyncio.run(test_fixture_mixed_tile_group())
     asyncio.run(test_fixture_financing_noise())
