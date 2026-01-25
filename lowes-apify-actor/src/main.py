@@ -103,18 +103,18 @@ USER_AGENTS = [
 ]
 
 TIMEZONES = [
-    'America/New_York',
-    'America/Chicago',
-    'America/Los_Angeles',
-    'America/Denver',
-    'America/Phoenix',
+    "America/New_York",
+    "America/Chicago",
+    "America/Los_Angeles",
+    "America/Denver",
+    "America/Phoenix",
 ]
 
 LOCALES = [
-    'en-US',
-    'en-GB',
-    'en-CA',
-    'en-AU',
+    "en-US",
+    "en-GB",
+    "en-CA",
+    "en-AU",
 ]
 
 
@@ -133,7 +133,10 @@ def randomize_locale_enabled() -> bool:
 def desired_timezone() -> str:
     """Return the baseline timezone to use when not randomizing."""
 
-    return os.getenv("CHEAPSKATER_TZ", "America/Los_Angeles").strip() or "America/Los_Angeles"
+    return (
+        os.getenv("CHEAPSKATER_TZ", "America/Los_Angeles").strip()
+        or "America/Los_Angeles"
+    )
 
 
 def desired_locale() -> str:
@@ -271,7 +274,9 @@ async def _prime_session(page: Page) -> None:
     """Prime the session on Lowe's homepage to allow Akamai JS to settle."""
 
     try:
-        await page.goto("https://www.lowes.com/", wait_until="domcontentloaded", timeout=30000)
+        await page.goto(
+            "https://www.lowes.com/", wait_until="domcontentloaded", timeout=30000
+        )
         await page.wait_for_load_state("networkidle", timeout=12000)
         await asyncio.sleep(random.uniform(0.8, 1.6))
     except Exception:
@@ -297,7 +302,11 @@ async def _wait_for_akamai_clear(page: Page, timeout_s: float = 60.0) -> bool:
             return False
 
         # Challenge marker seen: wait for it to complete.
-        if "chlgeId" in content or "/fUQvvs/" in content or "akamai" in content[:2000].lower():
+        if (
+            "chlgeId" in content
+            or "/fUQvvs/" in content
+            or "akamai" in content[:2000].lower()
+        ):
             try:
                 await page.wait_for_load_state("networkidle", timeout=5000)
             except Exception:
@@ -417,8 +426,11 @@ async def compute_fingerprint_hash(page: Page) -> str:
             payload["audio"] = audio_payload
         except Exception:
             payload["audio"] = None
-    digest = hashlib.sha256(json.dumps(payload, sort_keys=True).encode("utf-8")).hexdigest()
+    digest = hashlib.sha256(
+        json.dumps(payload, sort_keys=True).encode("utf-8")
+    ).hexdigest()
     return digest
+
 
 # =============================================================================
 # STORE DATA - ALL WASHINGTON AND OREGON LOWE'S
@@ -426,13 +438,28 @@ async def compute_fingerprint_hash(page: Page) -> str:
 
 WA_OR_STORES = {
     # WASHINGTON (35 stores)
-    "0061": {"name": "Smokey Point", "city": "Arlington", "state": "WA", "zip": "98223"},
+    "0061": {
+        "name": "Smokey Point",
+        "city": "Arlington",
+        "state": "WA",
+        "zip": "98223",
+    },
     "1089": {"name": "Auburn", "city": "Auburn", "state": "WA", "zip": "98002"},
     "1631": {"name": "Bellingham", "city": "Bellingham", "state": "WA", "zip": "98226"},
-    "2895": {"name": "Bonney Lake", "city": "Bonney Lake", "state": "WA", "zip": "98391"},
+    "2895": {
+        "name": "Bonney Lake",
+        "city": "Bonney Lake",
+        "state": "WA",
+        "zip": "98391",
+    },
     "1534": {"name": "Bremerton", "city": "Bremerton", "state": "WA", "zip": "98311"},
     "0149": {"name": "Everett", "city": "Everett", "state": "WA", "zip": "98201"},
-    "2346": {"name": "Federal Way", "city": "Federal Way", "state": "WA", "zip": "98003"},
+    "2346": {
+        "name": "Federal Way",
+        "city": "Federal Way",
+        "state": "WA",
+        "zip": "98003",
+    },
     "0140": {"name": "Issaquah", "city": "Issaquah", "state": "WA", "zip": "98027"},
     "0249": {"name": "Kennewick", "city": "Kennewick", "state": "WA", "zip": "99336"},
     "2561": {"name": "Kent-Midway", "city": "Kent", "state": "WA", "zip": "98032"},
@@ -443,39 +470,94 @@ WA_OR_STORES = {
     "1573": {"name": "Mill Creek", "city": "Mill Creek", "state": "WA", "zip": "98012"},
     "2781": {"name": "Monroe", "city": "Monroe", "state": "WA", "zip": "98272"},
     "2956": {"name": "Moses Lake", "city": "Moses Lake", "state": "WA", "zip": "98837"},
-    "0035": {"name": "Mount Vernon", "city": "Mount Vernon", "state": "WA", "zip": "98273"},
+    "0035": {
+        "name": "Mount Vernon",
+        "city": "Mount Vernon",
+        "state": "WA",
+        "zip": "98273",
+    },
     "1167": {"name": "Olympia", "city": "Olympia", "state": "WA", "zip": "98516"},
     "2344": {"name": "Pasco", "city": "Pasco", "state": "WA", "zip": "99301"},
-    "2733": {"name": "Port Orchard", "city": "Port Orchard", "state": "WA", "zip": "98367"},
+    "2733": {
+        "name": "Port Orchard",
+        "city": "Port Orchard",
+        "state": "WA",
+        "zip": "98367",
+    },
     "2734": {"name": "Puyallup", "city": "Puyallup", "state": "WA", "zip": "98374"},
     "2420": {"name": "Renton", "city": "Renton", "state": "WA", "zip": "98057"},
     "0252": {"name": "N. Seattle", "city": "Seattle", "state": "WA", "zip": "98133"},
     "0004": {"name": "Rainier", "city": "Seattle", "state": "WA", "zip": "98144"},
     "2746": {"name": "Silverdale", "city": "Silverdale", "state": "WA", "zip": "98383"},
     "3045": {"name": "N. Spokane", "city": "Spokane", "state": "WA", "zip": "99208"},
-    "0172": {"name": "Spokane Valley", "city": "Spokane", "state": "WA", "zip": "99212"},
-    "2793": {"name": "E. Spokane Valley", "city": "Spokane Valley", "state": "WA", "zip": "99037"},
+    "0172": {
+        "name": "Spokane Valley",
+        "city": "Spokane",
+        "state": "WA",
+        "zip": "99212",
+    },
+    "2793": {
+        "name": "E. Spokane Valley",
+        "city": "Spokane Valley",
+        "state": "WA",
+        "zip": "99037",
+    },
     "0026": {"name": "Tacoma", "city": "Tacoma", "state": "WA", "zip": "98466"},
     "0010": {"name": "Tukwila", "city": "Tukwila", "state": "WA", "zip": "98188"},
-    "1632": {"name": "E. Vancouver", "city": "Vancouver", "state": "WA", "zip": "98662"},
-    "2954": {"name": "Lacamas Lake", "city": "Vancouver", "state": "WA", "zip": "98683"},
+    "1632": {
+        "name": "E. Vancouver",
+        "city": "Vancouver",
+        "state": "WA",
+        "zip": "98662",
+    },
+    "2954": {
+        "name": "Lacamas Lake",
+        "city": "Vancouver",
+        "state": "WA",
+        "zip": "98683",
+    },
     "0152": {"name": "Wenatchee", "city": "Wenatchee", "state": "WA", "zip": "98801"},
     "3240": {"name": "Yakima", "city": "Yakima", "state": "WA", "zip": "98903"},
     # OREGON (14 stores)
-    "3057": {"name": "Albany-Millersburg", "city": "Albany", "state": "OR", "zip": "97322"},
+    "3057": {
+        "name": "Albany-Millersburg",
+        "city": "Albany",
+        "state": "OR",
+        "zip": "97322",
+    },
     "1690": {"name": "Bend", "city": "Bend", "state": "OR", "zip": "97701"},
     "2940": {"name": "W. Eugene", "city": "Eugene", "state": "OR", "zip": "97402"},
     "1558": {"name": "Hillsboro", "city": "Hillsboro", "state": "OR", "zip": "97123"},
     "2619": {"name": "Keizer", "city": "Keizer", "state": "OR", "zip": "97303"},
-    "1693": {"name": "McMinnville", "city": "McMinnville", "state": "OR", "zip": "97128"},
+    "1693": {
+        "name": "McMinnville",
+        "city": "McMinnville",
+        "state": "OR",
+        "zip": "97128",
+    },
     "0248": {"name": "Medford", "city": "Medford", "state": "OR", "zip": "97504"},
-    "1824": {"name": "Clackamas County", "city": "Milwaukie", "state": "OR", "zip": "97222"},
-    "2579": {"name": "Portland-Delta Park", "city": "Portland", "state": "OR", "zip": "97217"},
+    "1824": {
+        "name": "Clackamas County",
+        "city": "Milwaukie",
+        "state": "OR",
+        "zip": "97222",
+    },
+    "2579": {
+        "name": "Portland-Delta Park",
+        "city": "Portland",
+        "state": "OR",
+        "zip": "97217",
+    },
     "2865": {"name": "Redmond", "city": "Redmond", "state": "OR", "zip": "97756"},
     "1741": {"name": "Roseburg", "city": "Roseburg", "state": "OR", "zip": "97470"},
     "1600": {"name": "Salem", "city": "Salem", "state": "OR", "zip": "97302"},
     "1108": {"name": "Tigard", "city": "Tigard", "state": "OR", "zip": "97223"},
-    "1114": {"name": "Wood Village", "city": "Wood Village", "state": "OR", "zip": "97060"},
+    "1114": {
+        "name": "Wood Village",
+        "city": "Wood Village",
+        "state": "OR",
+        "zip": "97060",
+    },
 }
 
 # =============================================================================
@@ -484,47 +566,98 @@ WA_OR_STORES = {
 
 DEFAULT_CATEGORIES = [
     # Clearance/Deals (highest priority for markdowns)
-    {"name": "Clearance", "url": "https://www.lowes.com/pl/The-back-aisle/2021454685607"},
-
+    {
+        "name": "Clearance",
+        "url": "https://www.lowes.com/pl/The-back-aisle/2021454685607",
+    },
     # Building Materials
-    {"name": "Lumber", "url": "https://www.lowes.com/pl/Lumber-Building-supplies/4294850532"},
-    {"name": "Plywood", "url": "https://www.lowes.com/pl/Plywood-Building-supplies/4294858043"},
-    {"name": "Drywall", "url": "https://www.lowes.com/pl/Drywall-Building-supplies/4294857989"},
-
+    {
+        "name": "Lumber",
+        "url": "https://www.lowes.com/pl/Lumber-Building-supplies/4294850532",
+    },
+    {
+        "name": "Plywood",
+        "url": "https://www.lowes.com/pl/Plywood-Building-supplies/4294858043",
+    },
+    {
+        "name": "Drywall",
+        "url": "https://www.lowes.com/pl/Drywall-Building-supplies/4294857989",
+    },
     # Tools
-    {"name": "Power Tools", "url": "https://www.lowes.com/pl/Power-tools-Tools/4294612503"},
-    {"name": "Hand Tools", "url": "https://www.lowes.com/pl/Hand-tools-Tools/4294933958"},
-    {"name": "Tool Storage", "url": "https://www.lowes.com/pl/Tool-storage-Tools/4294857963"},
-
+    {
+        "name": "Power Tools",
+        "url": "https://www.lowes.com/pl/Power-tools-Tools/4294612503",
+    },
+    {
+        "name": "Hand Tools",
+        "url": "https://www.lowes.com/pl/Hand-tools-Tools/4294933958",
+    },
+    {
+        "name": "Tool Storage",
+        "url": "https://www.lowes.com/pl/Tool-storage-Tools/4294857963",
+    },
     # Paint
-    {"name": "Paint", "url": "https://www.lowes.com/pl/Paint-Paint-supplies/4294820090"},
-    {"name": "Stains", "url": "https://www.lowes.com/pl/Exterior-stains-waterproofers/4294858026"},
-
+    {
+        "name": "Paint",
+        "url": "https://www.lowes.com/pl/Paint-Paint-supplies/4294820090",
+    },
+    {
+        "name": "Stains",
+        "url": "https://www.lowes.com/pl/Exterior-stains-waterproofers/4294858026",
+    },
     # Appliances
     {"name": "Appliances", "url": "https://www.lowes.com/pl/Appliances/4294857975"},
-    {"name": "Washers Dryers", "url": "https://www.lowes.com/pl/Washers-dryers-Appliances/4294857958"},
-    {"name": "Refrigerators", "url": "https://www.lowes.com/pl/Refrigerators-Appliances/4294857957"},
-
+    {
+        "name": "Washers Dryers",
+        "url": "https://www.lowes.com/pl/Washers-dryers-Appliances/4294857958",
+    },
+    {
+        "name": "Refrigerators",
+        "url": "https://www.lowes.com/pl/Refrigerators-Appliances/4294857957",
+    },
     # Outdoor
-    {"name": "Outdoor Power", "url": "https://www.lowes.com/pl/Outdoor-power-equipment-Outdoors/4294857982"},
-    {"name": "Grills", "url": "https://www.lowes.com/pl/Grills-grilling-Outdoors/4294821574"},
-    {"name": "Patio Furniture", "url": "https://www.lowes.com/pl/Patio-furniture-Outdoors/4294857984"},
-
+    {
+        "name": "Outdoor Power",
+        "url": "https://www.lowes.com/pl/Outdoor-power-equipment-Outdoors/4294857982",
+    },
+    {
+        "name": "Grills",
+        "url": "https://www.lowes.com/pl/Grills-grilling-Outdoors/4294821574",
+    },
+    {
+        "name": "Patio Furniture",
+        "url": "https://www.lowes.com/pl/Patio-furniture-Outdoors/4294857984",
+    },
     # Flooring
     {"name": "Flooring", "url": "https://www.lowes.com/pl/Flooring/4294822454"},
-    {"name": "Tile", "url": "https://www.lowes.com/pl/Tile-tile-accessories-Flooring/4294858017"},
-
+    {
+        "name": "Tile",
+        "url": "https://www.lowes.com/pl/Tile-tile-accessories-Flooring/4294858017",
+    },
     # Kitchen & Bath
-    {"name": "Kitchen Faucets", "url": "https://www.lowes.com/pl/Kitchen-faucets-water-dispensers/4294857986"},
-    {"name": "Bathroom Vanities", "url": "https://www.lowes.com/pl/Bathroom-vanities-Bathroom/4294819024"},
-
+    {
+        "name": "Kitchen Faucets",
+        "url": "https://www.lowes.com/pl/Kitchen-faucets-water-dispensers/4294857986",
+    },
+    {
+        "name": "Bathroom Vanities",
+        "url": "https://www.lowes.com/pl/Bathroom-vanities-Bathroom/4294819024",
+    },
     # Electrical
-    {"name": "Lighting", "url": "https://www.lowes.com/pl/Lighting-ceiling-fans/4294857979"},
+    {
+        "name": "Lighting",
+        "url": "https://www.lowes.com/pl/Lighting-ceiling-fans/4294857979",
+    },
     {"name": "Electrical", "url": "https://www.lowes.com/pl/Electrical/4294630256"},
-
     # Hardware
-    {"name": "Fasteners", "url": "https://www.lowes.com/pl/Fasteners-Hardware/4294857976"},
-    {"name": "Door Hardware", "url": "https://www.lowes.com/pl/Door-hardware-Hardware/4294858003"},
+    {
+        "name": "Fasteners",
+        "url": "https://www.lowes.com/pl/Fasteners-Hardware/4294857976",
+    },
+    {
+        "name": "Door Hardware",
+        "url": "https://www.lowes.com/pl/Door-hardware-Hardware/4294858003",
+    },
 ]
 
 
@@ -562,10 +695,17 @@ def load_lowes_map() -> tuple[dict[str, dict], list[dict]]:
                 elif "/pl/" in line:
                     if line not in seen_cats:
                         seen_cats.add(line)
-                        name = line.split("/pl/")[1].split("/")[0].replace("-", " ").title()
+                        name = (
+                            line.split("/pl/")[1]
+                            .split("/")[0]
+                            .replace("-", " ")
+                            .title()
+                        )
                         categories.append({"name": name, "url": line})
 
-        Actor.log.info(f"Loaded {len(stores)} stores and {len(categories)} categories from LowesMap.txt")
+        Actor.log.info(
+            f"Loaded {len(stores)} stores and {len(categories)} categories from LowesMap.txt"
+        )
         return stores, categories
     except Exception as e:
         Actor.log.error(f"Error reading LowesMap.txt: {e}")
@@ -579,16 +719,35 @@ def load_lowes_map() -> tuple[dict[str, dict], list[dict]]:
 BLOCKED_RESOURCE_TYPES = {"image", "media", "font"}
 
 BLOCKED_URL_PATTERNS = [
-    r"google-analytics\.com", r"googletagmanager\.com", r"facebook\.net",
-    r"doubleclick\.net", r"analytics", r"tracking", r"beacon", r"pixel",
-    r"ads\.", r"adservice", r"youtube\.com", r"vimeo\.com",
-    r"hotjar\.com", r"clarity\.ms", r"newrelic\.com", r"sentry\.io",
-    r"segment\.com", r"optimizely\.com", r"fullstory\.com",
-    r"\.woff2?(\?|$)", r"\.ttf(\?|$)", r"\.eot(\?|$)",
+    r"google-analytics\.com",
+    r"googletagmanager\.com",
+    r"facebook\.net",
+    r"doubleclick\.net",
+    r"analytics",
+    r"tracking",
+    r"beacon",
+    r"pixel",
+    r"ads\.",
+    r"adservice",
+    r"youtube\.com",
+    r"vimeo\.com",
+    r"hotjar\.com",
+    r"clarity\.ms",
+    r"newrelic\.com",
+    r"sentry\.io",
+    r"segment\.com",
+    r"optimizely\.com",
+    r"fullstory\.com",
+    r"\.woff2?(\?|$)",
+    r"\.ttf(\?|$)",
+    r"\.eot(\?|$)",
 ]
 
 NEVER_BLOCK_PATTERNS = [
-    r"/_sec/", r"/akam/", r"akamai", r"lowes\.com",
+    r"/_sec/",
+    r"/akam/",
+    r"akamai",
+    r"lowes\.com",
 ]
 
 
@@ -596,7 +755,10 @@ NEVER_BLOCK_PATTERNS = [
 # ANTI-FINGERPRINTING - INJECTION SCRIPTS
 # =============================================================================
 
-def build_fingerprint_profile(viewport_width: int, viewport_height: int) -> dict[str, object]:
+
+def build_fingerprint_profile(
+    viewport_width: int, viewport_height: int
+) -> dict[str, object]:
     """Build a stable per-context fingerprint profile to avoid intra-session drift."""
 
     screen_width = max(viewport_width + random.randint(200, 600), viewport_width)
@@ -615,20 +777,24 @@ def build_fingerprint_profile(viewport_width: int, viewport_height: int) -> dict
             "avail_height_offset": random.randint(30, 80),
         },
         "webgl": {
-            "vendor": random.choice([
-                "Intel Inc.",
-                "Intel Open Source Technology Center",
-                "Google Inc. (Intel)",
-                "NVIDIA Corporation",
-                "AMD",
-            ]),
-            "renderer": random.choice([
-                "Intel Iris OpenGL Engine",
-                "Mesa DRI Intel(R) HD Graphics",
-                "ANGLE (Intel, Intel(R) UHD Graphics Direct3D11)",
-                "Intel(R) UHD Graphics 620",
-                "GeForce GTX 1050/PCIe/SSE2",
-            ]),
+            "vendor": random.choice(
+                [
+                    "Intel Inc.",
+                    "Intel Open Source Technology Center",
+                    "Google Inc. (Intel)",
+                    "NVIDIA Corporation",
+                    "AMD",
+                ]
+            ),
+            "renderer": random.choice(
+                [
+                    "Intel Iris OpenGL Engine",
+                    "Mesa DRI Intel(R) HD Graphics",
+                    "ANGLE (Intel, Intel(R) UHD Graphics Direct3D11)",
+                    "Intel(R) UHD Graphics 620",
+                    "GeForce GTX 1050/PCIe/SSE2",
+                ]
+            ),
         },
     }
 
@@ -737,9 +903,8 @@ async def inject_webgl_noise(page: Page, vendor: str, renderer: str) -> None:
             }
         })();
     """
-    script = (
-        script.replace("__VENDOR__", json.dumps(vendor))
-        .replace("__RENDERER__", json.dumps(renderer))
+    script = script.replace("__VENDOR__", json.dumps(vendor)).replace(
+        "__RENDERER__", json.dumps(renderer)
     )
     await page.add_init_script(script)
 
@@ -789,7 +954,9 @@ async def inject_audio_noise(page: Page, noise_offset: float) -> None:
     await page.add_init_script(script)
 
 
-async def inject_screen_randomization(page: Page, screen_width: int, screen_height: int, avail_height_offset: int) -> None:
+async def inject_screen_randomization(
+    page: Page, screen_width: int, screen_height: int, avail_height_offset: int
+) -> None:
     """
     Inject screen resolution randomization.
 
@@ -819,7 +986,9 @@ async def inject_screen_randomization(page: Page, screen_width: int, screen_heig
     await page.add_init_script(script)
 
 
-async def apply_fingerprint_randomization(page: Page, profile: dict[str, object]) -> None:
+async def apply_fingerprint_randomization(
+    page: Page, profile: dict[str, object]
+) -> None:
     """
     Apply all fingerprint randomization techniques.
 
@@ -839,11 +1008,14 @@ async def apply_fingerprint_randomization(page: Page, profile: dict[str, object]
     await inject_canvas_noise(page, canvas_noise)
     await inject_webgl_noise(page, webgl["vendor"], webgl["renderer"])
     await inject_audio_noise(page, audio_noise)
-    await inject_screen_randomization(page, screen["width"], screen["height"], screen["avail_height_offset"])
+    await inject_screen_randomization(
+        page, screen["width"], screen["height"], screen["avail_height_offset"]
+    )
 
 
 async def setup_request_interception(page: Page) -> None:
     """Block unnecessary resources while preserving Akamai scripts."""
+
     async def handle_route(route: Route):
         url = route.request.url.lower()
         resource_type = route.request.resource_type
@@ -864,7 +1036,9 @@ async def setup_request_interception(page: Page) -> None:
         for pattern in BLOCKED_URL_PATTERNS:
             if re.search(pattern, url, re.IGNORECASE):
                 if request_block_debug_enabled():
-                    Actor.log.info(f"[blocked:pattern] {resource_type} {route.request.url}")
+                    Actor.log.info(
+                        f"[blocked:pattern] {resource_type} {route.request.url}"
+                    )
                 await route.abort()
                 return
 
@@ -876,6 +1050,7 @@ async def setup_request_interception(page: Page) -> None:
 # =============================================================================
 # PICKUP FILTER - CRITICAL FOR LOCAL AVAILABILITY
 # =============================================================================
+
 
 async def apply_pickup_filter(page: Page, category_name: str) -> bool:
     """
@@ -931,7 +1106,9 @@ async def apply_pickup_filter(page: Page, category_name: str) -> bool:
     async def get_product_count() -> int:
         """Count visible products to verify filter effect."""
         try:
-            cards = await page.query_selector_all('[data-test="product-pod"], [data-test="productPod"]')
+            cards = await page.query_selector_all(
+                '[data-test="product-pod"], [data-test="productPod"]'
+            )
             return len(cards)
         except Exception:
             return -1
@@ -961,7 +1138,9 @@ async def apply_pickup_filter(page: Page, category_name: str) -> bool:
                     selector_counts.append((selector, len(matches)))
                 except Exception:
                     selector_counts.append((selector, 0))
-            Actor.log.info(f"[{category_name}] Pickup selector counts: {selector_counts}")
+            Actor.log.info(
+                f"[{category_name}] Pickup selector counts: {selector_counts}"
+            )
         except Exception:
             pass
 
@@ -984,10 +1163,14 @@ async def apply_pickup_filter(page: Page, category_name: str) -> bool:
                             continue
 
                         if await is_selected(element):
-                            Actor.log.info(f"[{category_name}] Pickup filter already active")
+                            Actor.log.info(
+                                f"[{category_name}] Pickup filter already active"
+                            )
                             return True
 
-                        Actor.log.info(f"[{category_name}] Clicking pickup filter: '{text[:40]}'")
+                        Actor.log.info(
+                            f"[{category_name}] Clicking pickup filter: '{text[:40]}'"
+                        )
                         await element.click()
                         await asyncio.sleep(random.uniform(0.8, 1.5))
 
@@ -1010,7 +1193,14 @@ async def apply_pickup_filter(page: Page, category_name: str) -> bool:
                             url_after = page.url
                             if url_after != url_before:
                                 url_lower = url_after.lower()
-                                if any(param in url_lower for param in ["pickup", "availability", "refinement"]):
+                                if any(
+                                    param in url_lower
+                                    for param in [
+                                        "pickup",
+                                        "availability",
+                                        "refinement",
+                                    ]
+                                ):
                                     verified = True
                                     verification_method = "url-params"
 
@@ -1020,10 +1210,14 @@ async def apply_pickup_filter(page: Page, category_name: str) -> bool:
                             if 0 < count_after < count_before:
                                 verified = True
                                 verification_method = "product-count"
-                                Actor.log.info(f"[{category_name}] Products: {count_before} -> {count_after}")
+                                Actor.log.info(
+                                    f"[{category_name}] Products: {count_before} -> {count_after}"
+                                )
 
                         if verified:
-                            Actor.log.info(f"[{category_name}] Pickup filter VERIFIED via {verification_method}")
+                            Actor.log.info(
+                                f"[{category_name}] Pickup filter VERIFIED via {verification_method}"
+                            )
                             return True
 
                     except Exception:
@@ -1033,7 +1227,9 @@ async def apply_pickup_filter(page: Page, category_name: str) -> bool:
 
         await asyncio.sleep(0.5)
 
-    Actor.log.error(f"[{category_name}] Pickup filter FAILED after 3 attempts - SKIPPING CATEGORY")
+    Actor.log.error(
+        f"[{category_name}] Pickup filter FAILED after 3 attempts - SKIPPING CATEGORY"
+    )
     if diagnostics_enabled():
         try:
             title = await page.title()
@@ -1049,10 +1245,11 @@ async def apply_pickup_filter(page: Page, category_name: str) -> bool:
 # PRODUCT EXTRACTION
 # =============================================================================
 
+
 def parse_price(text: Optional[str]) -> Optional[float]:
     if not text:
         return None
-    match = re.search(r'(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)', str(text))
+    match = re.search(r"(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)", str(text))
     if not match:
         return None
     try:
@@ -1086,7 +1283,9 @@ def is_clearance(text: str, price: Optional[float], was: Optional[float]) -> boo
     return False
 
 
-async def extract_products(page: Page, store_id: str, store_name: str, category: str) -> list[dict]:
+async def extract_products(
+    page: Page, store_id: str, store_name: str, category: str
+) -> list[dict]:
     """Extract products using JSON-LD with DOM fallback."""
     products = []
     timestamp = datetime.now(timezone.utc).isoformat()
@@ -1134,21 +1333,23 @@ async def extract_products(page: Page, store_id: str, store_name: str, category:
                 if img and img.startswith("//"):
                     img = f"https:{img}"
 
-                products.append({
-                    "store_id": store_id,
-                    "store_name": store_name,
-                    "sku": prod.get("sku") or prod.get("productID"),
-                    "title": (prod.get("name") or "Unknown")[:200],
-                    "category": category,
-                    "price": price,
-                    "price_was": price_was,
-                    "pct_off": pct_off(price, price_was),
-                    "availability": "In Stock",
-                    "clearance": is_clearance(str(prod), price, price_was),
-                    "product_url": url,
-                    "image_url": img,
-                    "timestamp": timestamp,
-                })
+                products.append(
+                    {
+                        "store_id": store_id,
+                        "store_name": store_name,
+                        "sku": prod.get("sku") or prod.get("productID"),
+                        "title": (prod.get("name") or "Unknown")[:200],
+                        "category": category,
+                        "price": price,
+                        "price_was": price_was,
+                        "pct_off": pct_off(price, price_was),
+                        "availability": "In Stock",
+                        "clearance": is_clearance(str(prod), price, price_was),
+                        "product_url": url,
+                        "image_url": img,
+                        "timestamp": timestamp,
+                    }
+                )
     except Exception as e:
         Actor.log.debug(f"JSON-LD error: {e}")
 
@@ -1163,7 +1364,27 @@ async def extract_products(page: Page, store_id: str, store_name: str, category:
                             const title = card.querySelector('a[href*="/pd/"], h3, h2')?.innerText?.trim();
                             const price = card.querySelector('[data-test*="price"]')?.innerText?.trim();
                             const href = card.querySelector('a[href*="/pd/"]')?.getAttribute('href');
-                            if (title && price) items.push({title, price, href});
+                            
+                            // Robust image extraction: find the actual product image, NOT badge/clearance SVGs
+                            let img = null;
+                            const allImgs = card.querySelectorAll('img');
+                            for (const i of allImgs) {
+                                const src = i.getAttribute('src') || i.getAttribute('data-src') || i.getAttribute('srcset')?.split(' ')[0] || '';
+                                if (!src || src.includes('/badges/') || src.endsWith('.svg') || src.toLowerCase().includes('clearance')) {
+                                    continue;
+                                }
+                                // Prioritize the main product image selector found in the DOM
+                                if (i.getAttribute('data-selector') === 'splp-prd-img-org' || src.includes('productimages/') || src.includes('mobileimages.lowes.com')) {
+                                    img = src;
+                                    break;
+                                }
+                                // Fallback to any non-badge image with a common extension
+                                if (!img && (src.includes('.jpg') || src.includes('.png') || src.includes('.jpeg'))) {
+                                    img = src;
+                                }
+                            }
+
+                            if (title && price) items.push({title, price, href, img});
                         } catch {}
                     });
                     return items;
@@ -1177,21 +1398,23 @@ async def extract_products(page: Page, store_id: str, store_name: str, category:
                 href = r.get("href", "")
                 url = f"{BASE_URL}{href}" if href.startswith("/") else href
 
-                products.append({
-                    "store_id": store_id,
-                    "store_name": store_name,
-                    "sku": extract_sku(url),
-                    "title": r.get("title", "")[:200],
-                    "category": category,
-                    "price": price,
-                    "price_was": None,
-                    "pct_off": None,
-                    "availability": "In Stock",
-                    "clearance": False,
-                    "product_url": url,
-                    "image_url": None,
-                    "timestamp": timestamp,
-                })
+                products.append(
+                    {
+                        "store_id": store_id,
+                        "store_name": store_name,
+                        "sku": extract_sku(url),
+                        "title": r.get("title", "")[:200],
+                        "category": category,
+                        "price": price,
+                        "price_was": None,
+                        "pct_off": None,
+                        "availability": "In Stock",
+                        "clearance": False,
+                        "product_url": url,
+                        "image_url": r.get("img"),
+                        "timestamp": timestamp,
+                    }
+                )
         except Exception as e:
             Actor.log.debug(f"DOM error: {e}")
 
@@ -1201,6 +1424,7 @@ async def extract_products(page: Page, store_id: str, store_name: str, category:
 # =============================================================================
 # BLOCK DETECTION
 # =============================================================================
+
 
 async def check_blocked(page: Page) -> bool:
     try:
@@ -1218,6 +1442,7 @@ async def check_blocked(page: Page) -> bool:
 # =============================================================================
 # CATEGORY SCRAPING WITH SMART PAGINATION
 # =============================================================================
+
 
 def build_url(base: str, offset: int = 0, store_id: str | None = None) -> str:
     parsed = urlparse(base)
@@ -1251,7 +1476,9 @@ async def scrape_category(
             Actor.log.info(f"[{name}] Target URL: {target}")
 
         try:
-            resp = await page.goto(target, wait_until="domcontentloaded", timeout=GOTO_TIMEOUT_MS)
+            resp = await page.goto(
+                target, wait_until="domcontentloaded", timeout=GOTO_TIMEOUT_MS
+            )
 
             if resp and resp.status >= 400:
                 if resp.status == 404:
@@ -1298,7 +1525,9 @@ async def scrape_category(
             if new:
                 all_products.extend(new)
                 empty_streak = 0
-                Actor.log.info(f"[{name}] Found {len(new)} (total: {len(all_products)})")
+                Actor.log.info(
+                    f"[{name}] Found {len(new)} (total: {len(all_products)})"
+                )
             else:
                 empty_streak += 1
 
@@ -1322,6 +1551,7 @@ async def scrape_category(
 # MAIN ACTOR
 # =============================================================================
 
+
 async def main() -> None:
     """Apify Actor main entry point."""
 
@@ -1334,8 +1564,8 @@ async def main() -> None:
         state = await Actor.get_value(STATE_KEY) or {
             "completed_stores": [],
             "current_store_id": None,
-            "completed_categories": {}, # store_id -> [cat_names]
-            "total_products": 0
+            "completed_categories": {},  # store_id -> [cat_names]
+            "total_products": 0,
         }
 
         async def save_state():
@@ -1354,7 +1584,10 @@ async def main() -> None:
             stores = {s["store_id"]: s for s in inp["stores"]}
         else:
             # Use WA_OR_STORES as the base list
-            stores = {sid: map_stores.get(sid, WA_OR_STORES.get(sid, {"name": sid})) for sid in WA_OR_STORES.keys()}
+            stores = {
+                sid: map_stores.get(sid, WA_OR_STORES.get(sid, {"name": sid}))
+                for sid in WA_OR_STORES.keys()
+            }
 
         # Parse categories
         categories = inp.get("categories") or map_categories or DEFAULT_CATEGORIES
@@ -1365,12 +1598,20 @@ async def main() -> None:
             stores = {sid: stores[sid] for sid in list(stores.keys())[:1]}
             categories = categories[:1]
             max_pages = 2
-            Actor.log.warning("CHEAPSKATER_TEST_MODE enabled: 1 store, 1 category, max_pages=2")
+            Actor.log.warning(
+                "CHEAPSKATER_TEST_MODE enabled: 1 store, 1 category, max_pages=2"
+            )
 
         # Skip already completed stores
-        remaining_stores = {sid: info for sid, info in stores.items() if sid not in state["completed_stores"]}
+        remaining_stores = {
+            sid: info
+            for sid, info in stores.items()
+            if sid not in state["completed_stores"]
+        }
 
-        Actor.log.info(f"Target Stores: {len(stores)} (Remaining: {len(remaining_stores)})")
+        Actor.log.info(
+            f"Target Stores: {len(stores)} (Remaining: {len(remaining_stores)})"
+        )
         Actor.log.info(f"Target Categories: {len(categories)}")
         Actor.log.info(f"Max pages: {max_pages if max_pages < 5000 else 'Infinite'}")
         Actor.log.info(f"Headless: False")
@@ -1381,7 +1622,6 @@ async def main() -> None:
         proxy_override = os.getenv("CHEAPSKATER_PROXY")
         proxy_provider_name = os.getenv("PROXY_PROVIDER")
 
-
         if proxy_provider_name:
             try:
                 custom_proxy_provider = get_proxy_provider(proxy_provider_name)
@@ -1390,7 +1630,9 @@ async def main() -> None:
                 Actor.log.warning(f"Could not load custom proxy provider: {e}")
 
         if custom_proxy_provider:
-             Actor.log.info("Using custom residential proxy provider with session rotation")
+            Actor.log.info(
+                "Using custom residential proxy provider with session rotation"
+            )
         elif proxy_override:
             Actor.log.info("Proxy override enabled via CHEAPSKATER_PROXY")
         else:
@@ -1405,9 +1647,13 @@ async def main() -> None:
         if proxy_config:
             Actor.log.info("Residential proxy configuration enabled")
         elif proxy_override:
-            Actor.log.info(f"Using proxy override for all stores: {_mask_proxy(proxy_override)}")
+            Actor.log.info(
+                f"Using proxy override for all stores: {_mask_proxy(proxy_override)}"
+            )
         else:
-            Actor.log.warning("NO PROXY CONFIGURED - Akamai is likely to block this run")
+            Actor.log.warning(
+                "NO PROXY CONFIGURED - Akamai is likely to block this run"
+            )
 
         # Launch browser
         async with async_playwright() as pw:
@@ -1431,9 +1677,9 @@ async def main() -> None:
                 store_name = f"Lowe's {store_info.get('name', store_id)}"
                 store_products = []
 
-                Actor.log.info(f"\n{'='*50}")
+                Actor.log.info(f"\n{'=' * 50}")
                 Actor.log.info(f"STORE: {store_name} ({store_id})")
-                Actor.log.info(f"{'='*50}")
+                Actor.log.info(f"{'=' * 50}")
 
                 # Create context with RANDOMIZED fingerprint settings
                 # CRITICAL: Randomize viewport, timezone, locale, and user agent per context
@@ -1446,7 +1692,11 @@ async def main() -> None:
                 else:
                     selected_timezone = desired_timezone()
                     selected_locale = desired_locale()
-                selected_ua = random.choice(USER_AGENTS) if randomize_user_agent_enabled() else None
+                selected_ua = (
+                    random.choice(USER_AGENTS)
+                    if randomize_user_agent_enabled()
+                    else None
+                )
 
                 context_opts = {
                     "viewport": {"width": viewport_width, "height": viewport_height},
@@ -1457,32 +1707,44 @@ async def main() -> None:
                     context_opts["user_agent"] = selected_ua
 
                 if selected_ua:
-                    Actor.log.info(f"[{store_name}] Fingerprint: {viewport_width}x{viewport_height}, "
-                                  f"{selected_timezone}, {selected_locale}, "
-                                  f"UA: {selected_ua[:50]}...")
+                    Actor.log.info(
+                        f"[{store_name}] Fingerprint: {viewport_width}x{viewport_height}, "
+                        f"{selected_timezone}, {selected_locale}, "
+                        f"UA: {selected_ua[:50]}..."
+                    )
                 else:
-                    Actor.log.info(f"[{store_name}] Fingerprint: {viewport_width}x{viewport_height}, "
-                                  f"{selected_timezone}, {selected_locale}, "
-                                  "UA: default chromium")
+                    Actor.log.info(
+                        f"[{store_name}] Fingerprint: {viewport_width}x{viewport_height}, "
+                        f"{selected_timezone}, {selected_locale}, "
+                        "UA: default chromium"
+                    )
 
                 # Override with env var if provided (for testing)
                 user_agent_override = os.getenv("USER_AGENT")
                 if user_agent_override:
                     context_opts["user_agent"] = user_agent_override
-                    Actor.log.warning(f"[{store_name}] Using USER_AGENT override (reduces randomization)")
+                    Actor.log.warning(
+                        f"[{store_name}] Using USER_AGENT override (reduces randomization)"
+                    )
 
                 if custom_proxy_provider:
                     # Generate session-locked URL for this specific store
                     # This ensures one IP per store, maintaining stickiness for the duration of the store scrape
-                    proxy_url = custom_proxy_provider.get_proxy_url(session_id=f"lowes_{store_id}")
+                    proxy_url = custom_proxy_provider.get_proxy_url(
+                        session_id=f"lowes_{store_id}"
+                    )
                 elif proxy_config:
-                    proxy_url = await proxy_config.new_url(session_id=f"lowes_{store_id}")
+                    proxy_url = await proxy_config.new_url(
+                        session_id=f"lowes_{store_id}"
+                    )
                 elif proxy_override:
                     proxy_url = proxy_override
                 if proxy_url:
                     context_opts["proxy"] = proxy_settings_from_url(proxy_url)
                     if diagnostics_enabled():
-                        Actor.log.info(f"[{store_name}] Proxy: {_mask_proxy(proxy_url)}")
+                        Actor.log.info(
+                            f"[{store_name}] Proxy: {_mask_proxy(proxy_url)}"
+                        )
                 elif diagnostics_enabled():
                     Actor.log.info(f"[{store_name}] Proxy: none")
 
@@ -1521,7 +1783,9 @@ async def main() -> None:
                     # 2. Apply advanced fingerprint randomization (Canvas, WebGL, Audio, Screen)
                     # CRITICAL: This must come AFTER stealth for maximum effectiveness
                     if fingerprint_injection_enabled():
-                        fingerprint_profile = build_fingerprint_profile(viewport_width, viewport_height)
+                        fingerprint_profile = build_fingerprint_profile(
+                            viewport_width, viewport_height
+                        )
                         await apply_fingerprint_randomization(page, fingerprint_profile)
                     elif diagnostics_enabled():
                         Actor.log.info(f"[{store_name}] Fingerprint injection disabled")
@@ -1532,11 +1796,17 @@ async def main() -> None:
                     elif diagnostics_enabled():
                         Actor.log.info(f"[{store_name}] Resource blocking disabled")
 
-                    Actor.log.info(f"[{store_name}] Anti-fingerprinting stack applied successfully")
+                    Actor.log.info(
+                        f"[{store_name}] Anti-fingerprinting stack applied successfully"
+                    )
 
                     await _prime_session(page)
 
-                    if store_context_enabled() and set_store_context_ui and store_info.get("zip"):
+                    if (
+                        store_context_enabled()
+                        and set_store_context_ui
+                        and store_info.get("zip")
+                    ):
                         try:
                             await set_store_context_ui(
                                 page,
@@ -1544,28 +1814,48 @@ async def main() -> None:
                                 user_agent=context_opts.get("user_agent"),
                             )
                         except Exception as exc:
-                            Actor.log.warning(f"[{store_name}] Store context setup failed: {exc}")
+                            Actor.log.warning(
+                                f"[{store_name}] Store context setup failed: {exc}"
+                            )
                     elif store_context_enabled() and set_store_context_ui is None:
-                        Actor.log.warning(f"[{store_name}] Store context helper unavailable")
+                        Actor.log.warning(
+                            f"[{store_name}] Store context helper unavailable"
+                        )
 
                     if proxy_diagnostic_enabled():
                         try:
-                            await page.goto("https://lumtest.com/myip.json", wait_until="domcontentloaded", timeout=15000)
-                            ip_payload = await page.evaluate("() => document.body.innerText")
-                            Actor.log.info(f"[{store_name}] Proxy diagnostic: {ip_payload}")
+                            await page.goto(
+                                "https://lumtest.com/myip.json",
+                                wait_until="domcontentloaded",
+                                timeout=15000,
+                            )
+                            ip_payload = await page.evaluate(
+                                "() => document.body.innerText"
+                            )
+                            Actor.log.info(
+                                f"[{store_name}] Proxy diagnostic: {ip_payload}"
+                            )
                         except Exception as exc:
-                            Actor.log.warning(f"[{store_name}] Proxy diagnostic failed: {exc}")
+                            Actor.log.warning(
+                                f"[{store_name}] Proxy diagnostic failed: {exc}"
+                            )
 
                     for idx, cat in enumerate(categories):
                         cat_name = cat["name"]
-                        store_completed_cats = state["completed_categories"].get(store_id, [])
+                        store_completed_cats = state["completed_categories"].get(
+                            store_id, []
+                        )
 
                         if cat_name in store_completed_cats:
-                            Actor.log.info(f"[{store_name}] Skipping already completed category: {cat_name}")
+                            Actor.log.info(
+                                f"[{store_name}] Skipping already completed category: {cat_name}"
+                            )
                             continue
 
                         try:
-                            Actor.log.info(f"[{store_name}] Progress: Cat {idx+1}/{len(categories)} | {cat_name}")
+                            Actor.log.info(
+                                f"[{store_name}] Progress: Cat {idx + 1}/{len(categories)} | {cat_name}"
+                            )
                             products = await scrape_category(
                                 page,
                                 cat["url"],
@@ -1596,9 +1886,10 @@ async def main() -> None:
                     state["completed_stores"].append(store_id)
                     await save_state()
 
-                    Actor.log.info(f"Store {store_name} complete: {len(store_products)} products")
+                    Actor.log.info(
+                        f"Store {store_name} complete: {len(store_products)} products"
+                    )
                     return len(store_products)
-
 
                 finally:
                     if context is not None:
@@ -1617,17 +1908,21 @@ async def main() -> None:
             PARALLEL_CONTEXTS = 3
             store_items = list(remaining_stores.items())
 
-
             try:
                 for i in range(0, len(store_items), PARALLEL_CONTEXTS):
-                    batch = store_items[i:i + PARALLEL_CONTEXTS]
+                    batch = store_items[i : i + PARALLEL_CONTEXTS]
 
-                    Actor.log.info(f"\n{'='*60}")
-                    Actor.log.info(f"BATCH {i//PARALLEL_CONTEXTS + 1}: Processing {len(batch)} stores in parallel")
-                    Actor.log.info(f"{'='*60}")
+                    Actor.log.info(f"\n{'=' * 60}")
+                    Actor.log.info(
+                        f"BATCH {i // PARALLEL_CONTEXTS + 1}: Processing {len(batch)} stores in parallel"
+                    )
+                    Actor.log.info(f"{'=' * 60}")
 
                     # Run batch in parallel
-                    tasks = [scrape_store(store_id, store_info) for store_id, store_info in batch]
+                    tasks = [
+                        scrape_store(store_id, store_info)
+                        for store_id, store_info in batch
+                    ]
                     results = await asyncio.gather(*tasks, return_exceptions=True)
 
                     # Count successes
@@ -1637,7 +1932,9 @@ async def main() -> None:
                         elif isinstance(result, Exception):
                             Actor.log.error(f"Store failed: {result}")
 
-                    Actor.log.info(f"Batch complete. Total products so far: {total_products}")
+                    Actor.log.info(
+                        f"Batch complete. Total products so far: {total_products}"
+                    )
 
                     # Delay between batches
                     await asyncio.sleep(random.uniform(2, 4))
@@ -1646,12 +1943,13 @@ async def main() -> None:
                 if browser is not None:
                     await browser.close()
 
-        Actor.log.info(f"\n{'='*60}")
+        Actor.log.info(f"\n{'=' * 60}")
         Actor.log.info(f"SCRAPING COMPLETE")
         Actor.log.info(f"Total products: {total_products}")
-        Actor.log.info(f"{'='*60}")
+        Actor.log.info(f"{'=' * 60}")
 
 
 if __name__ == "__main__":
     import asyncio
+
     asyncio.run(main())
