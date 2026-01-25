@@ -24,8 +24,6 @@ DirExistsWarning=no
 UninstallDisplayIcon={app}\gloorbot.ico
 
 [InstallDelete]
-; CRITICAL: Always wipe old profiles to prevent cached geolocation from breaking store selection
-Type: filesandordirs; Name: "{localappdata}\GloorbotWorkerData\profiles"
 Type: filesandordirs; Name: "{localappdata}\GloorbotWorker"; Tasks: fullclean
 Type: filesandordirs; Name: "{localappdata}\GloorbotWorkerData"; Tasks: fullclean
 

@@ -252,17 +252,18 @@ async def set_store_context(page: Page, store_url: str, store_name: str):
     await asyncio.sleep(2 + random.random())
 
     # Check if already set (sometimes page says "My Store" immediately)
-    # CRITICAL: Must verify the CORRECT store is set, not just that a store button exists.
-    # Lowe's may auto-set based on IP geolocation, showing wrong store's "My Store" button.
+    # CRITICAL: Use text= for exact match, NOT has-text which does partial matching.
+    # has-text('My Store') incorrectly matches "Set as My Store" buttons.
     try:
+        if await page.locator('button:text-is("My Store")').is_visible():
+            Actor.log.info("Store already set as My Store")
+            return True
         header_store = await page.locator(
             "#store-search-link, [data-test='store-search-link']"
         ).first.inner_text()
         if store_name.split(",")[0] in header_store:
             Actor.log.info(f"Store verified in header: {header_store}")
             return True
-        # Header shows different store; don't trust "My Store" button visibility alone
-        Actor.log.debug(f"Header shows {header_store} but need {store_name} - will click button")
     except Exception as e:
         Actor.log.debug(f"Initial store check failed: {e}")
 
@@ -284,7 +285,7 @@ async def set_store_context(page: Page, store_url: str, store_name: str):
     try:
         await page.reload(wait_until="domcontentloaded")
         await asyncio.sleep(2)
-        if await page.locator("button:has-text('My Store')").is_visible():
+        if await page.locator('button:text-is("My Store")').is_visible():
             return True
     except Exception as e:
         Actor.log.debug(f"Final verification failed: {e}")
