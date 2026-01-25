@@ -578,11 +578,6 @@ async def _run_slot(client_id: str, slot_id: int) -> None:
                 context_kwargs: dict[str, Any] = {
                     "viewport": {"width": 1440, "height": 900},
                     "locale": "en-US",
-                    "permissions": ["geolocation"],
-                    "geolocation": {
-                        "latitude": 25.7617,
-                        "longitude": -80.1918,
-                    },  # Miami default
                 }
                 if storage_state_path.exists():
                     context_kwargs["storage_state"] = str(storage_state_path)
