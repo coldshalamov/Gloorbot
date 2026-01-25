@@ -40,6 +40,10 @@ class Actor:
             print(f"[INFO] {msg}")
 
         @staticmethod
+        def debug(msg):
+            print(f"[DEBUG] {msg}")
+
+        @staticmethod
         def warning(msg):
             print(f"[WARN] {msg}")
 
