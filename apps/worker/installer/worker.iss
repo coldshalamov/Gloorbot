@@ -23,6 +23,10 @@ RestartApplications=no
 DirExistsWarning=no
 UninstallDisplayIcon={app}\gloorbot.ico
 
+[InstallDelete]
+Type: filesandordirs; Name: "{localappdata}\GloorbotWorker"; Tasks: fullclean
+Type: filesandordirs; Name: "{localappdata}\GloorbotWorkerData"; Tasks: fullclean
+
 [Files]
 Source: "..\dist\GloorbotWorker\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs ignoreversion
 Source: "..\gloorbot.ico"; DestDir: "{app}"; Flags: ignoreversion
@@ -30,5 +34,12 @@ Source: "..\gloorbot.ico"; DestDir: "{app}"; Flags: ignoreversion
 [Icons]
 Name: "{userdesktop}\Gloorbot Worker"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\gloorbot.ico"
 
+[Tasks]
+Name: fullclean; Description: "Remove old profile folders"; GroupDescription: "Clean-up:"; Flags: unchecked
+
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Flags: nowait postinstall skipifsilent
+
+[UninstallDelete]
+Type: filesandordirs; Name: "{localappdata}\GloorbotWorker"
+Type: filesandordirs; Name: "{localappdata}\GloorbotWorkerData"
