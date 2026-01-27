@@ -52,6 +52,13 @@ def config_path() -> Path:
     return app_data_dir() / "config.json"
 
 
+def config_dir() -> Path:
+    """Directory for configuration files (settings, tuning, etc.)."""
+    d = app_data_dir() / "config"
+    d.mkdir(parents=True, exist_ok=True)
+    return d
+
+
 def profiles_dir() -> Path:
     d = app_data_dir() / "profiles"
     d.mkdir(parents=True, exist_ok=True)

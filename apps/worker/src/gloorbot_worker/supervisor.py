@@ -14,9 +14,11 @@ import psutil
 if getattr(sys, 'frozen', False):
     from gloorbot_worker import api
     from gloorbot_worker.paths import config_path, logs_dir, cleanup_old_files, status_dir
+    from gloorbot_worker.settings import get_settings
 else:
     from . import api
     from .paths import config_path, logs_dir, cleanup_old_files, status_dir
+    from .settings import get_settings
 
 
 TARGET_LOW = 70.0
@@ -182,17 +184,34 @@ class Supervisor:
             # Joined, but coordinator isn't reachable yet; don't spawn slots.
             return {"running": True, "connected": False, "slots": 0, "cpu": cpu, "mem": mem}
 
-        # Scale decisions
-        max_slots_cfg = max(1, MAX_SLOTS_DEFAULT)
-        max_slots = self._max_slots_override if self._max_slots_override is not None else max_slots_cfg
-        if len(self.slots) == 0:
-            self._spawn_slot()
-        elif len(self.slots) < max_slots and cpu < TARGET_LOW and mem < TARGET_LOW:
-            self._spawn_slot()
-        elif cpu > TARGET_HIGH or mem > TARGET_HIGH:
-            if len(self.slots) > 1:
+        # Load performance settings
+        settings = get_settings()
+
+        # Scale decisions - support fixed browser mode
+        if settings.fixed_browser_count > 0:
+            # FIXED MODE: Always maintain exactly N browsers (ignores CPU/memory)
+            target_slots = settings.fixed_browser_count
+            if self._max_slots_override is not None:
+                # Block detection can still reduce count
+                target_slots = min(target_slots, self._max_slots_override)
+
+            while len(self.slots) < target_slots:
+                self._spawn_slot()
+            while len(self.slots) > target_slots:
                 self._kill_slot(self.slots[-1])
                 self.slots = self.slots[:-1]
+        else:
+            # DYNAMIC MODE: Scale based on CPU/memory (original behavior)
+            max_slots_cfg = max(1, settings.max_browsers or MAX_SLOTS_DEFAULT)
+            max_slots = self._max_slots_override if self._max_slots_override is not None else max_slots_cfg
+            if len(self.slots) == 0:
+                self._spawn_slot()
+            elif len(self.slots) < max_slots and cpu < TARGET_LOW and mem < TARGET_LOW:
+                self._spawn_slot()
+            elif cpu > TARGET_HIGH or mem > TARGET_HIGH:
+                if len(self.slots) > 1:
+                    self._kill_slot(self.slots[-1])
+                    self.slots = self.slots[:-1]
 
         return {"running": True, "connected": True, "slots": len(self.slots), "cpu": cpu, "mem": mem, "blocks": self._block_count}
 

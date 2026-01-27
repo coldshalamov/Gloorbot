@@ -22,10 +22,12 @@ if getattr(sys, "frozen", False):
         set_default_parallel_navlog_path,
     )
     from gloorbot_worker.paths import logs_dir, profiles_dir, status_dir
+    from gloorbot_worker.settings import get_settings
 else:
     from . import api
     from .navlog import default_event_logger, set_default_parallel_navlog_path
     from .paths import logs_dir, profiles_dir, status_dir
+    from .settings import get_settings
 
 
 DEAL_THRESHOLD = float(os.getenv("DEAL_THRESHOLD", "0.50"))
@@ -532,16 +534,43 @@ async def _run_slot(client_id: str, slot_id: int) -> None:
 
             # Browser launch config
             # NOTE: UA / header / init-script spoofing caused Akamai blocks in testing.
+            settings = get_settings()
+
+            # Build browser args from settings
+            browser_args = [
+                "--disable-blink-features=AutomationControlled",
+                "--disable-features=IsolateOrigins,site-per-process",
+                "--disable-infobars",
+                "--lang=en-US",
+                "--no-default-browser-check",
+            ]
+
+            # Performance optimizations from settings
+            if settings.disable_dev_shm:
+                browser_args.append("--disable-dev-shm-usage")
+            if settings.disable_gpu:
+                browser_args.append("--disable-gpu")
+            if settings.disable_background_networking:
+                browser_args.append("--disable-background-networking")
+            if settings.disable_background_timer_throttling:
+                browser_args.append("--disable-background-timer-throttling")
+            if settings.disable_backgrounding_occluded_windows:
+                browser_args.append("--disable-backgrounding-occluded-windows")
+            if settings.disable_renderer_backgrounding:
+                browser_args.append("--disable-renderer-backgrounding")
+            if settings.memory_pressure_off:
+                browser_args.append("--memory-pressure-off")
+
+            # Audio/video blocking at browser level (safe, no detection risk)
+            if settings.block_media:
+                browser_args.extend([
+                    "--autoplay-policy=no-user-gesture-required",
+                    "--mute-audio",
+                ])
+
             launch_kwargs = {
-                "headless": False,  # Must be False for anti-bot
-                "args": [
-                    "--disable-blink-features=AutomationControlled",
-                    "--disable-dev-shm-usage",
-                    "--disable-features=IsolateOrigins,site-per-process",
-                    "--disable-infobars",
-                    "--lang=en-US",
-                    "--no-default-browser-check",
-                ],
+                "headless": False,  # Must be False for anti-bot - NEVER CHANGE THIS
+                "args": browser_args,
             }
 
             # Prefer system Chrome when available (matches PARALLEL’s most reliable setup).
@@ -576,12 +605,70 @@ async def _run_slot(client_id: str, slot_id: int) -> None:
                     browser = await p.chromium.launch(**launch_kwargs)
 
                 context_kwargs: dict[str, Any] = {
-                    "viewport": {"width": 1440, "height": 900},
+                    "viewport": {
+                        "width": settings.viewport_width,
+                        "height": settings.viewport_height,
+                    },
                     "locale": "en-US",
                 }
                 if storage_state_path.exists():
                     context_kwargs["storage_state"] = str(storage_state_path)
                 context = await browser.new_context(**context_kwargs)
+
+                # Set up resource blocking via route interception
+                # CRITICAL: NEVER block /_sec/ which is Akamai's bot detection
+                async def route_handler(route):
+                    request = route.request
+                    url = request.url.lower()
+                    resource_type = request.resource_type
+
+                    # NEVER block Akamai security scripts
+                    if "/_sec/" in url or "akamai" in url or "_abck" in url:
+                        await route.continue_()
+                        return
+
+                    # Block images if enabled (saves 60-70% bandwidth)
+                    if settings.block_images and resource_type == "image":
+                        # Allow Lowe's product images to keep DOM structure intact
+                        # but abort before downloading full content
+                        if settings.abort_images_after_dom:
+                            await route.continue_()
+                        else:
+                            await route.abort("blockedbyclient")
+                        return
+
+                    # Block fonts if enabled (saves 5-10% bandwidth)
+                    if settings.block_fonts and resource_type == "font":
+                        await route.abort("blockedbyclient")
+                        return
+
+                    # Block media if enabled (audio/video)
+                    if settings.block_media and resource_type in ("media", "websocket"):
+                        await route.abort("blockedbyclient")
+                        return
+
+                    # Block analytics/tracking (except Akamai)
+                    if settings.block_analytics:
+                        blocked_domains = [
+                            "google-analytics.com",
+                            "googletagmanager.com",
+                            "facebook.com/tr",
+                            "doubleclick.net",
+                            "adsrvr.org",
+                            "criteo.com",
+                            "pinterest.com/ct",
+                            "bat.bing.com",
+                        ]
+                        for domain in blocked_domains:
+                            if domain in url:
+                                await route.abort("blockedbyclient")
+                                return
+
+                    await route.continue_()
+
+                # Only enable route blocking if any blocking is enabled
+                if settings.block_images or settings.block_fonts or settings.block_media or settings.block_analytics:
+                    await context.route("**/*", route_handler)
 
                 print(f"[slot-{slot_id}] Context created", flush=True)
             except Exception as e:
@@ -632,6 +719,9 @@ async def _run_slot(client_id: str, slot_id: int) -> None:
 
         lease_failures = 0
         while True:
+            # Reload settings each iteration to pick up any changes
+            settings = get_settings()
+
             lease = None
             try:
                 lease = api.lease_next(client_id, preferred_store_id)
@@ -765,9 +855,12 @@ async def _run_slot(client_id: str, slot_id: int) -> None:
                 )
 
                 # CRITICAL: Add inter-lease delay to match PARALLEL's pacing
-                # PARALLEL sleeps 2.0-4.55s between categories (scraper.py:802-803)
+                # Use configurable settings (default matches PARALLEL's 2.0-4.55s)
                 # Without this, Worker hammers the server too fast → detection
-                await asyncio.sleep(2.0 + random.random() * 2.55)
+                inter_delay = settings.inter_lease_delay_min + random.random() * (
+                    settings.inter_lease_delay_max - settings.inter_lease_delay_min
+                )
+                await asyncio.sleep(inter_delay)
             except Exception as e:
                 # If a task keeps landing on a non-listing `/c/` page, it can get
                 # re-leased repeatedly and appear "stuck" overnight. After a small

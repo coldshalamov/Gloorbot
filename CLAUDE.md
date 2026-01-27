@@ -21,48 +21,42 @@
 
 ## Architecture Overview
 
+## Architecture Overview
+
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│ Worker (Downloadable EXE)                                       │
-│ Built from: Gloorbot/apps/worker/                               │
-│ Runs on: User's Windows computer                                │
-│ Downloads from: GitHub Release (via "Download Worker" button)   │
-│ Location: C:\Users\User\AppData\Local\GloorbotWorker           │
-├─────────────────────────────────────────────────────────────────┤
-│ What it does:                                                   │
-│ 1. Scrapes Lowes.com product listings (with Playwright)        │
-│ 2. Filters for 50%+ markdown deals                             │
-│ 3. Submits deals to coordinator                                │
-└─────────────────────────────────────────────────────────────────┘
-                            ↓ POST /api/v1/deals/bulk
-┌─────────────────────────────────────────────────────────────────┐
-│ Coordinator (Render Service)                                    │
-│ Repo: Gloorbot/apps/coordinator/                                │
-│ Service Name: gloorbot-coordinator                              │
-│ URL: https://gloorbot-coordinator.onrender.com                  │
-├─────────────────────────────────────────────────────────────────┤
-│ What it does:                                                   │
-│ 1. Manages task queue (store × category combinations)          │
-│ 2. Assigns work to connected workers                           │
-│ 3. Receives deals from workers                                 │
-│ 4. De-duplicates and validates deals                           │
-│ 5. Stores deals in local SQLite                                │
-│ 6. Forwards deals to Cheapskater website                       │
-└─────────────────────────────────────────────────────────────────┘
-                            ↓ POST /api/ingest/deals
-┌─────────────────────────────────────────────────────────────────┐
-│ Cheapskater Website (Render Service)                            │
-│ Repo: CheapSkater- (different repo!)                            │
-│ Local Path: C:\Users\User\Documents\GitHub\Telomere\CheapSkater-│
-│ Service Name: Gloorbot (yes, really!)                           │
-│ URL: https://cheapskater.onrender.com                           │
-├─────────────────────────────────────────────────────────────────┤
-│ What it does:                                                   │
-│ 1. Receives deals via API from coordinator                     │
-│ 2. Stores in SQLite at /var/data/orwa_lowes.sqlite            │
-│ 3. Displays deals on public website                           │
-│ 4. Users browse and find deals                                 │
-└─────────────────────────────────────────────────────────────────┘
+                                    ┌───────────────────────┐
+                                    │   Lowe's Website      │
+                                    └──────────┬────────────┘
+                                               │ Scrape (Playwright)
+                                               ▼
+┌────────────────────────────────────────────────────────┐
+│  THE SWARM (Distributed Workers)                       │
+│                                                        │
+│  [Worker 1] [Worker 2] ... [Worker N]                  │
+│                                                        │
+│  - Downloaded from Render Coord website                │
+│  - Run by users on their PCs                           │
+│  - "Gloorbot Worker" app (EXE)                         │
+└───────────────────────────┬────────────────────────────┘
+                            │
+                            │ POST /api/v1/deals/bulk
+                            ▼
+┌────────────────────────────────────────────────────────┐
+│  COORDINATOR (Backend Service)                         │
+│                                                        │
+│  - URL: gloorbot-coordinator.onrender.com              │
+│  - Assigns Tasks (Store x Category)                    │
+│  - Validates & Deduplicates Deals                      │
+└───────────────────────────┬────────────────────────────┘
+                            │
+                            │ POST /api/ingest/deals
+                            ▼
+┌────────────────────────────────────────────────────────┐
+│  CHEAPSKATER (Public Website)                          │
+│                                                        │
+│  - URL: cheapskater.onrender.com                       │
+│  - Displays deals to the world                         │
+└────────────────────────────────────────────────────────┘
 ```
 
 ## Data Flow
@@ -81,38 +75,51 @@ Cheapskater Website (cheapskater.onrender.com, service name "Gloorbot")
 Public Website UI (users see deals)
 ```
 
-## Project Structure
+## The "Gloorbot Swarm" Narrative (READ THIS!)
+
+**This project is a distributed scraping system** (a "Swarm"). 
+Users join the swarm by downloading the **Worker** application and running it on their PC.
+
+**The User Journey:**
+1. User visits the **Coordinator** website (`https://gloorbot-coordinator.onrender.com`).
+2. User clicks **"Download Worker"**.
+3. User installs `WorkerSetup.exe` (built via GitHub Actions).
+4. User runs "Gloorbot Worker".
+5. The Worker connects to the swarm, leases tasks, and scrapes Lowe's.
+6. Deals are sent to the Coordinator -> Cheapskater Website (`https://cheapskater.onrender.com`).
+
+## Project Structure (What matters vs. Legacy)
 
 ```
 Gloorbot/
-├── PARALLEL/                    # Local testing scraper
-│   ├── scraper.py              # Core Playwright scraping logic
-│   ├── orchestrator.py         # Multi-worker manager
-│   ├── worker.py               # Per-store wrapper
-│   ├── urls.txt                # 49 stores × 605 categories
-│   └── output/                 # Scraped product JSONL files
-│
-├── apps/
-│   ├── worker/                 # Distributed worker (builds to EXE)
-│   │   ├── src/gloorbot_worker/
-│   │   │   ├── slot_worker.py  # Main worker loop, deal filtering
-│   │   │   ├── api.py          # Coordinator API client
-│   │   │   └── parallel.py     # Imports PARALLEL scraper
-│   │   └── pyproject.toml
+├── apps/                       # ✅ PRODUCTION CODE
+│   ├── worker/                 # The distributed client (builds to EXE)
+│   │   ├── src/gloorbot_worker/ # Main application logic
+│   │   └── installer/          # Inno Setup script for WorkerSetup.exe
 │   │
-│   └── coordinator/            # Backend service (FastAPI)
-│       ├── coordinator_app/
-│       │   ├── web.py          # API endpoints, deal forwarding
-│       │   └── models.py       # SQLAlchemy models
-│       └── pyproject.toml
+│   └── coordinator/            # The backend brain (FastAPI on Render)
+│       └── coordinator_app/    # API, Task Queue, Deal Aggregation
 │
-├── .github/workflows/
-│   └── worker-build.yml        # Builds worker EXE, creates GitHub release
+├── .github/workflows/          # ✅ BUILD SYSTEM
+│   └── worker-build.yml        # CI/CD: Builds WorkerSetup.exe on tag v*
 │
-├── docs/                       # Documentation
-├── logs/                       # Runtime logs (gitignored)
-└── CLAUDE.md                   # This file
+├── PARALLEL/                   # ⚠️ SHARED LIBRARY / LEGACY
+│   ├── scraper.py              # Core Playwright logic (imported by Worker!)
+│   ├── urls.txt                # Canonical Seed List
+│   └── ...                     # Other files here are mostly local dev tools
+│
+├── verifications/              # ✅ TEST SUITE
+│   └── run_suite.py            # Regression tests run by CI
+│
+├── logs/                       # 🗑️ IGNORED (Runtime logs)
+│
+└── [Everything Else]           # 🛑 LEGACY / DEV SCRIPTS
+    ├── *.py (root)             # One-off scripts, old experiments, etc.
+    ├── GloorbotWorker.zip      # 📦 Build Artifact (Output of GitHub Actions)
+    └── ...
 ```
+
+**Key Takeaway**: If you are fixing the "Product", you are working in `apps/worker` or `apps/coordinator`. If you are fixing the "Scraping Logic", you are working in `PARALLEL/scraper.py`. Everything else is likely noise.
 
 ## Key Technical Decisions
 
@@ -272,3 +279,122 @@ You know it's working when:
 ✅ Cheapskater website (https://cheapskater.onrender.com) displays new deals
 
 ✅ Workers complete tasks without getting blocked by Akamai
+
+---
+
+## Performance Tuning Guide
+
+### Overview
+
+The worker includes a **Performance Settings** system with GUI controls accessible via the "Settings" button. These allow you to tune speed vs. detection risk.
+
+### GUI Settings Dialog
+
+Click **Settings** (when worker is stopped) to open the Performance Tuning dialog with three tabs:
+
+1. **Timing** - Browser pool size and navigation/click delays
+2. **Resources** - Resource blocking (images, fonts, media, analytics)
+3. **Presets** - Quick presets from Conservative to Ultra-Aggressive
+
+### Presets
+
+| Preset | Speed | Block Risk | Use Case |
+|--------|-------|------------|----------|
+| **Conservative** | Slow | Very Low | Getting blocked frequently |
+| **Balanced** | Medium | Low | Default, proven reliable |
+| **Aggressive** | Fast | Medium | Good residential IPs |
+| **Ultra Aggressive** | Maximum | High | Excellent IPs only |
+
+### Key Settings
+
+#### Browser Pool
+- **Fixed Browser Count**: Set to 5 for predictable performance (0 = dynamic scaling)
+- **Dynamic Mode**: Scales based on CPU/memory (70-90% thresholds)
+- Fixed mode prevents thrashing from constant browser open/close
+
+#### Timing Delays
+- **Nav Delay**: Time after loading pages (default 1.5-3.9s)
+- **Click Delay**: Time before clicking elements (default 0.1-0.4s)
+- **Inter-Task Delay**: Time between finishing tasks (default 2.0-4.55s)
+
+**WARNING**: Setting delays too low triggers Akamai's "inhuman speed" detection!
+
+#### Resource Blocking
+- **Block Images**: 60-70% bandwidth savings, DOM still renders structure
+- **Block Fonts**: 5-10% bandwidth savings, minor visual difference
+- **Block Media**: Safe, rarely used on Lowe's
+- **Block Analytics**: Blocks tracking (except Akamai /_sec/ scripts)
+
+**CRITICAL**: NEVER block `/_sec/` scripts - this is Akamai's bot detection!
+
+#### Browser Optimizations
+- **Disable GPU**: Faster on low-end machines
+- **Memory Pressure Off**: Prevents OOM crashes
+- **Disable Background Networking**: Reduces idle traffic
+
+### What Gets You Blocked
+
+| Signal | Detection | Block Speed | Mitigation |
+|--------|-----------|-------------|------------|
+| **Headless** | navigator.webdriver | Instant | NEVER run headless |
+| **Datacenter IP** | IP reputation | Instant | Use residential proxies |
+| **Too Fast** | Timing analysis | ~30s | Use Conservative preset |
+| **Block /_sec/** | Missing Akamai cookie | Instant | Never block Akamai scripts |
+| **Stealth Scripts** | Fingerprint mismatch | Fast | Don't use playwright-stealth |
+
+### Safe Optimizations (Won't Trigger Akamai)
+
+✅ Block images (but keep DOM structure)
+✅ Block fonts, media, analytics (except Akamai)
+✅ Reduce viewport size (1280x720 vs 1440x900)
+✅ Disable GPU/background networking
+✅ Fixed browser pool (prevents open/close thrashing)
+✅ Memory pressure off (prevents crashes)
+
+### Dangerous Optimizations (May Trigger Akamai)
+
+⚠️ Very short navigation delays (<1s)
+⚠️ Very short click delays (<0.05s)
+⚠️ Blocking CSS or JavaScript
+⚠️ Running more than 5-6 browsers on same IP
+⚠️ Headless mode (instant block)
+⚠️ playwright-stealth injection
+
+### Recommended Settings for Testing Speed
+
+To find the fastest safe settings:
+
+1. Start with **Balanced** preset
+2. Set **Fixed Browser Count** to 5
+3. Enable **Block Images** and **Block Fonts**
+4. Run for 30 minutes, check for blocks
+5. If no blocks, try **Aggressive** preset
+6. If getting blocked, switch to **Conservative**
+
+### Settings File Location
+
+Settings are persisted to:
+```
+%LOCALAPPDATA%\GloorbotWorkerData\config\performance_settings.json
+```
+
+You can edit this file directly or use the GUI.
+
+### Environment Variable Overrides
+
+These env vars can override settings (useful for testing):
+
+```bash
+GLOORBOT_FIXED_BROWSER_COUNT=5
+GLOORBOT_MAX_BROWSERS=5
+GLOORBOT_CLICK_DELAY_MIN=0.1
+GLOORBOT_CLICK_DELAY_MAX=0.4
+GLOORBOT_NAV_DELAY_MIN=1.5
+GLOORBOT_NAV_DELAY_MAX=3.9
+GLOORBOT_BLOCK_IMAGES=1
+GLOORBOT_BLOCK_FONTS=1
+GLOORBOT_BLOCK_MEDIA=1
+GLOORBOT_BLOCK_ANALYTICS=1
+GLOORBOT_VIEWPORT_WIDTH=1280
+GLOORBOT_VIEWPORT_HEIGHT=720
+```

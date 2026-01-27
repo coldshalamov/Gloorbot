@@ -259,28 +259,38 @@ async def set_store_context(page: Page, store_url: str, store_name: str):
     # CRITICAL: Use text= for exact match, NOT has-text which does partial matching.
     # has-text('My Store') incorrectly matches "Set as My Store" buttons.
     try:
-        if await page.locator('button:text-is("My Store")').is_visible():
-            Actor.log.info("Store already set as My Store")
-            return True
-        header_store = await page.locator(
-            "#store-search-link, [data-test='store-search-link']"
-        ).first.inner_text()
-        if store_name.split(",")[0] in header_store:
-            Actor.log.info(f"Store verified in header: {header_store}")
-            return True
+        # Robust check: Verify the store name in the header matches our target.
+        # We assume the page loaded successfully.
+        header = page.locator("#store-search-link, [data-test='store-search-link'], span.store-name").first
+        if await header.is_visible():
+            header_store = await header.inner_text()
+            # Normalize comparison (case-insensitive, split city from state if needed)
+            target_city = store_name.split(",")[0].strip().lower()
+            current_city = header_store.split("-")[0].strip().lower()
+            
+            if target_city in header_store.lower():
+                Actor.log.info(f"Store verified in header: {header_store}")
+                return True
+            else:
+                Actor.log.info(f"Store mismatch - Target: {store_name}, Current: {header_store}")
     except Exception as e:
         Actor.log.debug(f"Initial store check failed: {e}")
 
+    # Prioritize the main store card button to avoid "Nearby Stores"
     for selector in [
+        "#InfoBarCard button.met-sl-set-as-my-store",
+        "#InfoBarCard button:has-text('Set as My Store')",
         "button:has-text('Set Store')",
         "button:has-text('Set as My Store')",
     ]:
         try:
+            # Use strict mode=False to allow fallback to first match if multiple exist (for generic selectors)
+            # but the specific #InfoBarCard ones should be unique.
             btn = page.locator(selector).first
             if await btn.is_visible():
                 await btn.click(timeout=8000)
                 await asyncio.sleep(2.5)  # Wait for API update
-                Actor.log.info(f"Clicked 'Set Store'")
+                Actor.log.info(f"Clicked 'Set Store' using selector: {selector}")
                 return True
         except:
             continue

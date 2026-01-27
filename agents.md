@@ -5,22 +5,26 @@
 
 ---
 
-### REPO MAP (WHAT RUNS)
-**Core runtime (this repo):**
-- **Coordinator (API + Admin UI)**: `apps/coordinator/`
-  - Entrypoint: `apps/coordinator/coordinator_app/main.py` (creates FastAPI app via `apps/coordinator/coordinator_app/web.py`)
-  - Task seeding: `apps/coordinator/coordinator_app/seed.py`
-  - Seed file resolution order:
-    1) `LOCAL_URLS_PATH` (explicit override)
-    2) `${DATA_DIR}/urls.txt` or `apps/coordinator/data/urls.txt` (Render/Docker)
-    3) `PARALLEL/urls.txt` (local dev fallback)
-- **Worker (Windows EXE / GUI + slot workers)**: `apps/worker/`
-  - Entrypoint: `apps/worker/src/gloorbot_worker/__main__.py`
-  - Scrape logic: `apps/worker/src/gloorbot_worker/slot_worker.py`
+### REPO MAP (THE SWARM ARCHITECTURE)
+**Production Components:**
+- **The Coordinator (Mothership)**: `apps/coordinator/`
+  - Deployed to Render (`gloorbot-coordinator`).
+  - Manages the swarm, hands out tasks, collects loot (deals).
+- **The Worker (Drone)**: `apps/worker/`
+  - Built by GitHub Actions into `WorkerSetup.exe`.
+  - Downloaded by users to join the swarm.
+  - Wraps the scraping logic in a GUI and tray icon.
 
-**Support/legacy (not deployed to Render as ?the worker?):**
-- `PARALLEL/` contains older/local scraper + orchestrator used for experimentation and some regression fixture parsing.
-- `verification/` is the deterministic, no-network regression suite used in CI (`verification/run_suite.py`).
+**Shared Logic:**
+- `PARALLEL/scraper.py`: The core scraping engine. Used by the Worker (via import) and local tests.
+
+**Legacy / Junkyard:**
+- Root `*.py` scripts: Old experiments. Ignore unless debugging historical context.
+- `PARALLEL/orchestrator.py`: Local-only testing tool, not part of the distributed swarm.
+
+**Artifacts (Do Not Edit):**
+- `GloorbotWorker.zip`: A build output (matches CI/GitHub Actions). Do not treat as source code.
+- `apps/worker/dist-installer/`: Where local builds place the EXE.
 
 ### URL SEED LISTS (SOURCE OF TRUTH)
 - Canonical combined store+category list: `PARALLEL/urls.txt`
