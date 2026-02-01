@@ -563,10 +563,12 @@ async def _run_slot(client_id: str, slot_id: int) -> None:
 
             # Audio/video blocking at browser level (safe, no detection risk)
             if settings.block_media:
-                browser_args.extend([
-                    "--autoplay-policy=no-user-gesture-required",
-                    "--mute-audio",
-                ])
+                browser_args.extend(
+                    [
+                        "--autoplay-policy=no-user-gesture-required",
+                        "--mute-audio",
+                    ]
+                )
 
             launch_kwargs = {
                 "headless": False,  # Must be False for anti-bot - NEVER CHANGE THIS
@@ -643,7 +645,10 @@ async def _run_slot(client_id: str, slot_id: int) -> None:
                         return
 
                     # Block media if enabled (audio/video)
-                    if settings.block_media and resource_type in ("media", "websocket"):
+                    # NOTE: Do not block websockets here. Websockets are not "media" and
+                    # aborting them can cause confusing net::ERR_BLOCKED_BY_CLIENT errors
+                    # that look like bot blocks.
+                    if settings.block_media and resource_type == "media":
                         await route.abort("blockedbyclient")
                         return
 
@@ -667,7 +672,12 @@ async def _run_slot(client_id: str, slot_id: int) -> None:
                     await route.continue_()
 
                 # Only enable route blocking if any blocking is enabled
-                if settings.block_images or settings.block_fonts or settings.block_media or settings.block_analytics:
+                if (
+                    settings.block_images
+                    or settings.block_fonts
+                    or settings.block_media
+                    or settings.block_analytics
+                ):
                     await context.route("**/*", route_handler)
 
                 print(f"[slot-{slot_id}] Context created", flush=True)
@@ -944,10 +954,18 @@ async def _run_slot(client_id: str, slot_id: int) -> None:
 
                 # Block/cooldown behavior: if blocked, wait then rebuild browser.
                 msg = str(e).lower()
-                if (
+                # Avoid false-positive "block" detection from our own request aborts
+                # (Playwright uses strings like ERR_BLOCKED_BY_CLIENT / blockedbyclient).
+                is_client_block = (
+                    "err_blocked_by_client" in msg
+                    or "blockedbyclient" in msg
+                    or "net::err_blocked_by_client" in msg
+                )
+                if (not is_client_block) and (
                     "access denied" in msg
+                    or "blocked by anti-bot" in msg
                     or "robot" in msg
-                    or "blocked" in msg
+                    or "akamai" in msg
                     or "could not set store" in msg
                 ):
                     # Signal to supervisor that we got blocked

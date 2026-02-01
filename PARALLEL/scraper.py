@@ -52,6 +52,26 @@ class Actor:
             print(f"[ERROR] {msg}")
 
 
+def _safe_actor_debug(msg: str) -> None:
+    """Best-effort debug logging.
+
+    The packaged Worker may swap `Actor` with a minimal logger that doesn't
+    implement `.debug()`. Never let that crash scraping.
+    """
+    try:
+        log_obj = getattr(Actor, "log", None)
+        fn = getattr(log_obj, "debug", None)
+        if callable(fn):
+            fn(msg)
+            return
+        fn = getattr(log_obj, "info", None)
+        if callable(fn):
+            fn(msg)
+            return
+    except Exception:
+        return
+
+
 # ============================================================================
 # OPTIONAL NAVIGATION LOGGING (used by the installed Worker)
 # ============================================================================
@@ -261,20 +281,24 @@ async def set_store_context(page: Page, store_url: str, store_name: str):
     try:
         # Robust check: Verify the store name in the header matches our target.
         # We assume the page loaded successfully.
-        header = page.locator("#store-search-link, [data-test='store-search-link'], span.store-name").first
+        header = page.locator(
+            "#store-search-link, [data-test='store-search-link'], span.store-name"
+        ).first
         if await header.is_visible():
             header_store = await header.inner_text()
             # Normalize comparison (case-insensitive, split city from state if needed)
             target_city = store_name.split(",")[0].strip().lower()
             current_city = header_store.split("-")[0].strip().lower()
-            
+
             if target_city in header_store.lower():
                 Actor.log.info(f"Store verified in header: {header_store}")
                 return True
             else:
-                Actor.log.info(f"Store mismatch - Target: {store_name}, Current: {header_store}")
+                Actor.log.info(
+                    f"Store mismatch - Target: {store_name}, Current: {header_store}"
+                )
     except Exception as e:
-        Actor.log.debug(f"Initial store check failed: {e}")
+        _safe_actor_debug(f"Initial store check failed: {e}")
 
     # Prioritize the main store card button to avoid "Nearby Stores"
     for selector in [
@@ -302,7 +326,7 @@ async def set_store_context(page: Page, store_url: str, store_name: str):
         if await page.locator('button:text-is("My Store")').is_visible():
             return True
     except Exception as e:
-        Actor.log.debug(f"Final verification failed: {e}")
+        _safe_actor_debug(f"Final verification failed: {e}")
 
     # DIAGNOSTIC: Capture what's actually on the page
     try:
@@ -1376,7 +1400,7 @@ async def apply_pickup_filter(page: Page, category_name: str) -> bool:
                                 "pickup" not in container_text.lower()
                                 and "pick up" not in container_text.lower()
                             ):
-                                Actor.log.debug(
+                                _safe_actor_debug(
                                     f"[{category_name}] Skipping non-pickup filter: '{text[:20]}...' (Container: '{container_text[:30]}')"
                                 )
                                 continue
@@ -2198,7 +2222,9 @@ async def scrape_category_page(
             )
             return []
     except asyncio.TimeoutError:
-        Actor.log.warning(f"Timeout validating first card on page {page_num}. Skipping page.")
+        Actor.log.warning(
+            f"Timeout validating first card on page {page_num}. Skipping page."
+        )
         _navlog(
             "grid_validation_failure",
             {
