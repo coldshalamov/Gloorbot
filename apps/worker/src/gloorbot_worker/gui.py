@@ -2,14 +2,15 @@ from __future__ import annotations
 
 import sys
 import threading
+import shutil
 import tkinter as tk
 from tkinter import messagebox, ttk
 
 # Handle PyInstaller frozen executable - need absolute imports
-if getattr(sys, 'frozen', False):
+if getattr(sys, "frozen", False):
     from gloorbot_worker import api
     from gloorbot_worker.supervisor import Supervisor
-    from gloorbot_worker.paths import status_dir
+    from gloorbot_worker.paths import status_dir, profiles_dir
     from gloorbot_worker import __version__
     from gloorbot_worker.settings import (
         PerformanceSettings,
@@ -20,7 +21,7 @@ if getattr(sys, 'frozen', False):
 else:
     from . import api
     from .supervisor import Supervisor
-    from .paths import status_dir
+    from .paths import status_dir, profiles_dir
     from . import __version__
     from .settings import (
         PerformanceSettings,
@@ -73,9 +74,15 @@ class SettingsDialog:
         btn_frame = ttk.Frame(self.dialog)
         btn_frame.pack(fill="x", padx=10, pady=10)
 
-        ttk.Button(btn_frame, text="Save", command=self._save).pack(side="right", padx=5)
-        ttk.Button(btn_frame, text="Cancel", command=self.dialog.destroy).pack(side="right")
-        ttk.Button(btn_frame, text="Reset to Defaults", command=self._reset).pack(side="left")
+        ttk.Button(btn_frame, text="Save", command=self._save).pack(
+            side="right", padx=5
+        )
+        ttk.Button(btn_frame, text="Cancel", command=self.dialog.destroy).pack(
+            side="right"
+        )
+        ttk.Button(btn_frame, text="Reset to Defaults", command=self._reset).pack(
+            side="left"
+        )
 
     def _build_timing_tab(self, parent: ttk.Frame) -> None:
         """Build the timing settings tab."""
@@ -86,18 +93,28 @@ class SettingsDialog:
         ttk.Label(lf, text="Fixed Browser Count (0 = dynamic):").pack(anchor="w")
         self.fixed_browsers = tk.IntVar(value=self.settings.fixed_browser_count)
         browser_scale = ttk.Scale(
-            lf, from_=0, to=10, orient="horizontal",
-            variable=self.fixed_browsers, command=lambda v: self._update_label(v, self.browser_label)
+            lf,
+            from_=0,
+            to=10,
+            orient="horizontal",
+            variable=self.fixed_browsers,
+            command=lambda v: self._update_label(v, self.browser_label),
         )
         browser_scale.pack(fill="x")
         self.browser_label = ttk.Label(lf, text=str(self.settings.fixed_browser_count))
         self.browser_label.pack(anchor="e")
 
-        ttk.Label(lf, text="Max Browsers (when dynamic):").pack(anchor="w", pady=(10, 0))
+        ttk.Label(lf, text="Max Browsers (when dynamic):").pack(
+            anchor="w", pady=(10, 0)
+        )
         self.max_browsers = tk.IntVar(value=self.settings.max_browsers)
         max_scale = ttk.Scale(
-            lf, from_=1, to=10, orient="horizontal",
-            variable=self.max_browsers, command=lambda v: self._update_label(v, self.max_label)
+            lf,
+            from_=1,
+            to=10,
+            orient="horizontal",
+            variable=self.max_browsers,
+            command=lambda v: self._update_label(v, self.max_label),
         )
         max_scale.pack(fill="x")
         self.max_label = ttk.Label(lf, text=str(self.settings.max_browsers))
@@ -110,8 +127,12 @@ class SettingsDialog:
         ttk.Label(lf2, text="Nav Delay Min:").pack(anchor="w")
         self.nav_min = tk.DoubleVar(value=self.settings.nav_delay_min)
         ttk.Scale(
-            lf2, from_=0.5, to=5.0, orient="horizontal",
-            variable=self.nav_min, command=lambda v: self._update_label(v, self.nav_min_label, 2)
+            lf2,
+            from_=0.5,
+            to=5.0,
+            orient="horizontal",
+            variable=self.nav_min,
+            command=lambda v: self._update_label(v, self.nav_min_label, 2),
         ).pack(fill="x")
         self.nav_min_label = ttk.Label(lf2, text=f"{self.settings.nav_delay_min:.2f}")
         self.nav_min_label.pack(anchor="e")
@@ -119,8 +140,12 @@ class SettingsDialog:
         ttk.Label(lf2, text="Nav Delay Max:").pack(anchor="w", pady=(10, 0))
         self.nav_max = tk.DoubleVar(value=self.settings.nav_delay_max)
         ttk.Scale(
-            lf2, from_=1.0, to=8.0, orient="horizontal",
-            variable=self.nav_max, command=lambda v: self._update_label(v, self.nav_max_label, 2)
+            lf2,
+            from_=1.0,
+            to=8.0,
+            orient="horizontal",
+            variable=self.nav_max,
+            command=lambda v: self._update_label(v, self.nav_max_label, 2),
         ).pack(fill="x")
         self.nav_max_label = ttk.Label(lf2, text=f"{self.settings.nav_delay_max:.2f}")
         self.nav_max_label.pack(anchor="e")
@@ -132,19 +157,31 @@ class SettingsDialog:
         ttk.Label(lf3, text="Click Delay Min:").pack(anchor="w")
         self.click_min = tk.DoubleVar(value=self.settings.click_delay_min)
         ttk.Scale(
-            lf3, from_=0.01, to=1.0, orient="horizontal",
-            variable=self.click_min, command=lambda v: self._update_label(v, self.click_min_label, 2)
+            lf3,
+            from_=0.01,
+            to=1.0,
+            orient="horizontal",
+            variable=self.click_min,
+            command=lambda v: self._update_label(v, self.click_min_label, 2),
         ).pack(fill="x")
-        self.click_min_label = ttk.Label(lf3, text=f"{self.settings.click_delay_min:.2f}")
+        self.click_min_label = ttk.Label(
+            lf3, text=f"{self.settings.click_delay_min:.2f}"
+        )
         self.click_min_label.pack(anchor="e")
 
         ttk.Label(lf3, text="Click Delay Max:").pack(anchor="w", pady=(10, 0))
         self.click_max = tk.DoubleVar(value=self.settings.click_delay_max)
         ttk.Scale(
-            lf3, from_=0.05, to=2.0, orient="horizontal",
-            variable=self.click_max, command=lambda v: self._update_label(v, self.click_max_label, 2)
+            lf3,
+            from_=0.05,
+            to=2.0,
+            orient="horizontal",
+            variable=self.click_max,
+            command=lambda v: self._update_label(v, self.click_max_label, 2),
         ).pack(fill="x")
-        self.click_max_label = ttk.Label(lf3, text=f"{self.settings.click_delay_max:.2f}")
+        self.click_max_label = ttk.Label(
+            lf3, text=f"{self.settings.click_delay_max:.2f}"
+        )
         self.click_max_label.pack(anchor="e")
 
         # Inter-lease delay
@@ -154,19 +191,31 @@ class SettingsDialog:
         ttk.Label(lf4, text="Delay between tasks Min:").pack(anchor="w")
         self.inter_min = tk.DoubleVar(value=self.settings.inter_lease_delay_min)
         ttk.Scale(
-            lf4, from_=0.5, to=5.0, orient="horizontal",
-            variable=self.inter_min, command=lambda v: self._update_label(v, self.inter_min_label, 2)
+            lf4,
+            from_=0.5,
+            to=5.0,
+            orient="horizontal",
+            variable=self.inter_min,
+            command=lambda v: self._update_label(v, self.inter_min_label, 2),
         ).pack(fill="x")
-        self.inter_min_label = ttk.Label(lf4, text=f"{self.settings.inter_lease_delay_min:.2f}")
+        self.inter_min_label = ttk.Label(
+            lf4, text=f"{self.settings.inter_lease_delay_min:.2f}"
+        )
         self.inter_min_label.pack(anchor="e")
 
         ttk.Label(lf4, text="Delay between tasks Max:").pack(anchor="w", pady=(10, 0))
         self.inter_max = tk.DoubleVar(value=self.settings.inter_lease_delay_max)
         ttk.Scale(
-            lf4, from_=1.0, to=10.0, orient="horizontal",
-            variable=self.inter_max, command=lambda v: self._update_label(v, self.inter_max_label, 2)
+            lf4,
+            from_=1.0,
+            to=10.0,
+            orient="horizontal",
+            variable=self.inter_max,
+            command=lambda v: self._update_label(v, self.inter_max_label, 2),
         ).pack(fill="x")
-        self.inter_max_label = ttk.Label(lf4, text=f"{self.settings.inter_lease_delay_max:.2f}")
+        self.inter_max_label = ttk.Label(
+            lf4, text=f"{self.settings.inter_lease_delay_max:.2f}"
+        )
         self.inter_max_label.pack(anchor="e")
 
     def _build_resource_tab(self, parent: ttk.Frame) -> None:
@@ -178,39 +227,38 @@ class SettingsDialog:
         ttk.Label(
             lf,
             text="Block resources to save bandwidth and speed up scraping.\n"
-                 "CAUTION: Blocking too much may trigger Akamai detection.",
+            "CAUTION: Blocking too much may trigger Akamai detection.",
             wraplength=450,
-            foreground="gray"
+            foreground="gray",
         ).pack(anchor="w", pady=(0, 10))
 
         self.block_images = tk.BooleanVar(value=self.settings.block_images)
         ttk.Checkbutton(
-            lf, text="Block Images (60-70% bandwidth savings)",
-            variable=self.block_images
+            lf,
+            text="Block Images (60-70% bandwidth savings)",
+            variable=self.block_images,
         ).pack(anchor="w")
 
         self.block_fonts = tk.BooleanVar(value=self.settings.block_fonts)
         ttk.Checkbutton(
-            lf, text="Block Fonts (5-10% bandwidth savings)",
-            variable=self.block_fonts
+            lf, text="Block Fonts (5-10% bandwidth savings)", variable=self.block_fonts
         ).pack(anchor="w")
 
         self.block_media = tk.BooleanVar(value=self.settings.block_media)
         ttk.Checkbutton(
-            lf, text="Block Audio/Video (safe, rarely used)",
-            variable=self.block_media
+            lf, text="Block Audio/Video (safe, rarely used)", variable=self.block_media
         ).pack(anchor="w")
 
         self.block_analytics = tk.BooleanVar(value=self.settings.block_analytics)
         ttk.Checkbutton(
-            lf, text="Block Analytics (except Akamai)",
-            variable=self.block_analytics
+            lf, text="Block Analytics (except Akamai)", variable=self.block_analytics
         ).pack(anchor="w")
 
         self.abort_images = tk.BooleanVar(value=self.settings.abort_images_after_dom)
         ttk.Checkbutton(
-            lf, text="Abort images after DOM renders (hybrid approach)",
-            variable=self.abort_images
+            lf,
+            text="Abort images after DOM renders (hybrid approach)",
+            variable=self.abort_images,
         ).pack(anchor="w")
 
         # Viewport
@@ -220,16 +268,20 @@ class SettingsDialog:
         ttk.Label(
             lf2,
             text="Smaller viewport = faster rendering, less memory.\n"
-                 "1280x720 is 37% fewer pixels than 1440x900.",
+            "1280x720 is 37% fewer pixels than 1440x900.",
             wraplength=450,
-            foreground="gray"
+            foreground="gray",
         ).pack(anchor="w", pady=(0, 10))
 
         ttk.Label(lf2, text="Width:").pack(anchor="w")
         self.viewport_width = tk.IntVar(value=self.settings.viewport_width)
         ttk.Scale(
-            lf2, from_=1024, to=1920, orient="horizontal",
-            variable=self.viewport_width, command=lambda v: self._update_label(v, self.vw_label)
+            lf2,
+            from_=1024,
+            to=1920,
+            orient="horizontal",
+            variable=self.viewport_width,
+            command=lambda v: self._update_label(v, self.vw_label),
         ).pack(fill="x")
         self.vw_label = ttk.Label(lf2, text=str(self.settings.viewport_width))
         self.vw_label.pack(anchor="e")
@@ -237,8 +289,12 @@ class SettingsDialog:
         ttk.Label(lf2, text="Height:").pack(anchor="w", pady=(10, 0))
         self.viewport_height = tk.IntVar(value=self.settings.viewport_height)
         ttk.Scale(
-            lf2, from_=600, to=1080, orient="horizontal",
-            variable=self.viewport_height, command=lambda v: self._update_label(v, self.vh_label)
+            lf2,
+            from_=600,
+            to=1080,
+            orient="horizontal",
+            variable=self.viewport_height,
+            command=lambda v: self._update_label(v, self.vh_label),
         ).pack(fill="x")
         self.vh_label = ttk.Label(lf2, text=str(self.settings.viewport_height))
         self.vh_label.pack(anchor="e")
@@ -249,20 +305,23 @@ class SettingsDialog:
 
         self.disable_gpu = tk.BooleanVar(value=self.settings.disable_gpu)
         ttk.Checkbutton(
-            lf3, text="Disable GPU (faster on low-end machines)",
-            variable=self.disable_gpu
+            lf3,
+            text="Disable GPU (faster on low-end machines)",
+            variable=self.disable_gpu,
         ).pack(anchor="w")
 
         self.memory_off = tk.BooleanVar(value=self.settings.memory_pressure_off)
         ttk.Checkbutton(
-            lf3, text="Disable Memory Pressure (prevents OOM crashes)",
-            variable=self.memory_off
+            lf3,
+            text="Disable Memory Pressure (prevents OOM crashes)",
+            variable=self.memory_off,
         ).pack(anchor="w")
 
-        self.bg_networking = tk.BooleanVar(value=self.settings.disable_background_networking)
+        self.bg_networking = tk.BooleanVar(
+            value=self.settings.disable_background_networking
+        )
         ttk.Checkbutton(
-            lf3, text="Disable Background Networking",
-            variable=self.bg_networking
+            lf3, text="Disable Background Networking", variable=self.bg_networking
         ).pack(anchor="w")
 
     def _build_preset_tab(self, parent: ttk.Frame) -> None:
@@ -270,15 +329,31 @@ class SettingsDialog:
         ttk.Label(
             parent,
             text="Quick presets for different use cases.\n"
-                 "Click a preset to load its settings, then Save to apply.",
-            wraplength=450
+            "Click a preset to load its settings, then Save to apply.",
+            wraplength=450,
         ).pack(anchor="w", pady=(0, 20))
 
         presets = [
-            ("Conservative", "Slow but safe. Use if getting blocked.", PerformanceSettings.conservative),
-            ("Balanced (Default)", "Proven reliable settings.", PerformanceSettings.balanced),
-            ("Aggressive", "Faster, higher block risk.", PerformanceSettings.aggressive),
-            ("Ultra Aggressive", "Maximum speed. Requires good IPs.", PerformanceSettings.ultra_aggressive),
+            (
+                "Conservative",
+                "Slow but safe. Use if getting blocked.",
+                PerformanceSettings.conservative,
+            ),
+            (
+                "Balanced (Default)",
+                "Proven reliable settings.",
+                PerformanceSettings.balanced,
+            ),
+            (
+                "Aggressive",
+                "Faster, higher block risk.",
+                PerformanceSettings.aggressive,
+            ),
+            (
+                "Ultra Aggressive",
+                "Maximum speed. Requires good IPs.",
+                PerformanceSettings.ultra_aggressive,
+            ),
         ]
 
         for name, desc, preset_fn in presets:
@@ -286,8 +361,10 @@ class SettingsDialog:
             frame.pack(fill="x", pady=5)
 
             ttk.Button(
-                frame, text=name, width=20,
-                command=lambda fn=preset_fn: self._load_preset(fn)
+                frame,
+                text=name,
+                width=20,
+                command=lambda fn=preset_fn: self._load_preset(fn),
             ).pack(side="left")
 
             ttk.Label(frame, text=desc, foreground="gray").pack(side="left", padx=10)
@@ -296,12 +373,12 @@ class SettingsDialog:
         ttk.Label(
             parent,
             text="\nAkamai Detection Warning:\n"
-                 "- NEVER run headless (instant block)\n"
-                 "- NEVER block /_sec/ scripts\n"
-                 "- Aggressive settings may get you blocked\n"
-                 "- If blocked, switch to Conservative preset",
+            "- NEVER run headless (instant block)\n"
+            "- NEVER block /_sec/ scripts\n"
+            "- Aggressive settings may get you blocked\n"
+            "- If blocked, switch to Conservative preset",
             wraplength=450,
-            foreground="red"
+            foreground="red",
         ).pack(anchor="w", pady=(20, 0))
 
     def _update_label(self, value: str, label: ttk.Label, decimals: int = 0) -> None:
@@ -351,7 +428,10 @@ class SettingsDialog:
         self._update_label(str(preset.viewport_width), self.vw_label)
         self._update_label(str(preset.viewport_height), self.vh_label)
 
-        messagebox.showinfo("Preset Loaded", f"Loaded '{preset_fn.__name__}' preset.\nClick Save to apply.")
+        messagebox.showinfo(
+            "Preset Loaded",
+            f"Loaded '{preset_fn.__name__}' preset.\nClick Save to apply.",
+        )
 
     def _save(self) -> None:
         """Save current settings."""
@@ -377,7 +457,10 @@ class SettingsDialog:
         set_settings(self.settings)
         self.on_save(self.settings)
         self.dialog.destroy()
-        messagebox.showinfo("Settings Saved", "Performance settings saved.\nRestart workers for changes to take effect.")
+        messagebox.showinfo(
+            "Settings Saved",
+            "Performance settings saved.\nRestart workers for changes to take effect.",
+        )
 
     def _reset(self) -> None:
         """Reset to default settings."""
@@ -407,8 +490,12 @@ class App:
         btn_frame.pack(pady=14)
 
         self.join_btn = ttk.Button(btn_frame, text="Join", command=self.join)
-        self.kill_btn = ttk.Button(btn_frame, text="Kill", command=self.kill, state="disabled")
-        self.settings_btn = ttk.Button(btn_frame, text="Settings", command=self._open_settings)
+        self.kill_btn = ttk.Button(
+            btn_frame, text="Kill", command=self.kill, state="disabled"
+        )
+        self.settings_btn = ttk.Button(
+            btn_frame, text="Settings", command=self._open_settings
+        )
 
         self.join_btn.pack(side="left", padx=5)
         self.kill_btn.pack(side="left", padx=5)
@@ -427,8 +514,7 @@ class App:
         self.settings_summary = tk.StringVar(value="")
         self._update_settings_summary()
         ttk.Label(
-            root, textvariable=self.settings_summary,
-            justify="left", foreground="gray"
+            root, textvariable=self.settings_summary, justify="left", foreground="gray"
         ).pack(pady=8)
 
         self.root.protocol("WM_DELETE_WINDOW", self.on_close)
@@ -440,7 +526,11 @@ class App:
     def _update_settings_summary(self) -> None:
         """Update the settings summary display."""
         s = self._settings
-        mode = f"Fixed {s.fixed_browser_count}" if s.fixed_browser_count > 0 else f"Dynamic (max {s.max_browsers})"
+        mode = (
+            f"Fixed {s.fixed_browser_count}"
+            if s.fixed_browser_count > 0
+            else f"Dynamic (max {s.max_browsers})"
+        )
         blocking = []
         if s.block_images:
             blocking.append("images")
@@ -461,6 +551,7 @@ class App:
 
     def _open_settings(self) -> None:
         """Open the settings dialog."""
+
         def on_save(settings: PerformanceSettings) -> None:
             self._settings = settings
             self._update_settings_summary()
@@ -483,7 +574,9 @@ class App:
             shutil.which("chrome"),
             shutil.which("google-chrome"),
             os.path.expandvars(r"%ProgramFiles%\Google\Chrome\Application\chrome.exe"),
-            os.path.expandvars(r"%ProgramFiles(x86)%\Google\Chrome\Application\chrome.exe"),
+            os.path.expandvars(
+                r"%ProgramFiles(x86)%\Google\Chrome\Application\chrome.exe"
+            ),
             os.path.expandvars(r"%LocalAppData%\Google\Chrome\Application\chrome.exe"),
         ]
         for path in chrome_paths:
@@ -503,7 +596,6 @@ class App:
                 "but it is not required to run.\n"
                 "Download Chrome: https://www.google.com/chrome/"
             )
-
 
     def join(self) -> None:
         if self._running:
@@ -528,6 +620,7 @@ class App:
                     f"  CPU: {st.get('cpu'):.1f}%\n"
                     f"  MEM: {st.get('mem'):.1f}%{block_str}"
                 )
+
             try:
                 self.supervisor.run_loop(on_tick)
             finally:
@@ -576,6 +669,19 @@ def run_gui() -> None:
 
         import psutil
 
+        def _any_worker_process_running() -> bool:
+            try:
+                for proc in psutil.process_iter(["name", "cmdline"]):
+                    name = (proc.info.get("name") or "").lower()
+                    if "gloorbotworker" in name:
+                        return True
+                    cmd = " ".join(proc.info.get("cmdline") or [])
+                    if "gloorbot_worker" in cmd and "--slot-worker" in cmd:
+                        return True
+            except Exception:
+                return False
+            return False
+
         pid_file = status_dir() / "worker_gui.pid"
         if pid_file.exists():
             try:
@@ -602,6 +708,17 @@ def run_gui() -> None:
                     )
                     root.destroy()
                     return
+            else:
+                # Stale PID file: previous run likely crashed. If no worker processes
+                # are running, remove stale profiles to avoid corrupted sessions.
+                if not _any_worker_process_running():
+                    try:
+                        prof_dir = profiles_dir()
+                        if prof_dir.exists():
+                            shutil.rmtree(prof_dir, ignore_errors=True)
+                            prof_dir.mkdir(parents=True, exist_ok=True)
+                    except Exception:
+                        pass
 
         pid_file.parent.mkdir(parents=True, exist_ok=True)
         pid_file.write_text(str(os.getpid()), encoding="utf-8")
@@ -613,6 +730,7 @@ def run_gui() -> None:
     try:
         import os
         from pathlib import Path
+
         # When frozen, the icon is in the same dir as the EXE
         # In dev, it might be in apps/worker or PARALLEL
         exe_dir = Path(sys.executable).parent
@@ -620,7 +738,9 @@ def run_gui() -> None:
         icon_candidates = [
             exe_dir / "gloorbot.ico",
             spec_dir / "gloorbot.ico",
-            spec_dir.parent.parent / "PARALLEL" / "gloorbot.ico", # for dev if converted
+            spec_dir.parent.parent
+            / "PARALLEL"
+            / "gloorbot.ico",  # for dev if converted
         ]
         for cand in icon_candidates:
             if cand.exists():
