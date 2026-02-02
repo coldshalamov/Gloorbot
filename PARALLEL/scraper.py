@@ -72,20 +72,14 @@ def _safe_actor_debug(msg: str) -> None:
         return
 
 
-_BLOCK_TITLE_RE = re.compile(
-    r"(access denied|robot check|are you a robot|request blocked|forbidden|\bblocked\b)",
-    re.IGNORECASE,
-)
-
-
 def _is_blocked_title(title: str | None) -> bool:
     """Return True if the page title indicates an anti-bot block.
 
-    Avoid substring checks like "Robot" which match legitimate titles (e.g. "Robotic Vacuum").
+    Per ops: only treat explicit "Access Denied" as a block signal.
     """
     if not title:
         return False
-    return bool(_BLOCK_TITLE_RE.search(title))
+    return "Access Denied" in title
 
 
 # ============================================================================
