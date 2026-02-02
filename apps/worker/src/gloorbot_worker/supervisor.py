@@ -11,9 +11,14 @@ from pathlib import Path
 import psutil
 
 # Handle PyInstaller frozen executable - need absolute imports
-if getattr(sys, 'frozen', False):
+if getattr(sys, "frozen", False):
     from gloorbot_worker import api
-    from gloorbot_worker.paths import config_path, logs_dir, cleanup_old_files, status_dir
+    from gloorbot_worker.paths import (
+        config_path,
+        logs_dir,
+        cleanup_old_files,
+        status_dir,
+    )
     from gloorbot_worker.settings import get_settings
 else:
     from . import api
@@ -25,6 +30,7 @@ TARGET_LOW = 70.0
 TARGET_HIGH = 90.0
 CHECK_INTERVAL_SECONDS = 90
 MAX_SLOTS_DEFAULT = int(os.getenv("MAX_SLOTS", "5"))
+MAX_BLOCK_OVERRIDE_SECONDS = int(os.getenv("MAX_BLOCK_OVERRIDE_SECONDS", "1800"))
 
 
 @dataclass
@@ -44,7 +50,8 @@ class Supervisor:
         self._block_count = 0  # Track consecutive blocks
         self._last_block_time = 0.0
         self._max_slots_override: int | None = None  # Reduced when detecting blocks
-        
+        self._max_override_set_at: float | None = None
+
         # Run disk cleanup on startup
         try:
             deleted = cleanup_old_files(max_age_days=30)
@@ -121,8 +128,13 @@ class Supervisor:
         env["PYTHONUNBUFFERED"] = "1"
         # Per-slot JSONL logs so multiple slots don't contend for the same file.
         try:
-            env.setdefault("GLOORBOT_NAVLOG_PATH", str(logs_dir() / f"nav_slot_{slot_id}.jsonl"))
-            env.setdefault("GLOORBOT_EVENTLOG_PATH", str(logs_dir() / f"events_slot_{slot_id}.jsonl"))
+            env.setdefault(
+                "GLOORBOT_NAVLOG_PATH", str(logs_dir() / f"nav_slot_{slot_id}.jsonl")
+            )
+            env.setdefault(
+                "GLOORBOT_EVENTLOG_PATH",
+                str(logs_dir() / f"events_slot_{slot_id}.jsonl"),
+            )
         except Exception:
             pass
         env.setdefault("GLOORBOT_SLOT_ID", str(slot_id))
@@ -177,12 +189,39 @@ class Supervisor:
         except Exception:
             pass
 
+        # Do not let block-based slot limiting persist forever.
+        if (
+            self._max_slots_override is not None
+            and self._max_override_set_at is not None
+            and MAX_BLOCK_OVERRIDE_SECONDS > 0
+            and time.time() - self._max_override_set_at > MAX_BLOCK_OVERRIDE_SECONDS
+        ):
+            print(
+                f"[supervisor] Block backoff expired after {MAX_BLOCK_OVERRIDE_SECONDS}s; restoring slots"
+            )
+            self._max_slots_override = None
+            self._max_override_set_at = None
+            self._block_count = 0
+            self._last_block_time = 0.0
+
         if self._stop:
-            return {"running": False, "connected": connected, "slots": 0, "cpu": cpu, "mem": mem}
+            return {
+                "running": False,
+                "connected": connected,
+                "slots": 0,
+                "cpu": cpu,
+                "mem": mem,
+            }
 
         if not connected:
             # Joined, but coordinator isn't reachable yet; don't spawn slots.
-            return {"running": True, "connected": False, "slots": 0, "cpu": cpu, "mem": mem}
+            return {
+                "running": True,
+                "connected": False,
+                "slots": 0,
+                "cpu": cpu,
+                "mem": mem,
+            }
 
         # Load performance settings
         settings = get_settings()
@@ -203,7 +242,11 @@ class Supervisor:
         else:
             # DYNAMIC MODE: Scale based on CPU/memory (original behavior)
             max_slots_cfg = max(1, settings.max_browsers or MAX_SLOTS_DEFAULT)
-            max_slots = self._max_slots_override if self._max_slots_override is not None else max_slots_cfg
+            max_slots = (
+                self._max_slots_override
+                if self._max_slots_override is not None
+                else max_slots_cfg
+            )
             if len(self.slots) == 0:
                 self._spawn_slot()
             elif len(self.slots) < max_slots and cpu < TARGET_LOW and mem < TARGET_LOW:
@@ -213,7 +256,14 @@ class Supervisor:
                     self._kill_slot(self.slots[-1])
                     self.slots = self.slots[:-1]
 
-        return {"running": True, "connected": True, "slots": len(self.slots), "cpu": cpu, "mem": mem, "blocks": self._block_count}
+        return {
+            "running": True,
+            "connected": True,
+            "slots": len(self.slots),
+            "cpu": cpu,
+            "mem": mem,
+            "blocks": self._block_count,
+        }
 
     def report_block(self) -> None:
         """Called by slot workers when they detect a block. Triggers backoff."""
@@ -221,30 +271,42 @@ class Supervisor:
         # Reset block count if last block was more than 10 minutes ago
         if now - self._last_block_time > 600:
             self._block_count = 0
-        
+
         self._block_count += 1
         self._last_block_time = now
-        
+
         # Exponential backoff: reduce max slots based on block count
         if self._block_count >= 5:
             self._max_slots_override = 1
-            print(f"[supervisor] High block rate ({self._block_count}), limiting to 1 slot")
+            self._max_override_set_at = now
+            print(
+                f"[supervisor] High block rate ({self._block_count}), limiting to 1 slot"
+            )
         elif self._block_count >= 3:
             self._max_slots_override = max(1, len(self.slots) // 2)
-            print(f"[supervisor] Moderate blocks ({self._block_count}), limiting to {self._max_slots_override} slots")
+            self._max_override_set_at = now
+            print(
+                f"[supervisor] Moderate blocks ({self._block_count}), limiting to {self._max_slots_override} slots"
+            )
         elif self._block_count >= 1:
             # Just log, don't reduce yet
             print(f"[supervisor] Block detected ({self._block_count} total)")
-        
+
         # Write block status to file so slots can read it
         try:
             block_file = status_dir() / "block_status.json"
             import json
-            block_file.write_text(json.dumps({
-                "block_count": self._block_count,
-                "last_block": self._last_block_time,
-                "max_slots": self._max_slots_override,
-            }), encoding="utf-8")
+
+            block_file.write_text(
+                json.dumps(
+                    {
+                        "block_count": self._block_count,
+                        "last_block": self._last_block_time,
+                        "max_slots": self._max_slots_override,
+                    }
+                ),
+                encoding="utf-8",
+            )
         except Exception:
             pass
 
