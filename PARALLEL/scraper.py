@@ -72,6 +72,22 @@ def _safe_actor_debug(msg: str) -> None:
         return
 
 
+_BLOCK_TITLE_RE = re.compile(
+    r"(access denied|robot check|are you a robot|request blocked|forbidden|\bblocked\b)",
+    re.IGNORECASE,
+)
+
+
+def _is_blocked_title(title: str | None) -> bool:
+    """Return True if the page title indicates an anti-bot block.
+
+    Avoid substring checks like "Robot" which match legitimate titles (e.g. "Robotic Vacuum").
+    """
+    if not title:
+        return False
+    return bool(_BLOCK_TITLE_RE.search(title))
+
+
 # ============================================================================
 # OPTIONAL NAVIGATION LOGGING (used by the installed Worker)
 # ============================================================================
@@ -1581,7 +1597,7 @@ async def scrape_category_page(
     # Check for blocking with timeout
     try:
         title = await asyncio.wait_for(page.title(), timeout=10.0)
-        if "Access Denied" in title or "Robot" in title or "Blocked" in title:
+        if _is_blocked_title(title):
             Actor.log.error(f"BLOCKED on page {page_num}: {title}")
             raise Exception(f"Blocked by anti-bot: {title}")  # Raise to stop scraping
 
@@ -2559,7 +2575,7 @@ async def scrape_category_all_pages(
         # If we're already blocked on the first navigation, abort quickly.
         try:
             title = await asyncio.wait_for(page.title(), timeout=10.0)
-            if "Access Denied" in title or "Robot" in title or "Blocked" in title:
+            if _is_blocked_title(title):
                 Actor.log.error(f"BLOCKED during setup: {title}")
                 raise Exception(f"Blocked by anti-bot: {title}")
         except asyncio.TimeoutError:
