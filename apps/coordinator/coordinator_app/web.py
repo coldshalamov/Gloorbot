@@ -1397,3 +1397,4 @@ def create_app() -> FastAPI:
         return get_structured_logs(limit=limit, event_type="grid_validation_failure")
 
     return app
+

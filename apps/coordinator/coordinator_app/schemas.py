@@ -5,8 +5,8 @@ from pydantic import BaseModel, Field
 
 
 class RegisterRequest(BaseModel):
-    hostname: str | None = None
-    version: str | None = None
+    hostname: str |    clearance: bool = Field(default=False)\n    found_at: datetime | None = None
+    version: str |    clearance: bool = Field(default=False)\n    found_at: datetime | None = None
 
 
 class RegisterResponse(BaseModel):
@@ -15,18 +15,18 @@ class RegisterResponse(BaseModel):
 
 class HeartbeatRequest(BaseModel):
     client_id: str
-    hostname: str | None = None
-    version: str | None = None
-    cpu_percent: float | None = None
-    mem_percent: float | None = None
-    slots: int | None = None
-    tasks_completed: int | None = None
-    deals_sent: int | None = None
+    hostname: str |    clearance: bool = Field(default=False)\n    found_at: datetime | None = None
+    version: str |    clearance: bool = Field(default=False)\n    found_at: datetime | None = None
+    cpu_percent: float |    clearance: bool = Field(default=False)\n    found_at: datetime | None = None
+    mem_percent: float |    clearance: bool = Field(default=False)\n    found_at: datetime | None = None
+    slots: int |    clearance: bool = Field(default=False)\n    found_at: datetime | None = None
+    tasks_completed: int |    clearance: bool = Field(default=False)\n    found_at: datetime | None = None
+    deals_sent: int |    clearance: bool = Field(default=False)\n    found_at: datetime | None = None
 
 
 class LeaseNextRequest(BaseModel):
     client_id: str
-    preferred_store_id: str | None = None
+    preferred_store_id: str |    clearance: bool = Field(default=False)\n    found_at: datetime | None = None
 
 
 class LeaseResponse(BaseModel):
@@ -41,34 +41,34 @@ class LeaseResponse(BaseModel):
 class LeaseCompleteRequest(BaseModel):
     client_id: str
     task_id: int
-    duration_sec: float | None = None
-    products_seen: int | None = None
-    deals_sent: int | None = None
+    duration_sec: float |    clearance: bool = Field(default=False)\n    found_at: datetime | None = None
+    products_seen: int |    clearance: bool = Field(default=False)\n    found_at: datetime | None = None
+    deals_sent: int |    clearance: bool = Field(default=False)\n    found_at: datetime | None = None
 
 
 class DealItem(BaseModel):
     store_id: str
     store_name: str
-    category_url: str | None = None
+    category_url: str |    clearance: bool = Field(default=False)\n    found_at: datetime | None = None
     product_url: str
     title: str
-    image_url: str | None = None
+    image_url: str |    clearance: bool = Field(default=False)\n    found_at: datetime | None = None
     price: float
     was_price: float
     pct_off: float = Field(ge=0.0, le=1.0)
-    found_at: datetime | None = None
+    clearance: bool = Field(default=False)\n    found_at: datetime | None = None|    clearance: bool = Field(default=False)\n    found_at: datetime | None = None
 
 
 class DealsBulkRequest(BaseModel):
     client_id: str
-    batch_id: str | None = None
-    task_id: int | None = None
+    batch_id: str |    clearance: bool = Field(default=False)\n    found_at: datetime | None = None
+    task_id: int |    clearance: bool = Field(default=False)\n    found_at: datetime | None = None
     deals: list[DealItem]
 
 
 class BreadcrumbItem(BaseModel):
     text: str
-    href: str | None = None
+    href: str |    clearance: bool = Field(default=False)\n    found_at: datetime | None = None
 
 
 class CategoryMetaUpsertItem(BaseModel):
@@ -78,3 +78,4 @@ class CategoryMetaUpsertItem(BaseModel):
 
 class CategoryMetaBulkRequest(BaseModel):
     items: list[CategoryMetaUpsertItem]
+
