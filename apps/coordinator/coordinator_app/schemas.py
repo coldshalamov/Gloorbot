@@ -79,3 +79,4 @@ class CategoryMetaUpsertItem(BaseModel):
 class CategoryMetaBulkRequest(BaseModel):
     items: list[CategoryMetaUpsertItem]
 
+
