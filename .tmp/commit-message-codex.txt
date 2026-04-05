@@ -1,5 +1,0 @@
-Land coordinator stale-deal sweep flow
-
-Add the coordinator and worker changes for the stale-deal expiration pipeline, including scan_status-aware lease completion, CheapSkater expire forwarding, deal_source cleanup, and focused coordinator regression coverage.
-
-Co-authored-by: Codex <noreply@openai.com>
