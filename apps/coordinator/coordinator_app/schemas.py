@@ -44,6 +44,7 @@ class LeaseCompleteRequest(BaseModel):
     duration_sec: float
     products_seen: int
     deals_sent: int
+    scan_status: str | None = None
 
 
 class DealItem(BaseModel):

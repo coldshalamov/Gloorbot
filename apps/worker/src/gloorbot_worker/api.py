@@ -69,7 +69,15 @@ def lease_next(client_id: str, preferred_store_id: str | None) -> Lease | None:
     return Lease(**data)
 
 
-def lease_complete(client_id: str, task_id: int, duration_sec: float | None, products_seen: int, deals_sent: int) -> None:
+def lease_complete(
+    client_id: str,
+    task_id: int,
+    duration_sec: float | None,
+    products_seen: int,
+    deals_sent: int,
+    *,
+    scan_status: str | None = None,
+) -> None:
     requests.post(
         f"{coordinator_url()}/api/v1/lease/complete",
         json={
@@ -78,6 +86,7 @@ def lease_complete(client_id: str, task_id: int, duration_sec: float | None, pro
             "duration_sec": duration_sec,
             "products_seen": products_seen,
             "deals_sent": deals_sent,
+            "scan_status": scan_status,
         },
         timeout=15,
     ).raise_for_status()

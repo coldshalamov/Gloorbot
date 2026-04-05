@@ -772,6 +772,7 @@ async def _run_slot(client_id: str, slot_id: int) -> None:
 
             products_seen = 0
             deals_sent = 0
+            scan_status = "incomplete"
             try:
                 await ensure_store(lease)
                 store_info = {
@@ -796,11 +797,15 @@ async def _run_slot(client_id: str, slot_id: int) -> None:
                     page_url=getattr(page, "url", None),
                     title=title,
                 )
-                products = await asyncio.wait_for(
-                    parallel.scrape_category_all_pages(page, category_url, store_info),
+                scrape_result = await asyncio.wait_for(
+                    parallel.scrape_category_all_pages_result(
+                        page, category_url, store_info
+                    ),
                     timeout=MAX_CATEGORY_SECONDS,
                 )
+                products = scrape_result.products
                 products_seen = len(products)
+                scan_status = scrape_result.scan_status
 
                 deals: list[dict] = []
                 for p_item in products:
@@ -828,6 +833,7 @@ async def _run_slot(client_id: str, slot_id: int) -> None:
                     time.time() - start,
                     products_seen,
                     deals_sent,
+                    scan_status=scan_status,
                 )
 
                 slot_status_path.write_text(
@@ -839,6 +845,7 @@ async def _run_slot(client_id: str, slot_id: int) -> None:
                             "last_done_at": datetime.utcnow().isoformat(),
                             "products_seen": products_seen,
                             "deals_sent": deals_sent,
+                            "scan_status": scan_status,
                             "last_batch_id": batch_id,
                         },
                         indent=2,
@@ -861,6 +868,7 @@ async def _run_slot(client_id: str, slot_id: int) -> None:
                     duration_sec=round(time.time() - start, 3),
                     products_seen=products_seen,
                     deals_sent=deals_sent,
+                    scan_status=scan_status,
                     batch_id=batch_id,
                 )
 
@@ -905,7 +913,12 @@ async def _run_slot(client_id: str, slot_id: int) -> None:
 
                 if should_abandon:
                     api.lease_complete(
-                        client_id, lease.task_id, time.time() - start, 0, 0
+                        client_id,
+                        lease.task_id,
+                        time.time() - start,
+                        0,
+                        0,
+                        scan_status="incomplete",
                     )
                     eventlog.write(
                         "task_abandoned_non_pl",

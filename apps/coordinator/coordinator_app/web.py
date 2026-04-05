@@ -11,6 +11,7 @@ import time
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import AsyncIterator
+from urllib.parse import urlsplit, urlunsplit
 
 import httpx
 from fastapi import FastAPI, Request, HTTPException
@@ -114,31 +115,55 @@ def _get_http_client() -> httpx.Client:
     return _http_client
 
 
-def _forward_deals_to_cheapskater(
-    deals: list[dict],
+def _build_cheapskater_endpoint_url(endpoint_name: str) -> str:
+    if not CHEAPSKATER_INGEST_URL:
+        return ""
+
+    parts = urlsplit(CHEAPSKATER_INGEST_URL)
+    path = parts.path.rstrip("/")
+    if path.endswith("/deals"):
+        path = path[: -len("/deals")]
+    if not path:
+        path = "/api/ingest"
+    endpoint_path = f"{path}/{endpoint_name}".replace("//", "/")
+    return urlunsplit(
+        (parts.scheme, parts.netloc, endpoint_path, parts.query, parts.fragment)
+    )
+
+
+def _post_to_cheapskater(
+    payload: dict,
     *,
+    endpoint_name: str,
+    item_count: int,
     batch_id: str | None = None,
     client_id: str | None = None,
+    task_id: int | None = None,
+    store_id: str | None = None,
 ) -> dict:
-    """Forward deals to Cheapskater website (best-effort, non-blocking)."""
-    if not CHEAPSKATER_INGEST_URL or not deals:
-        if not CHEAPSKATER_INGEST_URL:
+    endpoint_url = _build_cheapskater_endpoint_url(endpoint_name)
+    if not endpoint_url or item_count <= 0:
+        if not endpoint_url:
             logger.warning(
-                "CHEAPSKATER_INGEST_URL not configured - deals will not be forwarded"
+                "CHEAPSKATER_INGEST_URL not configured - %s will not be forwarded",
+                endpoint_name,
             )
         return {
             "attempted": False,
             "status_code": None,
-            "accepted": 0,
+            "processed": 0,
             "error": "not_configured",
         }
 
     logger.info(
-        "[FORWARD] batch_id=%s client_id=%s attempting count=%s url_configured=%s",
+        "[FORWARD_%s] batch_id=%s client_id=%s task_id=%s store_id=%s attempting count=%s url=%s",
+        endpoint_name.upper(),
         batch_id,
         client_id,
-        len(deals),
-        bool(CHEAPSKATER_INGEST_URL),
+        task_id,
+        store_id,
+        item_count,
+        endpoint_url,
     )
     try:
         client = _get_http_client()
@@ -150,52 +175,117 @@ def _forward_deals_to_cheapskater(
         if client_id:
             headers["X-Gloorbot-Client-Id"] = client_id
 
-        payload = {
-            "source": "gloorbot",
-            "batch_id": batch_id,
-            "client_id": client_id,
-            "deals": deals,
-        }
-
-        resp = client.post(CHEAPSKATER_INGEST_URL, json=payload, headers=headers)
+        resp = client.post(endpoint_url, json=payload, headers=headers)
         if resp.status_code == 200:
-            data = resp.json()
+            try:
+                data = resp.json()
+            except ValueError:
+                data = {}
+            processed = item_count
+            for key in ("accepted", "expired", "removed", "count"):
+                if key in data and data.get(key) is not None:
+                    processed = int(data[key])
+                    break
             logger.info(
-                "[FORWARD] batch_id=%s client_id=%s ok accepted=%s",
+                "[FORWARD_%s] batch_id=%s client_id=%s task_id=%s store_id=%s ok processed=%s",
+                endpoint_name.upper(),
                 batch_id,
                 client_id,
-                data.get("accepted", 0),
+                task_id,
+                store_id,
+                processed,
             )
             return {
                 "attempted": True,
                 "status_code": resp.status_code,
-                "accepted": int(data.get("accepted", 0) or 0),
+                "processed": processed,
                 "error": None,
             }
-        else:
-            logger.warning(
-                "[FORWARD] batch_id=%s client_id=%s failed status=%s body=%s",
-                batch_id,
-                client_id,
-                resp.status_code,
-                resp.text[:200],
-            )
-            return {
-                "attempted": True,
-                "status_code": resp.status_code,
-                "accepted": 0,
-                "error": f"{resp.status_code}: {resp.text[:200]}",
-            }
+
+        logger.warning(
+            "[FORWARD_%s] batch_id=%s client_id=%s task_id=%s store_id=%s failed status=%s body=%s",
+            endpoint_name.upper(),
+            batch_id,
+            client_id,
+            task_id,
+            store_id,
+            resp.status_code,
+            resp.text[:200],
+        )
+        return {
+            "attempted": True,
+            "status_code": resp.status_code,
+            "processed": 0,
+            "error": f"{resp.status_code}: {resp.text[:200]}",
+        }
     except Exception as e:
         logger.warning(
-            "[FORWARD] batch_id=%s client_id=%s exception=%s", batch_id, client_id, e
+            "[FORWARD_%s] batch_id=%s client_id=%s task_id=%s store_id=%s exception=%s",
+            endpoint_name.upper(),
+            batch_id,
+            client_id,
+            task_id,
+            store_id,
+            e,
         )
         return {
             "attempted": True,
             "status_code": None,
-            "accepted": 0,
+            "processed": 0,
             "error": str(e)[:200],
         }
+
+
+def _forward_deals_to_cheapskater(
+    deals: list[dict],
+    *,
+    batch_id: str | None = None,
+    client_id: str | None = None,
+) -> dict:
+    """Forward deals to Cheapskater website (best-effort, non-blocking)."""
+    result = _post_to_cheapskater(
+        {
+            "source": "gloorbot",
+            "batch_id": batch_id,
+            "client_id": client_id,
+            "deals": deals,
+        },
+        endpoint_name="deals",
+        item_count=len(deals),
+        batch_id=batch_id,
+        client_id=client_id,
+    )
+    return {
+        "attempted": result.get("attempted", False),
+        "status_code": result.get("status_code"),
+        "accepted": result.get("processed", 0),
+        "error": result.get("error"),
+    }
+
+
+def _forward_expired_deals_to_cheapskater(
+    expired_deals: list[dict],
+    *,
+    task_id: int,
+    client_id: str,
+    store_id: str,
+    category_url: str,
+) -> dict:
+    return _post_to_cheapskater(
+        {
+            "source": "gloorbot",
+            "task_id": task_id,
+            "client_id": client_id,
+            "store_id": store_id,
+            "category_url": category_url,
+            "expired_deals": expired_deals,
+        },
+        endpoint_name="expire",
+        item_count=len(expired_deals),
+        client_id=client_id,
+        task_id=task_id,
+        store_id=store_id,
+    )
 
 
 def _require_debug_token(request: Request) -> None:
@@ -819,6 +909,11 @@ def create_app() -> FastAPI:
     @app.post("/api/v1/lease/complete")
     def lease_complete(req: LeaseCompleteRequest) -> dict:
         now = datetime.utcnow()
+        task_started_at: datetime | None = None
+        task_store_id: str | None = None
+        task_store_name: str | None = None
+        task_category_url: str | None = None
+        scan_status = (req.scan_status or "").strip().lower()
         with db_session() as db:
             task = db.get(Task, req.task_id)
             if not task:
@@ -826,6 +921,10 @@ def create_app() -> FastAPI:
             if task.lease_client_id and task.lease_client_id != req.client_id:
                 return {"ok": False, "error": "not_lease_holder"}
 
+            task_started_at = task.last_started_at
+            task_store_id = task.store_id
+            task_store_name = task.store_name
+            task_category_url = task.category_url
             task.lease_client_id = None
             task.lease_expires_at = None
             task.last_completed_at = now
@@ -843,10 +942,120 @@ def create_app() -> FastAPI:
                 category_url=task.category_url,
                 status="completed",
                 duration_seconds=req.duration_sec,
-                products_found=req.products_found
-                if hasattr(req, "products_found")
-                else None,
+                products_found=req.products_seen,
             )
+
+        if scan_status not in {"complete", "empty_complete"}:
+            structured_log(
+                "deal_expiration_sweep",
+                level="info",
+                status="skipped_incomplete_scan",
+                task_id=req.task_id,
+                client_id=req.client_id,
+                store_id=task_store_id,
+                store_name=task_store_name,
+                category_url=task_category_url,
+                count=0,
+                products_seen=req.products_seen,
+                scan_status=scan_status or None,
+            )
+        elif not task_started_at or not task_store_id or not task_category_url:
+            structured_log(
+                "deal_expiration_sweep",
+                level="warning",
+                status="skipped_missing_task_context",
+                task_id=req.task_id,
+                client_id=req.client_id,
+                store_id=task_store_id,
+                store_name=task_store_name,
+                category_url=task_category_url,
+                count=0,
+            )
+        else:
+            expired_deal_rows: list[tuple[int, str]] = []
+            with db_session() as db:
+                expired_deal_rows = db.execute(
+                    select(Deal.id, Deal.product_url).where(
+                        Deal.store_id == task_store_id,
+                        Deal.category_url == task_category_url,
+                        Deal.last_seen_at < task_started_at,
+                    )
+                ).all()
+
+            expired_deals = [
+                {"store_id": task_store_id, "product_url": product_url}
+                for _, product_url in expired_deal_rows
+            ]
+            structured_log(
+                "deal_expiration_sweep",
+                level="info",
+                status="candidate_scan_complete",
+                task_id=req.task_id,
+                client_id=req.client_id,
+                store_id=task_store_id,
+                store_name=task_store_name,
+                category_url=task_category_url,
+                count=len(expired_deals),
+                last_started_at=task_started_at.isoformat(),
+            )
+
+            if expired_deals:
+                expire_result = _forward_expired_deals_to_cheapskater(
+                    expired_deals,
+                    task_id=req.task_id,
+                    client_id=req.client_id,
+                    store_id=task_store_id,
+                    category_url=task_category_url,
+                )
+                forward_succeeded = (
+                    expire_result.get("attempted")
+                    and expire_result.get("status_code") == 200
+                )
+                deleted_count = 0
+                if forward_succeeded:
+                    expired_ids = [deal_id for deal_id, _ in expired_deal_rows]
+                    expired_urls = [product_url for _, product_url in expired_deal_rows]
+                    with db_session() as db:
+                        deleted_count = (
+                            db.execute(
+                                delete(Deal).where(
+                                    Deal.id.in_(expired_ids),
+                                    Deal.store_id == task_store_id,
+                                    Deal.category_url == task_category_url,
+                                    Deal.last_seen_at < task_started_at,
+                                )
+                            ).rowcount
+                            or 0
+                        )
+                        db.execute(
+                            delete(DealSource).where(
+                                DealSource.store_id == task_store_id,
+                                DealSource.category_url == task_category_url,
+                                DealSource.product_url.in_(expired_urls),
+                                DealSource.last_seen_at < task_started_at,
+                            )
+                        )
+                        db.commit()
+
+                structured_log(
+                    "deal_expiration_sweep",
+                    level="info" if forward_succeeded else "warning",
+                    status=(
+                        "expired_forwarded_and_deleted"
+                        if forward_succeeded
+                        else "expired_forward_failed"
+                    ),
+                    task_id=req.task_id,
+                    client_id=req.client_id,
+                    store_id=task_store_id,
+                    store_name=task_store_name,
+                    category_url=task_category_url,
+                    count=len(expired_deals),
+                    deleted_count=deleted_count,
+                    forward_status_code=expire_result.get("status_code"),
+                    error=expire_result.get("error"),
+                    scan_status=scan_status,
+                )
 
         bus.publish(
             f'event:task\ndata:{{"type":"complete","task_id":{req.task_id}}}\n\n'

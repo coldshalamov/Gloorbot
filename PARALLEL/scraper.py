@@ -21,6 +21,7 @@ import os
 import re
 import random
 import time
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
@@ -70,6 +71,12 @@ def _safe_actor_debug(msg: str) -> None:
             return
     except Exception:
         return
+
+
+@dataclass
+class CategoryScrapeResult:
+    products: list[dict]
+    scan_status: str
 
 
 def _is_blocked_title(title: str | None) -> bool:
@@ -1099,7 +1106,7 @@ async def extract_tile_group_products(card: Locator) -> list[dict]:
 # ============================================================================
 
 
-async def apply_pickup_filter(page: Page, category_name: str) -> bool:
+async def apply_pickup_filter(page: Page, category_name: str) -> str:
     """
     Apply the pickup filter with VERIFICATION and AVAILABILITY CHECK.
 
@@ -1112,8 +1119,9 @@ async def apply_pickup_filter(page: Page, category_name: str) -> bool:
     Now it detects disabled filters and skips the category entirely.
 
     Returns:
-        True: Filter was successfully applied and verified
-        False: Filter is disabled/unavailable OR cannot be applied - SKIP CATEGORY
+        "applied": Filter was successfully applied and verified
+        "no_pickup": Filter is unavailable because this store has no pickup items
+        "failed": Filter could not be applied/verified safely
     """
     print(f"[DEBUG] Applying Pickup Filter for {category_name}", flush=True)
 
@@ -1236,9 +1244,9 @@ async def apply_pickup_filter(page: Page, category_name: str) -> bool:
         Use JavaScript to find and click the pickup checkbox.
 
         Returns:
-            True: Filter successfully applied/verified
+            "applied": Filter successfully applied/verified
             False: Filter not found or error occurred (continue to fallback)
-            'disabled': Filter is disabled (no pickup items available - SKIP CATEGORY)
+            "disabled": Filter is disabled (no pickup items available - SKIP CATEGORY)
         """
         try:
             result = await page.evaluate("""
@@ -1351,7 +1359,7 @@ async def apply_pickup_filter(page: Page, category_name: str) -> bool:
 
             if result.get("wasChecked"):
                 Actor.log.info(f"[{category_name}] Pickup filter already checked (JS)")
-                return True
+                return "applied"
             if result.get("clicked"):
                 Actor.log.info(
                     f"[{category_name}] Clicked pickup filter via JS (method: {result.get('method', 'checkbox')})"
@@ -1371,12 +1379,12 @@ async def apply_pickup_filter(page: Page, category_name: str) -> bool:
                     Actor.log.info(
                         f"[{category_name}] Pickup filter verified via URL (inStock param)"
                     )
-                    return True
+                    return "applied"
                 # Even if URL doesn't show it, the click happened - trust it
                 Actor.log.info(
                     f"[{category_name}] Pickup filter applied (JS click succeeded)"
                 )
-                return True
+                return "applied"
 
         except Exception as e:
             Actor.log.warning(f"[{category_name}] JS checkbox approach failed: {e}")
@@ -1384,7 +1392,7 @@ async def apply_pickup_filter(page: Page, category_name: str) -> bool:
 
     # Try JS approach first (most reliable)
     js_result = await try_js_checkbox_click()
-    if js_result is True:
+    if js_result == "applied":
         # Verify the filter actually shows products
         await asyncio.sleep(2)
         zero_products = await page.evaluate(
@@ -1394,13 +1402,13 @@ async def apply_pickup_filter(page: Page, category_name: str) -> bool:
             Actor.log.warning(
                 f"[{category_name}] Pickup filter applied but shows 0 products - no pickup items available"
             )
-            return False
-        return True  # Filter successfully applied with products
+            return "no_pickup"
+        return "applied"  # Filter successfully applied with products
     elif js_result == "disabled":
         Actor.log.info(
             f"[{category_name}] JS detection confirmed pickup filter is DISABLED - skipping category"
         )
-        return False  # Filter is disabled - do NOT attempt fallback
+        return "no_pickup"  # Filter is disabled - do NOT attempt fallback
     # If js_result is False (not found), continue to fallback selector-based approach
 
     # APPROACH 2: Fallback to selector-based clicking
@@ -1424,7 +1432,7 @@ async def apply_pickup_filter(page: Page, category_name: str) -> bool:
                             Actor.log.info(
                                 f"[{category_name}] Pickup filter is DISABLED (no pickup items available) - skipping category"
                             )
-                            return False
+                            return "no_pickup"
 
                         # STRICT VALIDATION: Element or its title/aria-label must contain "Pickup"
                         text = (await element.inner_text()) or ""
@@ -1474,8 +1482,8 @@ async def apply_pickup_filter(page: Page, category_name: str) -> bool:
                                 Actor.log.warning(
                                     f"[{category_name}] Pickup filter active but shows 0 products"
                                 )
-                                return False
-                            return True
+                                return "no_pickup"
+                            return "applied"
 
                         # Click the filter
                         Actor.log.info(
@@ -1499,12 +1507,12 @@ async def apply_pickup_filter(page: Page, category_name: str) -> bool:
                             Actor.log.warning(
                                 f"[{category_name}] Filter click resulted in 0 products - no pickup items available"
                             )
-                            return False
+                            return "no_pickup"
 
                         # VERIFY the click worked
                         if await is_filter_selected(element):
                             Actor.log.info(f"[{category_name}] Pickup filter VERIFIED")
-                            return True
+                            return "applied"
 
                         # Check URL for filter params
                         current_url = page.url.lower()
@@ -1516,7 +1524,7 @@ async def apply_pickup_filter(page: Page, category_name: str) -> bool:
                             Actor.log.info(
                                 f"[{category_name}] Pickup filter verified via URL"
                             )
-                            return True
+                            return "applied"
 
                     except Exception as e:
                         continue
@@ -1528,7 +1536,7 @@ async def apply_pickup_filter(page: Page, category_name: str) -> bool:
         await asyncio.sleep(0.5 + random.random() * 0.5)
 
     Actor.log.warning(f"[{category_name}] Pickup filter NOT applied after all attempts")
-    return False
+    return "failed"
 
 
 # ============================================================================
@@ -2546,12 +2554,13 @@ async def scrape_category_page(
     return products
 
 
-async def scrape_category_all_pages(
+async def scrape_category_all_pages_result(
     page: Page, category_url: str, store_info: dict
-) -> list[dict]:
+) -> CategoryScrapeResult:
     """Scrape ALL pages of a category until no more products found"""
     all_products = []
     cat_name = category_url.split("/pl/")[-1].split("/")[0][:30]
+    scan_status = "incomplete"
 
     # 1. Go to page 1 to set "Pickup Today" filter
     try:
@@ -2602,7 +2611,7 @@ async def scrape_category_all_pages(
                     Actor.log.info(
                         f"{store_info['name']} - {cat_name}: Empty results page detected ({selector}); skipping category"
                     )
-                    return []
+                    return CategoryScrapeResult(products=[], scan_status="empty_complete")
         except Exception:
             pass
 
@@ -2621,18 +2630,25 @@ async def scrape_category_all_pages(
         await asyncio.sleep(0.5 + random.random() * 0.5)
 
         # Apply the robust pickup filter with verification
-        filter_applied = await apply_pickup_filter(
+        filter_status = await apply_pickup_filter(
             page, f"{store_info['name']}-{cat_name}"
         )
 
-        if not filter_applied:
+        if filter_status == "no_pickup":
             Actor.log.error(
-                f"{store_info['name']} - {cat_name}: Pickup filter DISABLED or could not be applied - SKIPPING CATEGORY ENTIRELY"
+                f"{store_info['name']} - {cat_name}: Pickup filter indicates no pickup inventory - SKIPPING CATEGORY ENTIRELY"
             )
             Actor.log.error(
                 f"This means no pickup items are available in this category at {store_info['name']}"
             )
-            return []  # Skip this category entirely instead of scraping wrong data
+            return CategoryScrapeResult(
+                products=[], scan_status="empty_complete"
+            )  # Skip this category entirely instead of scraping wrong data
+        if filter_status != "applied":
+            Actor.log.error(
+                f"{store_info['name']} - {cat_name}: Pickup filter could not be applied safely - marking scrape incomplete"
+            )
+            return CategoryScrapeResult(products=[], scan_status="incomplete")
 
         # CRITICAL: Verify the URL actually has pickup filter parameters
         current_url_lower = page.url.lower()
@@ -2647,7 +2663,9 @@ async def scrape_category_all_pages(
                 f"{store_info['name']} - {cat_name}: URL missing pickup filter params after filter was 'applied' - SKIPPING CATEGORY"
             )
             Actor.log.error(f"URL: {page.url}")
-            return []  # Don't scrape unfiltered results
+            return CategoryScrapeResult(
+                products=[], scan_status="incomplete"
+            )  # Don't scrape unfiltered results
 
         # Update category_url to include the new query params (facets)
         new_url = page.url
@@ -2733,6 +2751,7 @@ async def scrape_category_all_pages(
                     Actor.log.info(
                         f"{store_info['name']} - {cat_name}: {consecutive_empty} consecutive empty pages, category done"
                     )
+                    scan_status = "complete" if page_num > 1 else "empty_complete"
                     break
                 # Try once more in case of transient issue
                 Actor.log.info(
@@ -2751,6 +2770,7 @@ async def scrape_category_all_pages(
 
             # Stop if partial page (end of results)
             if len(products) < 12:
+                scan_status = "complete"
                 break
 
             page_num += 1
@@ -2771,7 +2791,14 @@ async def scrape_category_all_pages(
             f"{store_info['name']} - {cat_name}: {len(all_products)} total from {page_num} pages"
         )
 
-    return all_products
+    return CategoryScrapeResult(products=all_products, scan_status=scan_status)
+
+
+async def scrape_category_all_pages(
+    page: Page, category_url: str, store_info: dict
+) -> list[dict]:
+    result = await scrape_category_all_pages_result(page, category_url, store_info)
+    return result.products
 
 
 # ============================================================================
