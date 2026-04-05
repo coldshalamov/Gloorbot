@@ -53,6 +53,7 @@
 ---
 
 ### RECENT MILESTONES (LAST 24 HOURS)
+- [2026-04-05]: Codex: Ported the live-patched Worker changes from `GloorbotWorker.zip` into the repo (only `PARALLEL/scraper.py` differed): store-id URL verification + optional debug screenshots (`GLOORBOT_DEBUG_SCREENSHOTS` + `GLOORBOT_SCREENSHOT_DIR`). Bumped Worker `__version__` to `0.12.13` in preparation for tagging `v0.12.13`.
 - [2026-01-23]: Codex: Verified coordinator + worker imports/tests; fixed worker `__main__.py` running on import; synced `apps/coordinator/data/urls.txt` to `PARALLEL/urls.txt`; marked async Playwright regression tests with `@pytest.mark.asyncio`; guarded several root `test_*.py` scripts from running at import-time; moved admin credentials docs to `GLOORBOT_ADMIN_EMAIL`/`GLOORBOT_ADMIN_PASSWORD` env vars (code supports env override).
 - [2026-01-10]: Swarm: Kilo Code CLI is working again → reinstated `kilo-cli` subagent access across agents (Codex `C:\\Users\\User\\.codex\\config.toml`, Antigravity/Claude `C:\\Users\\User\\.claude\\mcp_settings.json`, Gemini `C:\\Users\\User\\.gemini\\settings.json`). Restarted/validated lazy-MCP proxies: **Swarm Senses** (9091) + **Opaque Hands** (9092). Updated Gemini instructions to match `opaque-hands` + Kilo usage.
 - [2026-01-10]: Codex: Published worker installer **v0.11.8** (GitHub Release asset `WorkerSetup.exe`). Coordinator `/download` now supports GitHub “latest release” resolution when `WORKER_DOWNLOAD_URL` is unset or set to `latest`/`github:latest` (fallback repo `coldshalamov/Gloorbot`).

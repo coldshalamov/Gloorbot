@@ -82,6 +82,22 @@ def _is_blocked_title(title: str | None) -> bool:
     return "Access Denied" in title
 
 
+def _debug_screenshots_enabled() -> bool:
+    # Off by default to avoid disk bloat in long-running workers.
+    value = os.getenv("GLOORBOT_DEBUG_SCREENSHOTS", "").strip().lower()
+    return value in {"1", "true", "yes", "on"}
+
+
+def _debug_screenshot_path(prefix: str) -> str:
+    root = (os.getenv("GLOORBOT_SCREENSHOT_DIR") or "").strip()
+    if root:
+        path = Path(root)
+    else:
+        path = Path.cwd() / "debug_screenshots"
+    path.mkdir(parents=True, exist_ok=True)
+    return str(path / f"{prefix}_{int(time.time())}.png")
+
+
 # ============================================================================
 # OPTIONAL NAVIGATION LOGGING (used by the installed Worker)
 # ============================================================================
@@ -285,6 +301,19 @@ async def set_store_context(page: Page, store_url: str, store_name: str):
     await page.goto(store_url, wait_until="domcontentloaded", timeout=60000)
     await asyncio.sleep(2 + random.random())
 
+    # Accept canonical Lowe's store page URL as valid context.
+    try:
+        target_match = re.search(r"/store/[^/]+/(\d+)", store_url)
+        current_match = re.search(r"/store/[^/]+/(\d+)", page.url or "")
+        if target_match and current_match:
+            if target_match.group(1) == current_match.group(1):
+                Actor.log.info(
+                    f"Store verified by URL store id: {current_match.group(1)}"
+                )
+                return True
+    except Exception as e:
+        _safe_actor_debug(f"Store-id URL verification failed: {e}")
+
     # Check if already set (sometimes page says "My Store" immediately)
     # CRITICAL: Use text= for exact match, NOT has-text which does partial matching.
     # has-text('My Store') incorrectly matches "Set as My Store" buttons.
@@ -342,15 +371,26 @@ async def set_store_context(page: Page, store_url: str, store_name: str):
     try:
         page_title = await page.title()
         page_url = page.url
+
+        target_match = re.search(r"/store/[^/]+/(\d+)", store_url)
+        current_match = re.search(r"/store/[^/]+/(\d+)", page_url or "")
+        if target_match and current_match:
+            if target_match.group(1) == current_match.group(1):
+                Actor.log.info(
+                    f"Proceeding with matched store URL despite UI validation miss: {page_url}"
+                )
+                return True
+
         Actor.log.warning(
             f"Store validation failed - Title: '{page_title}', URL: '{page_url}'"
         )
 
-        # Take screenshot for debugging
-        try:
-            await page.screenshot(path=f"debug_store_fail_{int(time.time())}.png")
-        except:
-            pass
+        # Optional screenshot for debugging. Disabled unless explicitly enabled.
+        if _debug_screenshots_enabled():
+            try:
+                await page.screenshot(path=_debug_screenshot_path("debug_store_fail"))
+            except Exception:
+                pass
     except:
         pass
 
