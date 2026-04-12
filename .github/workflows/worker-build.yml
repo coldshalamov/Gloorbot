@@ -68,22 +68,28 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
-          $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
-          if (-not (Test-Path $iscc)) {
+          $isccCandidates = @(
+            "C:\Program Files (x86)\Inno Setup 6\ISCC.exe",
+            "C:\Program Files\Inno Setup 6\ISCC.exe"
+          )
+          $iscc = $isccCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if (-not $iscc) {
             choco install innosetup -y --no-progress
           }
-          if (-not (Test-Path $iscc)) {
-            throw "ISCC not found after install attempt at $iscc"
+          $iscc = $isccCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if (-not $iscc) {
+            throw "ISCC not found after install attempt. Checked: $($isccCandidates -join ', ')"
           }
+          cd "$env:GITHUB_WORKSPACE/apps/worker"
           $version = "${{ github.ref_name }}" -replace '^v',''
           if ([string]::IsNullOrWhiteSpace($version)) { $version = "0.0.0" }
-          if (-not (Test-Path "apps/worker/installer/worker.iss")) {
-            throw "Missing apps/worker/installer/worker.iss"
+          if (-not (Test-Path "installer/worker.iss")) {
+            throw "Missing installer/worker.iss"
           }
-          if (-not (Test-Path "apps/worker/dist/GloorbotWorker/GloorbotWorker.exe")) {
-            throw "Missing apps/worker/dist/GloorbotWorker/GloorbotWorker.exe"
+          if (-not (Test-Path "dist/GloorbotWorker/GloorbotWorker.exe")) {
+            throw "Missing dist/GloorbotWorker/GloorbotWorker.exe"
           }
-          & $iscc "/DMyAppVersion=$version" apps/worker/installer/worker.iss
+          & $iscc "/DMyAppVersion=$version" "installer/worker.iss"
           if ($LASTEXITCODE -ne 0) {
             throw "ISCC failed with exit code $LASTEXITCODE"
           }
