@@ -67,10 +67,26 @@ jobs:
       - name: Build installer with Inno Setup
         shell: pwsh
         run: |
-          choco install innosetup -y --no-progress
+          $ErrorActionPreference = "Stop"
+          $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) {
+            choco install innosetup -y --no-progress
+          }
+          if (-not (Test-Path $iscc)) {
+            throw "ISCC not found after install attempt at $iscc"
+          }
           $version = "${{ github.ref_name }}" -replace '^v',''
           if ([string]::IsNullOrWhiteSpace($version)) { $version = "0.0.0" }
-          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" "/DMyAppVersion=$version" apps/worker/installer/worker.iss
+          if (-not (Test-Path "apps/worker/installer/worker.iss")) {
+            throw "Missing apps/worker/installer/worker.iss"
+          }
+          if (-not (Test-Path "apps/worker/dist/GloorbotWorker/GloorbotWorker.exe")) {
+            throw "Missing apps/worker/dist/GloorbotWorker/GloorbotWorker.exe"
+          }
+          & $iscc "/DMyAppVersion=$version" apps/worker/installer/worker.iss
+          if ($LASTEXITCODE -ne 0) {
+            throw "ISCC failed with exit code $LASTEXITCODE"
+          }
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
