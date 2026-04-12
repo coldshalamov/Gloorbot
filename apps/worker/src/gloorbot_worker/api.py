@@ -10,6 +10,20 @@ import requests
 from . import __version__
 
 
+def _requests_verify() -> str | bool:
+    # Frozen Windows builds can lose requests' CA discovery unless the certifi
+    # bundle is explicitly carried into the PyInstaller payload.
+    try:
+        import certifi
+
+        ca_bundle = certifi.where()
+        if ca_bundle:
+            return ca_bundle
+    except Exception:
+        pass
+    return True
+
+
 def coordinator_url() -> str:
     url = os.getenv("GLOORBOT_COORDINATOR_URL", "").strip()
     if not url:
@@ -32,6 +46,7 @@ def register() -> str:
         f"{coordinator_url()}/api/v1/client/register",
         json={"hostname": socket.gethostname(), "version": __version__},
         timeout=15,
+        verify=_requests_verify(),
     )
     res.raise_for_status()
     return res.json()["client_id"]
@@ -50,6 +65,7 @@ def heartbeat(client_id: str, cpu_percent: float | None, mem_percent: float | No
                 "slots": slots,
             },
             timeout=10,
+            verify=_requests_verify(),
         )
     except Exception:
         # Best-effort; worker must continue even if coordinator is flaky.
@@ -61,6 +77,7 @@ def lease_next(client_id: str, preferred_store_id: str | None) -> Lease | None:
         f"{coordinator_url()}/api/v1/lease/next",
         json={"client_id": client_id, "preferred_store_id": preferred_store_id},
         timeout=30,
+        verify=_requests_verify(),
     )
     res.raise_for_status()
     data = res.json()
@@ -89,6 +106,7 @@ def lease_complete(
             "scan_status": scan_status,
         },
         timeout=15,
+        verify=_requests_verify(),
     ).raise_for_status()
 
 
@@ -98,6 +116,7 @@ def lease_fail(client_id: str, task_id: int, duration_sec: float | None) -> None
             f"{coordinator_url()}/api/v1/lease/fail",
             json={"client_id": client_id, "task_id": task_id, "duration_sec": duration_sec},
             timeout=15,
+            verify=_requests_verify(),
         ).raise_for_status()
     except Exception:
         pass
@@ -111,6 +130,7 @@ def submit_deals(client_id: str, deals: list[dict], *, task_id: int | None = Non
         f"{coordinator_url()}/api/v1/deals/bulk",
         json={"client_id": client_id, "batch_id": batch_id, "task_id": task_id, "deals": deals},
         timeout=30,
+        verify=_requests_verify(),
     )
     res.raise_for_status()
     data = res.json()
@@ -119,7 +139,11 @@ def submit_deals(client_id: str, deals: list[dict], *, task_id: int | None = Non
 
 def fetch_status() -> dict | None:
     try:
-        res = requests.get(f"{coordinator_url()}/api/v1/status", timeout=10)
+        res = requests.get(
+            f"{coordinator_url()}/api/v1/status",
+            timeout=10,
+            verify=_requests_verify(),
+        )
         if not res.ok:
             return None
         return res.json()

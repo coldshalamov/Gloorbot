@@ -24,7 +24,7 @@ jobs:
           cd apps/worker
           python -m pip install --upgrade pip
           pip install -e .
-          pip install pyinstaller==6.11.1 pillow pytest
+          pip install pyinstaller==6.11.1 pillow pytest certifi
 
       - name: Generate Icon for Worker
         shell: pwsh
@@ -55,12 +55,14 @@ jobs:
             --icon "gloorbot.ico" `
             --add-data "..\..\PARALLEL;PARALLEL" `
             --add-data "ms-playwright;ms-playwright" `
+            --collect-data "certifi" `
             --hidden-import "gloorbot_worker" `
             --hidden-import "gloorbot_worker.api" `
             --hidden-import "gloorbot_worker.gui" `
             --hidden-import "gloorbot_worker.paths" `
             --hidden-import "gloorbot_worker.slot_worker" `
             --hidden-import "gloorbot_worker.supervisor" `
+            --hidden-import "certifi" `
             --collect-submodules "gloorbot_worker" `
             src\gloorbot_worker\__main__.py
           if (-not (Test-Path "dist/GloorbotWorker.exe")) {
