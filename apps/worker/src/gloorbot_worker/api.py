@@ -4,6 +4,7 @@ import os
 import socket
 import uuid
 from dataclasses import dataclass
+from typing import Literal
 
 import requests
 
@@ -41,6 +42,9 @@ class Lease:
     category_url: str
 
 
+HeartbeatResult = Literal["ok", "stale_client", "error"]
+
+
 def register() -> str:
     res = requests.post(
         f"{coordinator_url()}/api/v1/client/register",
@@ -52,9 +56,16 @@ def register() -> str:
     return res.json()["client_id"]
 
 
-def heartbeat(client_id: str, cpu_percent: float | None, mem_percent: float | None, slots: int | None) -> None:
+def heartbeat(
+    client_id: str,
+    cpu_percent: float | None,
+    mem_percent: float | None,
+    slots: int | None,
+    tasks_completed: int = 0,
+    deals_sent: int = 0,
+) -> HeartbeatResult:
     try:
-        requests.post(
+        res = requests.post(
             f"{coordinator_url()}/api/v1/client/heartbeat",
             json={
                 "client_id": client_id,
@@ -63,13 +74,34 @@ def heartbeat(client_id: str, cpu_percent: float | None, mem_percent: float | No
                 "cpu_percent": cpu_percent,
                 "mem_percent": mem_percent,
                 "slots": slots,
+                "tasks_completed": int(tasks_completed),
+                "deals_sent": int(deals_sent),
             },
             timeout=10,
             verify=_requests_verify(),
         )
+        try:
+            data = res.json()
+        except Exception:
+            data = None
+        if res.status_code == 404:
+            return "stale_client"
+        if (
+            isinstance(data, dict)
+            and data.get("ok") is False
+            and str(data.get("error") or "").strip().lower() == "unknown_client"
+        ):
+            return "stale_client"
+        res.raise_for_status()
+        return "ok"
+    except requests.HTTPError as exc:
+        response = getattr(exc, "response", None)
+        if response is not None and response.status_code == 404:
+            return "stale_client"
+        return "error"
     except Exception:
         # Best-effort; worker must continue even if coordinator is flaky.
-        pass
+        return "error"
 
 
 def lease_next(client_id: str, preferred_store_id: str | None) -> Lease | None:

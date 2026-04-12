@@ -73,6 +73,22 @@ class Supervisor:
         cfg = config_path()
         cfg.write_text(json.dumps({"client_id": client_id}, indent=2), encoding="utf-8")
 
+    def _clear_client_id(self) -> None:
+        self.client_id = None
+        cfg = config_path()
+        if not cfg.exists():
+            return
+        try:
+            data = json.loads(cfg.read_text(encoding="utf-8"))
+        except Exception:
+            data = {}
+        if isinstance(data, dict) and "client_id" in data:
+            data.pop("client_id", None)
+            try:
+                cfg.write_text(json.dumps(data, indent=2), encoding="utf-8")
+            except Exception:
+                pass
+
     def _ensure_client_id(self) -> bool:
         if self.client_id:
             return True
@@ -175,7 +191,18 @@ class Supervisor:
 
         connected = self._ensure_client_id()
         if connected and self.client_id:
-            api.heartbeat(self.client_id, cpu, mem, len(self.slots))
+            heartbeat_result = api.heartbeat(
+                self.client_id,
+                cpu,
+                mem,
+                len(self.slots),
+                tasks_completed=self._tasks_completed,
+                deals_sent=self._deals_sent,
+            )
+            if heartbeat_result == "stale_client":
+                print("[supervisor] Coordinator rejected stale client_id; forcing re-register")
+                self._clear_client_id()
+                connected = self._ensure_client_id()
 
         # Check for block signals from slot workers
         try:

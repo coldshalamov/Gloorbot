@@ -77,7 +77,33 @@ def logs_dir() -> Path:
     return d
 
 
-def cleanup_old_files(max_age_days: int = 30) -> int:
+def acquire_process_lock(name: str):
+    lock_path = status_dir() / f"{name}.lock"
+    fh = open(lock_path, "a+b")
+    try:
+        if os.name == "nt":
+            import msvcrt
+
+            fh.seek(0)
+            msvcrt.locking(fh.fileno(), msvcrt.LK_NBLCK, 1)
+        else:
+            import fcntl
+
+            fcntl.flock(fh.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        fh.seek(0)
+        fh.truncate()
+        fh.write(str(os.getpid()).encode("utf-8"))
+        fh.flush()
+        return fh
+    except Exception:
+        try:
+            fh.close()
+        except Exception:
+            pass
+        return None
+
+
+def cleanup_old_files(max_age_days: int = 30, max_files_per_dir: int = 200) -> int:
     """Remove old logs, block artifacts, and other temp files older than max_age_days.
     
     Returns the number of files deleted.
@@ -89,21 +115,37 @@ def cleanup_old_files(max_age_days: int = 30) -> int:
     
     # Directories to clean
     dirs_to_clean = [
-        logs_dir(),
-        logs_dir() / "blocks",
-        status_dir(),
+        (logs_dir(), True),
+        (logs_dir() / "blocks", True),
+        (logs_dir() / "deal_diagnostics", True),
+        (logs_dir() / "price_diagnostics", True),
+        (status_dir(), False),
     ]
     
-    for dir_path in dirs_to_clean:
+    for dir_path, prune_by_count in dirs_to_clean:
         if not dir_path.exists():
             continue
         try:
+            retained_files: list[tuple[float, Path]] = []
             for item in dir_path.iterdir():
                 if item.is_file():
                     try:
-                        if item.stat().st_mtime < cutoff:
+                        stat = item.stat()
+                        if item.suffix in {".pid", ".lock"}:
+                            continue
+                        if stat.st_mtime < cutoff:
                             item.unlink()
                             deleted += 1
+                        else:
+                            retained_files.append((stat.st_mtime, item))
+                    except Exception:
+                        pass
+            if prune_by_count and max_files_per_dir > 0 and len(retained_files) > max_files_per_dir:
+                retained_files.sort(key=lambda entry: entry[0], reverse=True)
+                for _, item in retained_files[max_files_per_dir:]:
+                    try:
+                        item.unlink()
+                        deleted += 1
                     except Exception:
                         pass
         except Exception:
