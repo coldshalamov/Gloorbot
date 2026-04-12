@@ -212,7 +212,16 @@ def _load_parallel_scraper() -> Any:
     if not spec or not spec.loader:
         raise RuntimeError("Failed to load PARALLEL scraper module")
     mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)  # type: ignore[attr-defined]
+    module_name = spec.name or "parallel_scraper"
+    # Register before execution so decorators/introspection in the loaded module
+    # (notably dataclasses with postponed annotations) can resolve __module__
+    # through sys.modules during import-time processing.
+    sys.modules[module_name] = mod
+    try:
+        spec.loader.exec_module(mod)  # type: ignore[attr-defined]
+    except Exception:
+        sys.modules.pop(module_name, None)
+        raise
     return mod
 
 
