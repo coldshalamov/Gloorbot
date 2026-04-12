@@ -53,6 +53,7 @@
 ---
 
 ### RECENT MILESTONES (LAST 24 HOURS)
+- [2026-04-12]: Codex: `v0.12.16` still failed in Inno compile with non-zero exit after `ISCC` invocation. Added post-PyInstaller output normalization in workflow to guarantee `dist/GloorbotWorker/GloorbotWorker.exe` exists (supports one-file and discovered-path outputs), then bumped worker `__version__` to `0.12.17` and tagged `v0.12.17` for another release attempt.
 - [2026-04-12]: Codex: Follow-up release retry after `v0.12.15` failure. Updated installer workflow to compile from `apps/worker` explicitly and resolve `ISCC.exe` from both common install paths after optional Chocolatey install, while validating `installer/worker.iss` and `dist/GloorbotWorker/GloorbotWorker.exe` in that working directory. Bumped worker `__version__` to `0.12.16` and tagged `v0.12.16`.
 - [2026-04-12]: Codex: `v0.12.14` tag push triggered worker build but failed at "Build installer with Inno Setup" before release upload. Hardened `.github/workflows/worker-build.yml` installer step with preflight checks (`ISCC` presence, `worker.iss`, built EXE) and explicit failure diagnostics, then bumped worker `__version__` to `0.12.15` and tagged `v0.12.15` for a clean release retry.
 - [2026-04-12]: Codex: Released fresh worker version after stale-February installer report. Bumped `apps/worker/src/gloorbot_worker/__init__.py` to `0.12.14`, created/pushed tag `v0.12.14` from latest `main`, and triggered `.github/workflows/worker-build.yml` to publish a new `WorkerSetup.exe` GitHub Release asset.

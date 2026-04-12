@@ -63,6 +63,23 @@ jobs:
             --hidden-import "gloorbot_worker.supervisor" `
             --collect-submodules "gloorbot_worker" `
             src\gloorbot_worker\__main__.py
+          $expectedExe = "dist/GloorbotWorker/GloorbotWorker.exe"
+          if (-not (Test-Path $expectedExe)) {
+            $singleExe = "dist/GloorbotWorker.exe"
+            if (Test-Path $singleExe) {
+              New-Item -ItemType Directory -Force -Path "dist/GloorbotWorker" | Out-Null
+              Move-Item -Force $singleExe $expectedExe
+            } else {
+              $found = Get-ChildItem -Path "dist" -Filter "GloorbotWorker.exe" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+              if ($found) {
+                New-Item -ItemType Directory -Force -Path "dist/GloorbotWorker" | Out-Null
+                Copy-Item -Force $found.FullName $expectedExe
+              }
+            }
+          }
+          if (-not (Test-Path $expectedExe)) {
+            throw "PyInstaller output missing: expected dist/GloorbotWorker/GloorbotWorker.exe"
+          }
 
       - name: Build installer with Inno Setup
         shell: pwsh
