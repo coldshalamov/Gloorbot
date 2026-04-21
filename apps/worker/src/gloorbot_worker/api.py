@@ -105,9 +105,12 @@ def heartbeat(
 
 
 def lease_next(client_id: str, preferred_store_id: str | None) -> Lease | None:
+    # Coordinator currently validates this field as a required string.
+    # Normalize None to empty string so new slots can request their first task.
+    preferred = preferred_store_id or ""
     res = requests.post(
         f"{coordinator_url()}/api/v1/lease/next",
-        json={"client_id": client_id, "preferred_store_id": preferred_store_id},
+        json={"client_id": client_id, "preferred_store_id": preferred},
         timeout=30,
         verify=_requests_verify(),
     )
