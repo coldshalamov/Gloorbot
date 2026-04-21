@@ -4,7 +4,8 @@ import os
 import re
 from pathlib import Path
 
-from sqlalchemy import select, inspect, text, delete
+from sqlalchemy import select, inspect, text, delete, func
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 
 from .db import Base, engine, db_session
 from .models import Task
@@ -108,7 +109,7 @@ def seed_tasks_from_parallel_urls(repo_root: Path) -> int:
 
     create_tables()
 
-    inserted = 0
+    chunk_size = max(100, int(os.getenv("SEED_INSERT_CHUNK_SIZE", "1000")))
     with db_session() as db:
         # Safety: purge any legacy /c/ category tasks (they are non-listing pages and will
         # cause workers to spin/retry forever when the pickup filter UI doesn't match).
@@ -119,25 +120,32 @@ def seed_tasks_from_parallel_urls(repo_root: Path) -> int:
         except Exception:
             pass
 
-        existing = set(db.execute(select(Task.store_id, Task.category_url)).all())
-        # CRITICAL: Insert category-major (not store-major) to prevent store clustering
-        # Old order (store → categories) caused all early tasks to be for store #1
-        # New order (categories → stores) interleaves tasks across stores
+        before_insert_total = db.scalar(select(func.count(Task.id))) or 0
+        # Memory-safe seeding: avoid loading all existing task keys into Python
+        # (this can OOM small Render instances on large persistent DBs).
+        insert_stmt = sqlite_insert(Task).prefix_with("OR IGNORE")
+        rows: list[dict] = []
+
+        # Insert category-major (not store-major) to prevent store clustering.
         for category_url in categories:
             for store in stores:
-                key = (store["store_id"], category_url)
-                if key in existing:
-                    continue
-                db.add(
-                    Task(
-                        state=store["state"],
-                        store_id=store["store_id"],
-                        store_name=store["name"],
-                        store_url=store["url"],
-                        category_url=category_url,
-                    )
+                rows.append(
+                    {
+                        "state": store["state"],
+                        "store_id": store["store_id"],
+                        "store_name": store["name"],
+                        "store_url": store["url"],
+                        "category_url": category_url,
+                    }
                 )
-                inserted += 1
+                if len(rows) >= chunk_size:
+                    db.execute(insert_stmt, rows)
+                    rows.clear()
+
+        if rows:
+            db.execute(insert_stmt, rows)
+        after_insert_total = db.scalar(select(func.count(Task.id))) or 0
+        inserted = max(0, int(after_insert_total - before_insert_total))
         # Optional safety: if the seed list changes (e.g. we remove confirmed 404 categories),
         # purge tasks that can never succeed so workers stop getting handed dead URLs.
         prune_flag = os.getenv("PRUNE_TASKS_NOT_IN_SEED", "true").strip().lower() not in {"0", "false", "no", "off"}
