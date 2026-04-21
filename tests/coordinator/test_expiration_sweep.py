@@ -395,3 +395,150 @@ def test_lease_complete_keeps_stale_deals_when_expire_forward_fails(
     assert complete_resp.json() == {"ok": True}
 
     assert _deal_urls(env) == {stale_product_url}
+
+
+def test_proactive_sweep_expires_deals_older_than_cutoff(
+    coordinator_env, monkeypatch
+):
+    from datetime import datetime
+
+    env = coordinator_env
+    now = datetime.utcnow()
+
+    stale_url = "https://www.lowes.com/pd/old-deal/100"
+    fresh_url = "https://www.lowes.com/pd/fresh-deal/200"
+    store_id = "0001"
+    cat_url = "https://www.lowes.com/pl/Washers-Appliances/4294857972"
+
+    with env.db.db_session() as db:
+        db.add(
+            env.models.Deal(
+                store_id=store_id,
+                store_name="Test Store",
+                category_url=cat_url,
+                category_name="Washers",
+                product_url=stale_url,
+                title="Old deal",
+                price=50.0,
+                was_price=100.0,
+                pct_off=0.50,
+                first_seen_at=now - timedelta(hours=40),
+                last_seen_at=now - timedelta(hours=40),
+                seen_count=1,
+            )
+        )
+        db.add(
+            env.models.DealSource(
+                store_id=store_id,
+                product_url=stale_url,
+                category_url=cat_url,
+                first_seen_at=now - timedelta(hours=40),
+                last_seen_at=now - timedelta(hours=40),
+                seen_count=1,
+            )
+        )
+        db.add(
+            env.models.Deal(
+                store_id=store_id,
+                store_name="Test Store",
+                category_url=cat_url,
+                category_name="Washers",
+                product_url=fresh_url,
+                title="Fresh deal",
+                price=30.0,
+                was_price=60.0,
+                pct_off=0.50,
+                first_seen_at=now - timedelta(hours=1),
+                last_seen_at=now - timedelta(hours=1),
+                seen_count=1,
+            )
+        )
+        db.commit()
+
+    expired_calls: list[tuple[list[dict], dict]] = []
+
+    def _fake_expire(expired_deals, **kwargs):
+        expired_calls.append((expired_deals, kwargs))
+        return {
+            "attempted": True,
+            "status_code": 200,
+            "processed": len(expired_deals),
+            "error": None,
+        }
+
+    monkeypatch.setattr(env.web, "_forward_expired_deals_to_cheapskater", _fake_expire)
+
+    env.web._proactive_stale_sweep()
+
+    assert len(expired_calls) == 1
+    assert expired_calls[0][0] == [
+        {"store_id": store_id, "product_url": stale_url}
+    ]
+    assert _deal_urls(env) == {fresh_url}
+    assert _deal_source_urls(env) == set()
+
+
+def test_proactive_sweep_skips_when_no_stale_deals(coordinator_env, monkeypatch):
+    env = coordinator_env
+
+    expired_calls: list[list[dict]] = []
+
+    def _fake_expire(expired_deals, **kwargs):
+        expired_calls.append(expired_deals)
+        return {
+            "attempted": True,
+            "status_code": 200,
+            "processed": len(expired_deals),
+            "error": None,
+        }
+
+    monkeypatch.setattr(env.web, "_forward_expired_deals_to_cheapskater", _fake_expire)
+
+    env.web._proactive_stale_sweep()
+
+    assert expired_calls == []
+
+
+def test_proactive_sweep_keeps_deals_when_forward_fails(coordinator_env, monkeypatch):
+    from datetime import datetime
+
+    env = coordinator_env
+    now = datetime.utcnow()
+
+    stale_url = "https://www.lowes.com/pd/stale-forward-fail/300"
+    store_id = "0001"
+    cat_url = "https://www.lowes.com/pl/Washers-Appliances/4294857972"
+
+    with env.db.db_session() as db:
+        db.add(
+            env.models.Deal(
+                store_id=store_id,
+                store_name="Test Store",
+                category_url=cat_url,
+                category_name="Washers",
+                product_url=stale_url,
+                title="Stale but forward fails",
+                price=40.0,
+                was_price=80.0,
+                pct_off=0.50,
+                first_seen_at=now - timedelta(hours=40),
+                last_seen_at=now - timedelta(hours=40),
+                seen_count=1,
+            )
+        )
+        db.commit()
+
+    monkeypatch.setattr(
+        env.web,
+        "_forward_expired_deals_to_cheapskater",
+        lambda expired_deals, **kwargs: {
+            "attempted": True,
+            "status_code": 503,
+            "processed": 0,
+            "error": "service unavailable",
+        },
+    )
+
+    env.web._proactive_stale_sweep()
+
+    assert _deal_urls(env) == {stale_url}

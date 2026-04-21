@@ -62,6 +62,11 @@ ACTIVE_WINDOW_SECONDS = int(os.getenv("ACTIVE_WINDOW_SECONDS", "180"))  # 3 minu
 DEAL_THRESHOLD = float(os.getenv("DEAL_THRESHOLD", "0.50"))
 MAX_DEALS_PER_BATCH = int(os.getenv("MAX_DEALS_PER_BATCH", "500"))
 
+STALE_DEAL_HOURS = float(os.getenv("STALE_DEAL_HOURS", "32"))
+STALE_DEAL_SWEEP_INTERVAL_SECONDS = int(
+    os.getenv("STALE_DEAL_SWEEP_INTERVAL_SECONDS", str(30 * 60))
+)
+
 # Defense-in-depth against upstream price-parsing pollution.
 # The historic "scrambled was_price" bug correlates strongly with items at/above $1,000.
 MAX_ABS_PRICE = float(os.getenv("GLOORBOT_MAX_ABS_PRICE", "50000"))
@@ -106,6 +111,100 @@ _worker_download_url_cache: str | None = None
 _worker_download_url_cache_at: float | None = None
 
 _last_debug_cleanup_at: datetime | None = None
+_stale_sweep_thread: threading.Thread | None = None
+_stale_sweep_stop = threading.Event()
+
+
+def _run_proactive_stale_sweep() -> None:
+    while not _stale_sweep_stop.is_set():
+        _stale_sweep_stop.wait(timeout=STALE_DEAL_SWEEP_INTERVAL_SECONDS)
+        if _stale_sweep_stop.is_set():
+            break
+        try:
+            _proactive_stale_sweep()
+        except Exception:
+            logger.exception("[STALE_SWEEP] proactive sweep failed")
+
+
+def _proactive_stale_sweep() -> None:
+    cutoff = datetime.utcnow() - timedelta(hours=STALE_DEAL_HOURS)
+    expired_deal_rows: list[tuple[int, str]] = []
+
+    with db_session() as db:
+        expired_deal_rows = db.execute(
+            select(Deal.id, Deal.product_url, Deal.store_id).where(
+                Deal.last_seen_at < cutoff
+            )
+        ).all()
+
+    if not expired_deal_rows:
+        structured_log(
+            "proactive_stale_sweep",
+            level="info",
+            status="no_stale_deals",
+            cutoff_hours=STALE_DEAL_HOURS,
+            count=0,
+        )
+        return
+
+    by_store: dict[str, list[tuple[int, str]]] = {}
+    for deal_id, product_url, store_id in expired_deal_rows:
+        by_store.setdefault(store_id, []).append((deal_id, product_url))
+
+    total_forwarded = 0
+    total_deleted = 0
+
+    for store_id, pairs in by_store.items():
+        expired_deals = [
+            {"store_id": store_id, "product_url": product_url}
+            for _, product_url in pairs
+        ]
+
+        result = _forward_expired_deals_to_cheapskater(
+            expired_deals,
+            task_id=0,
+            client_id="proactive-sweep",
+            store_id=store_id,
+            category_url="",
+        )
+
+        forward_ok = result.get("attempted") and result.get("status_code") == 200
+        deleted = 0
+
+        if forward_ok:
+            ids = [did for did, _ in pairs]
+            urls = [url for _, url in pairs]
+            with db_session() as db:
+                deleted = (
+                    db.execute(
+                        delete(Deal).where(
+                            Deal.id.in_(ids),
+                            Deal.last_seen_at < cutoff,
+                        )
+                    ).rowcount
+                    or 0
+                )
+                db.execute(
+                    delete(DealSource).where(
+                        DealSource.product_url.in_(urls),
+                        DealSource.store_id == store_id,
+                        DealSource.last_seen_at < cutoff,
+                    )
+                )
+                db.commit()
+
+        total_forwarded += len(expired_deals) if forward_ok else 0
+        total_deleted += deleted
+
+    structured_log(
+        "proactive_stale_sweep",
+        level="info",
+        status="completed",
+        cutoff_hours=STALE_DEAL_HOURS,
+        stale_found=len(expired_deal_rows),
+        forwarded=total_forwarded,
+        deleted=total_deleted,
+    )
 
 
 def _get_http_client() -> httpx.Client:
@@ -471,6 +570,20 @@ def create_app() -> FastAPI:
                 bus.publish(f'event:seed\ndata:{{"tasks_inserted":{inserted}}}\n\n')
         except Exception as e:
             logger.error(f"Startup seed failed: {e}")
+
+        global _stale_sweep_thread
+        _stale_sweep_thread = threading.Thread(
+            target=_run_proactive_stale_sweep,
+            name="stale-deal-sweep",
+            daemon=True,
+        )
+        _stale_sweep_thread.start()
+        logger.info(
+            "[startup] Proactive stale-deal sweep started "
+            "(interval=%ss, stale_after=%sh)",
+            STALE_DEAL_SWEEP_INTERVAL_SECONDS,
+            STALE_DEAL_HOURS,
+        )
 
     @app.get("/healthz")
     def healthz() -> dict:
