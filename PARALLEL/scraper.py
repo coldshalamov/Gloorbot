@@ -163,6 +163,64 @@ def _is_redirected_to_c(url: str) -> bool:
 
 
 # ============================================================================
+# TIMING CONFIG (performance tuning — safe-fast defaults, env-overridable)
+# ============================================================================
+#
+# These knobs control "dead time" waits ONLY (settles between actions and the
+# networkidle timeout). Human interaction — `human_mouse_move` / `human_scroll`
+# and their internal step pacing — is deliberately NOT throttled here, because
+# anti-bot detection keys on the *presence and rhythm of human interaction*,
+# not absolute dwell time. All delay floors are kept at or above ~1s to remain
+# human-plausible.
+#
+# Defaults are read from the environment so the installed Worker can drive them
+# from PerformanceSettings (see slot_worker `_run_slot` + settings
+# `to_env_overrides`). The PARALLEL package is also used standalone (e.g.
+# orchestrator.py), so this module never imports the worker's settings — it only
+# reads env, falling back to the constants below. To restore the original,
+# slower-but-proven pacing, use the Worker's "Conservative" preset (which sets
+# these env values back to the pre-optimization numbers).
+
+
+def _env_float(name: str, default: float) -> float:
+    try:
+        raw = (os.getenv(name) or "").strip()
+        return float(raw) if raw else default
+    except Exception:
+        return default
+
+
+def _env_int(name: str, default: int) -> int:
+    try:
+        raw = (os.getenv(name) or "").strip()
+        return int(raw) if raw else default
+    except Exception:
+        return default
+
+
+async def _sleep_band(
+    min_name: str, max_name: str, default_min: float, default_max: float
+) -> None:
+    """Sleep a random duration in [min, max], read from env with fallbacks."""
+    lo = _env_float(min_name, default_min)
+    hi = _env_float(max_name, default_max)
+    if hi < lo:
+        hi = lo
+    await asyncio.sleep(lo + random.random() * (hi - lo))
+
+
+def _networkidle_timeout_ms() -> int:
+    """Bounded networkidle timeout.
+
+    On a beacon-heavy Akamai site the page may never reach `networkidle`, so the
+    original 8-10s timeouts were dead time that almost always elapsed in full.
+    A shorter bound returns immediately when the page does settle and caps the
+    wasted wait otherwise. This is not a human-pacing signal.
+    """
+    return _env_int("GLOORBOT_NETWORKIDLE_TIMEOUT_MS", 3500)
+
+
+# ============================================================================
 # CONFIG
 # ============================================================================
 
@@ -1219,9 +1277,11 @@ async def apply_pickup_filter(page: Page, category_name: str) -> str:
         except Exception:
             return False
 
-    # Wait for page to settle
+    # Wait for page to settle (bounded — networkidle rarely fires on Lowe's).
     try:
-        await page.wait_for_load_state("networkidle", timeout=10000)
+        await page.wait_for_load_state(
+            "networkidle", timeout=_networkidle_timeout_ms()
+        )
     except Exception:
         pass
 
@@ -1364,9 +1424,11 @@ async def apply_pickup_filter(page: Page, category_name: str) -> str:
                 Actor.log.info(
                     f"[{category_name}] Clicked pickup filter via JS (method: {result.get('method', 'checkbox')})"
                 )
-                await asyncio.sleep(1.5 + random.random())
+                await asyncio.sleep(1.0 + random.random() * 0.8)
                 try:
-                    await page.wait_for_load_state("networkidle", timeout=10000)
+                    await page.wait_for_load_state(
+                        "networkidle", timeout=_networkidle_timeout_ms()
+                    )
                 except:
                     pass
                 # CRITICAL FIX: Verify via URL change - Lowe's uses inStock=1 parameter
@@ -1394,7 +1456,7 @@ async def apply_pickup_filter(page: Page, category_name: str) -> str:
     js_result = await try_js_checkbox_click()
     if js_result == "applied":
         # Verify the filter actually shows products
-        await asyncio.sleep(2)
+        await asyncio.sleep(1.0 + random.random() * 0.6)
         zero_products = await page.evaluate(
             "() => document.body.innerText.match(/0 Products|0 results|Please reduce your filters/i) !== null"
         )
@@ -1491,10 +1553,12 @@ async def apply_pickup_filter(page: Page, category_name: str) -> str:
                         )
                         await element.click()
 
-                        # Wait for page update
-                        await asyncio.sleep(0.8 + random.random() * 0.7)
+                        # Wait for page update (bounded networkidle)
+                        await asyncio.sleep(0.6 + random.random() * 0.5)
                         try:
-                            await page.wait_for_load_state("networkidle", timeout=8000)
+                            await page.wait_for_load_state(
+                                "networkidle", timeout=_networkidle_timeout_ms()
+                            )
                         except Exception:
                             pass
 
@@ -1575,8 +1639,11 @@ async def scrape_category_page(
         )
     )
 
-    # Navigate with human behavior - MINIMUM 1.5 seconds to avoid blocking
-    await asyncio.sleep(1.5 + random.random() * 2.4)  # 1.5-3.9 seconds (30% inc)
+    # Settle before navigation. Dead-wait only (no interaction here), trimmed to
+    # a human-plausible 1.0-2.4s band. Override via env if a slower pace is needed.
+    await _sleep_band(
+        "GLOORBOT_PRENAV_DELAY_MIN", "GLOORBOT_PRENAV_DELAY_MAX", 1.0, 2.4
+    )
 
     try:
         await page.goto(page_url, wait_until="domcontentloaded", timeout=60000)
@@ -1604,9 +1671,9 @@ async def scrape_category_page(
         )
         raise RuntimeError(f"Category redirected from /pl/ to /c/ page: {page.url}")
 
-    await asyncio.sleep(
-        2.0 + random.random() * 2.55
-    )  # 2.0-4.55 seconds (30% inc) after page load
+    # Post-load settle (dead-wait). The human mouse/scroll below is preserved
+    # in full — only the empty wait around it is trimmed.
+    await _sleep_band("GLOORBOT_NAV_DELAY_MIN", "GLOORBOT_NAV_DELAY_MAX", 1.2, 2.8)
 
     try:
         await human_mouse_move(page)
@@ -1615,9 +1682,10 @@ async def scrape_category_page(
         Actor.log.warning(f"Interaction error on page {page_num}: {e}")
         # Continue even if mouse/scroll fails
 
-    await asyncio.sleep(
-        1.5 + random.random() * 1.75
-    )  # 1.5-3.25 seconds (30% inc) before scraping
+    # Brief settle before reading the DOM (dead-wait).
+    await _sleep_band(
+        "GLOORBOT_PRESCRAPE_DELAY_MIN", "GLOORBOT_PRESCRAPE_DELAY_MAX", 1.0, 2.0
+    )
 
     # CRITICAL: Verify the URL still has pickup filter applied.
     # The pickup filter adds parameters like inStock=1 or refinement IDs.
@@ -1681,13 +1749,63 @@ async def scrape_category_page(
 
     # Some pages lazily render tiles; do a gentle scroll pass to encourage all
     # items to hydrate before we read the DOM.
+    #
+    # Performance: instead of always burning a fixed scroll budget, exit once the
+    # product grid has clearly finished lazy-loading (tile count steady across
+    # several reads). The scroll itself is preserved (it doubles as human-like
+    # behavior); only the unconditional waiting is removed.
+    #
+    # IMPORTANT (correctness): the early-exit signal must be "has the grid stopped
+    # growing", NOT "count >= expected_tiles". `expected_tiles` (#listItems
+    # data-totaltile) is a PRODUCT total and one tile_group can hold several
+    # products, so the units differ; and a page-global tile_group count is
+    # inflated by promo carousels ("Save Now Storewide", "You May Also Like")
+    # that the extractor deliberately excludes. Counting unscoped tiles against a
+    # product total could fire early and read a half-rendered grid. So we scope
+    # the count to the listings container and only treat a STABLE, non-empty grid
+    # as "settled". The whole early-exit is gated by GLOORBOT_HYDRATION_EARLY_EXIT
+    # (Conservative preset sets it to 0 to restore the original unconditional
+    # scroll pass).
     try:
         if expected_tiles and expected_tiles > 3:
-            for _ in range(6):
+            max_scrolls = max(1, _env_int("GLOORBOT_HYDRATION_MAX_SCROLLS", 6))
+            early_exit = _env_int("GLOORBOT_HYDRATION_EARLY_EXIT", 1) != 0
+            prev_count: int | None = None
+            stable = 0
+            for i in range(max_scrolls):
                 await page.mouse.wheel(0, 900)
-                await asyncio.sleep(0.35 + random.random() * 0.25)
+                await asyncio.sleep(0.30 + random.random() * 0.20)
+                if not early_exit:
+                    continue
+                # Scope to the SAME main-grid container the near-me extractor
+                # reads from (splp-prd-lst), so promo carousels elsewhere on the
+                # page don't inflate the count. If the selector is absent (layout
+                # variance) count stays 0 and we fall back to the full scroll
+                # budget, i.e. the original behavior.
+                try:
+                    count = await page.locator(
+                        '[data-selector="splp-prd-lst"] div.tile_group'
+                    ).count()
+                except Exception:
+                    count = -1
+                if count <= 0:
+                    # Grid not readable / not yet rendering — never treat as
+                    # "settled"; keep scrolling and reset the stability tracker.
+                    stable = 0
+                    prev_count = None
+                    continue
+                if prev_count is not None and count == prev_count:
+                    stable += 1
+                else:
+                    stable = 0
+                prev_count = count
+                # Require a minimum dwell (>=3 scrolls) AND a grid that held steady
+                # across consecutive reads before exiting early. This degrades to
+                # the old fixed budget on slow/odd pages instead of under-loading.
+                if i >= 2 and stable >= 2:
+                    break
             await page.evaluate("window.scrollTo(0, 0)")
-            await asyncio.sleep(0.6 + random.random() * 0.4)
+            await asyncio.sleep(0.4 + random.random() * 0.3)
     except Exception:
         pass
 
@@ -2566,7 +2684,7 @@ async def scrape_category_all_pages_result(
     try:
         Actor.log.info(f"NAVIGATING TO: {category_url}")
         await page.goto(category_url, wait_until="domcontentloaded", timeout=60000)
-        await asyncio.sleep(2)
+        await asyncio.sleep(1.0 + random.random() * 0.6)
         Actor.log.info(f"LANDED ON: {page.url}")
         try:
             _navlog(

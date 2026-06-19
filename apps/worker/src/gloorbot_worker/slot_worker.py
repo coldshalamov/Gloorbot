@@ -475,6 +475,17 @@ async def _run_slot(client_id: str, slot_id: int) -> None:
     _enable_price_diagnostics_for_slot(slot_id=slot_id)
     os.environ["GLOORBOT_SLOT_ID"] = str(slot_id)
 
+    # Plumb performance settings into the embedded PARALLEL scraper via env.
+    # The scraper reads these (pacing, bounded networkidle, hydration ceiling)
+    # with safe-fast fallbacks and never imports this package. Previously these
+    # were dead controls — the scraper never saw them. `setdefault` so a manual
+    # GLOORBOT_* override (e.g. for A/B testing on a given IP) still wins.
+    try:
+        for _env_key, _env_val in get_settings().to_env_overrides().items():
+            os.environ.setdefault(_env_key, _env_val)
+    except Exception:
+        pass
+
     # If the installer ships Playwright Chromium alongside the EXE, use it.
     if "PLAYWRIGHT_BROWSERS_PATH" not in os.environ:
         try:
@@ -569,6 +580,28 @@ async def _run_slot(client_id: str, slot_id: int) -> None:
                 browser_args.append("--disable-renderer-backgrounding")
             if settings.memory_pressure_off:
                 browser_args.append("--memory-pressure-off")
+
+            # Lean flags: disable Chrome background subsystems to free CPU/RAM so
+            # more windows can run in parallel. These are fingerprint-NEUTRAL —
+            # they don't alter navigator.*, WebGL, canvas, or any page-visible
+            # signal (notably NOT --disable-gpu, which would change the WebGL
+            # fingerprint and is left under its own opt-in setting). Each flag
+            # only turns off a background Google service.
+            if getattr(settings, "lean_browser_flags", True):
+                browser_args.extend(
+                    [
+                        "--disable-component-extensions-with-background-pages",
+                        "--disable-default-apps",
+                        "--disable-sync",
+                        "--disable-component-update",
+                        "--disable-domain-reliability",
+                        "--disable-client-side-phishing-detection",
+                        "--disable-breakpad",
+                        "--no-first-run",
+                        "--disable-hang-monitor",
+                        "--disable-prompt-on-repost",
+                    ]
+                )
 
             # Audio/video blocking at browser level (safe, no detection risk)
             if settings.block_media:
